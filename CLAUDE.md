@@ -9,15 +9,23 @@ in always-running private multiplayer worlds. **Status: design phase, no product
   the design progress checklist.
 - Process: superpowers brainstorming, architectural path. Design sections are approved one at a time → spec in
   `docs/superpowers/specs/` → the user reviews the spec → writing-plans. No product code before that.
-- **Next step:** Section 2 (Simulation model) was presented but not yet answered. Ask for feedback, especially on
-  the world speed options and on key staff as named characters, then continue with Sections 3–6.
+- **Next step:** the spec is approved. Slice 1 is split into six plans
+  (`docs/superpowers/plans/2026-10-17-slice1-index.md`); plan 1 (workspace and sim kernel,
+  `2026-10-17-slice1-plan1-sim-kernel.md`) is written and waits for the user's review and choice of execution method.
 - Art direction (Q10) is decided by rendering real pack models in candidate styles through Blender MCP.
 
 ## Requirements that must not be dropped
 
+- **The point of the game:** a chill simulator to watch citizens and the town move and work, people getting on and
+  off ships, vehicles driving. Free zoom in/out and rotation of the view is a core feature, not a detail.
+
 - Ship project skills per domain in `.claude/skills/` (game logic, frontend, Blender, server, content, testing).
-  Write them after spec approval, as explicit tasks in the implementation plan.
+  Write them after spec approval, as explicit tasks in the implementation plan, using the official skill-creator
+  skill (`anthropic-skills:skill-creator`, `/skill-creator`), not superpowers:writing-skills.
 - A world with one player must be fully playable; multiplayer only adds to it.
+- Phones are the main device (mobile browser, touch-first); desktop is also supported.
+- No emoji anywhere in the UI, mockups included: use real icons (an SVG icon set, or icons rendered from the 3D
+  models). Applies to text symbols that may render as emoji too (✓, ⚠, ▶ and similar): draw those as icons.
 - Free camera: scroll, swipe, drag and pinch on mouse, trackpad, touch and keyboard.
 
 ## Blender MCP
@@ -32,6 +40,8 @@ in always-running private multiplayer worlds. **Status: design phase, no product
 
 - `assets/packs/*.zip`: 10 Kenney packs (CC0), still zipped. `assets/SOURCES.md` lists each pack's version,
   download link and SHA-256. Keep it updated when packs are added.
+- People are the Kenney Mini Characters pack (decision 26); use its walk, carry, work, sit and drive clips, never
+  the combat ones.
 - Treat packs as untrusted downloads: extract each into its own new directory `assets/raw/<pack>/` and never run
   code found inside them.
 - Git: `assets/packs/` and `assets/raw/` are ignored (re-downloadable). Commit only the processed output that the
