@@ -1,7 +1,9 @@
 import type { Content } from '@island/content';
 import type { WorldState } from '../state.ts';
+import { buyMaterials } from './buyMaterials.ts';
 import { checkIn } from './checkIn.ts';
 import { claimIsland } from './claimIsland.ts';
+import { collect } from './collect.ts';
 import { reject, type CommandContext } from './context.ts';
 import { sell } from './sell.ts';
 import { hireCommuters, setAutoSell, setPriority } from './settings.ts';
@@ -42,6 +44,10 @@ export function applyCommand(world: WorldState, content: Content, command: Comma
       return setAutoSell(ctx, command);
     case 'sell':
       return sell(ctx, command);
+    case 'buy-materials':
+      return buyMaterials(ctx, command);
+    case 'collect':
+      return collect(ctx, command);
     default:
       return reject('bad-input');
   }

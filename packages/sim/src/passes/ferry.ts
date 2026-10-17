@@ -1,23 +1,27 @@
 import { emit } from '../events.ts';
 import { pay } from '../ledger.ts';
 import type { IslandState } from '../state.ts';
+import { unloadCargo } from './cargo.ts';
 import type { TickContext } from './context.ts';
 import { moveInNewcomers, moveOutUnhappy } from './migration.ts';
 
 // The commuter ferry (spec 2.2, 4.4, 12.1): a timetable with seats, not a simulated boat. The morning trip lands at
 // the start of the day shift with newcomers, who board first, and the hired commuters in the seats left. The evening
 // trip takes the commuters home and unhappy residents away in the seats left, and brings newcomers on its way in.
+// Both trips carry bought goods in the cargo hold.
 
 export function runFerry(ctx: TickContext, island: IslandState): void {
   const rules = ctx.content.rules;
   if (ctx.minute === rules.shiftStartMinute) {
     const newcomers = moveInNewcomers(ctx, island, rules.ferrySeats);
     boardCommuters(ctx, island, rules.ferrySeats - newcomers);
+    unloadCargo(ctx, island);
   } else if (ctx.minute === rules.shiftEndMinute) {
     const goingHome = island.commuters.present;
     island.commuters.present = 0;
     moveOutUnhappy(ctx, island, rules.ferrySeats - goingHome);
     moveInNewcomers(ctx, island, rules.ferrySeats);
+    unloadCargo(ctx, island);
   }
 }
 

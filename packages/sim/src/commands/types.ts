@@ -1,4 +1,4 @@
-import type { BuildingId, GoodId } from '@island/content';
+import type { BuildingId, GoalId, GoodId } from '@island/content';
 import type { SimEvent } from '../events.ts';
 import type { LedgerEntry } from '../ledger.ts';
 import type { Rotation } from '../state.ts';
@@ -65,6 +65,20 @@ export interface SellCommand {
   amount: number;
 }
 
+/** Buys every material a landmark site still misses from the Mainland; it comes on the next ferry. */
+export interface BuyMaterialsCommand {
+  type: 'buy-materials';
+  slot: number;
+  buildingId: number;
+}
+
+/** Collects the reward of a reached goal (spec 12.1). */
+export interface CollectCommand {
+  type: 'collect';
+  slot: number;
+  goal: GoalId;
+}
+
 export type Command =
   | ClaimIslandCommand
   | CheckInCommand
@@ -73,7 +87,9 @@ export type Command =
   | HireCommutersCommand
   | SetPriorityCommand
   | SetAutoSellCommand
-  | SellCommand;
+  | SellCommand
+  | BuyMaterialsCommand
+  | CollectCommand;
 
 /** Stable ids; the client turns them into words and icons (island-ui). */
 export type ReasonCode =
@@ -97,7 +113,12 @@ export type ReasonCode =
   | 'no-such-building'
   | 'unknown-good'
   | 'not-enough-goods'
-  | 'price-below-floor';
+  | 'price-below-floor'
+  | 'landmark-locked'
+  | 'already-built'
+  | 'not-a-landmark-site'
+  | 'nothing-missing'
+  | 'no-reward';
 
 export type CommandResult =
   | { ok: true; ledger: LedgerEntry[]; events: SimEvent[]; data: Record<string, number> }

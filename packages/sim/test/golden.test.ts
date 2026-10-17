@@ -25,7 +25,8 @@ describe('golden scenario: first buildings', () => {
       'warehouse',
     ]);
     expect(palmCove.buildings.every((b) => b.constructionLeft === 0)).toBe(true);
+    expect(palmCove.rewards).toEqual(['first-farm']);
     expect(islandOf(world, 1).owner).toBe('bob');
-    expect(stateHash(world)).toBe('05ca0a6999b990');
+    expect(stateHash(world)).toBe('1e791d55675106');
   });
 });

@@ -14,7 +14,10 @@ const REASON_FOR_CHECK: Record<PlacementCheckId, ReasonCode> = {
   affordable: 'not-enough-coins',
 };
 
-/** Pays the price up front and starts a construction site (spec 12.1); nothing is ever queued. */
+/**
+ * Pays the price up front and starts a construction site (spec 12.1); nothing is ever queued. A landmark can be
+ * placed once it is unlocked, and only once per island.
+ */
 export function placeBuilding(ctx: CommandContext, command: PlaceBuildingCommand): CommandResult {
   const { world, content } = ctx;
   const island = claimedIsland(world, command.slot);
@@ -23,6 +26,10 @@ export function placeBuilding(ctx: CommandContext, command: PlaceBuildingCommand
   if (!def) return reject('unknown-building');
   if (!def.playerBuildable) return reject('not-player-buildable');
   if (stageOrder(content, def.availableFrom) > stageOrder(content, island.stage)) return reject('not-available-yet');
+  if (def.landmark) {
+    if (!island.unlockedLandmarks.includes(def.id)) return reject('landmark-locked');
+    if (island.buildings.some((b) => b.type === def.id)) return reject('already-built');
+  }
   const x: unknown = command.x;
   const y: unknown = command.y;
   const rotation: unknown = command.rotation;
@@ -36,6 +43,6 @@ export function placeBuilding(ctx: CommandContext, command: PlaceBuildingCommand
   const id = world.nextId;
   world.nextId += 1;
   island.buildings.push(newBuilding(def, id, x, y, rotation));
-  emit(ctx.sink, 'construction-started', island.slot, { buildingId: id, building: def.id });
+  emit(ctx.sink, def.landmark ? 'landmark-started' : 'construction-started', island.slot, { buildingId: id, building: def.id });
   return accept(ctx, { buildingId: id });
 }

@@ -1,13 +1,13 @@
 import { withDefs } from '../buildings.ts';
 import { isDayShift } from '../clock.ts';
 import type { ConditionId, IslandState } from '../state.ts';
-import { stockTotal } from '../stock.ts';
+import { stockOf, stockTotal } from '../stock.ts';
 import type { TickContext } from './context.ts';
 
 /**
  * At the end of every tick, each building's conditions are rebuilt from its state, in the shown order (spec 12.1).
  * Staffing conditions only apply during the day shift, when the building is meant to work, and not while it waits
- * for money (the money is the cause to fix).
+ * for money (the money is the cause to fix). A landmark site short of materials is also missing input.
  */
 export function refreshConditions(ctx: TickContext, island: IslandState): void {
   const dayShift = isDayShift(ctx.minute, ctx.content.rules);
@@ -15,6 +15,9 @@ export function refreshConditions(ctx: TickContext, island: IslandState): void {
     const conditions: ConditionId[] = [];
     if (building.constructionLeft > 0) {
       conditions.push('under-construction');
+      if (def.landmark?.materials.some((m) => stockOf(building.stock, m.good) < m.amount)) {
+        conditions.push('missing-input');
+      }
     } else {
       if (building.upkeepDue) conditions.push('waiting-for-money');
       const work = building.work;

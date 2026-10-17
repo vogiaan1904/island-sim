@@ -93,3 +93,30 @@ export function town(minute: number, coinsCents = 500_000): WorldState {
   world.nextId = 7;
   return world;
 }
+
+/** An 8 x 8 map with a 3 x 3 grass lot under the road, for the Island Hall. */
+export const HALL_MAP: readonly string[] = [
+  '~~~~~~~~',
+  '~......~',
+  '~.,,,,.~',
+  '~.####.~',
+  '~.,,,,.~',
+  '~.,,,,.~',
+  '~.,,,,.~',
+  '~~~~~~~~',
+];
+
+/**
+ * HALL_MAP with the dock (id 1) and an Island Hall site (id 2) on the lot, unlocked, next tick at the given minute.
+ * The hall's materials are on site when `delivered` is true.
+ */
+export function hallSite(minute: number, options: { delivered?: boolean; coinsCents?: number } = {}): WorldState {
+  const world = nextTickAt(smallWorld(HALL_MAP, options.coinsCents), minute);
+  const island = islandOf(world, 0);
+  const hall = building('island-hall', 2, 2, 4, { constructionLeft: 720 });
+  if (options.delivered) hall.stock = { wood: 100 };
+  island.buildings.push(building('dock', 1, 5, 1), hall);
+  island.unlockedLandmarks = ['island-hall'];
+  world.nextId = 3;
+  return world;
+}

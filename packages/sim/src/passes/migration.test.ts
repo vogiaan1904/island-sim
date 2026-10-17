@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SMALL, building, buildingOf, islandOf, town } from '../../test/fixtures.ts';
+import type { SimEvent } from '../events.ts';
 import type { WorldState } from '../state.ts';
 import { tickWorld } from '../tick.ts';
 
@@ -14,12 +15,15 @@ function emptyTown(minute: number): WorldState {
 
 const residents = (world: WorldState, id: number) => buildingOf(world, id).home?.residents;
 
+/** The ferry's events, without the goals the same slow pass completes. */
+const ferryEvents = (events: SimEvent[]) => events.filter((e) => e.type !== 'goal-completed');
+
 describe('newcomers', () => {
   it('arrive on the morning ferry into homes with their needs met, while there are open jobs', () => {
     const world = emptyTown(420);
     const { events } = tickWorld(world, SMALL);
     expect([residents(world, 1), residents(world, 7)]).toEqual([4, 4]);
-    expect(events).toMatchObject([{ type: 'newcomers-arrived', data: { count: 8 } }]);
+    expect(ferryEvents(events)).toMatchObject([{ type: 'newcomers-arrived', data: { count: 8 } }]);
   });
 
   it('keep coming while a job is open, a household at a time', () => {
@@ -50,7 +54,7 @@ describe('newcomers', () => {
     islandOf(world, 0).commuters.hired = 12;
     const { events } = tickWorld(world, SMALL);
     expect(islandOf(world, 0).commuters.present).toBe(4);
-    expect(events.map((e) => [e.type, e.data.count])).toEqual([
+    expect(ferryEvents(events).map((e) => [e.type, e.data.count])).toEqual([
       ['newcomers-arrived', 8],
       ['commuters-stayed-home', 8],
     ]);
@@ -71,7 +75,7 @@ describe('leaving', () => {
     if (home) home.happiness = 200;
     const { events } = tickWorld(world, SMALL);
     expect(residents(world, 1)).toBe(0);
-    expect(events).toMatchObject([{ type: 'residents-left', data: { count: 4 } }]);
+    expect(ferryEvents(events)).toMatchObject([{ type: 'residents-left', data: { count: 4 } }]);
   });
 
   it('shares the evening seats with commuters going home, who board first', () => {

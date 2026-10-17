@@ -10,6 +10,7 @@ import { runFerry } from './passes/ferry.ts';
 import { runLabor } from './passes/labor.ts';
 import { updateMarket } from './passes/market.ts';
 import { collectRent, serveMeals, updateNeeds } from './passes/needs.ts';
+import { checkProgress } from './passes/progress.ts';
 import { runProduction } from './passes/production.ts';
 import { deliverShipments, dispatchGoods } from './passes/transport.ts';
 import { chargeUpkeep } from './passes/upkeep.ts';
@@ -59,5 +60,6 @@ function runIsland(ctx: TickContext, island: IslandState): void {
   if (hour) updateNeeds(ctx, island);
   if (hour) collectRent(ctx, island);
   if (hour) runAutoSell(ctx, island);
+  if (slow) checkProgress(ctx, island);
   refreshConditions(ctx, island);
 }
