@@ -4,6 +4,7 @@ import { checkIn } from './checkIn.ts';
 import { claimIsland } from './claimIsland.ts';
 import { reject, type CommandContext } from './context.ts';
 import { placeBuilding } from './placeBuilding.ts';
+import { placeRoad } from './placeRoad.ts';
 import type { Command, CommandMeta, CommandResult } from './types.ts';
 
 /**
@@ -29,6 +30,8 @@ export function applyCommand(world: WorldState, content: Content, command: Comma
       return checkIn(ctx, command);
     case 'place-building':
       return placeBuilding(ctx, command);
+    case 'place-road':
+      return placeRoad(ctx, command);
     default:
       return reject('bad-input');
   }

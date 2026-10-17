@@ -1,6 +1,6 @@
+import type { BuildingId } from '@island/content';
 import type { SimEvent } from '../events.ts';
 import type { LedgerEntry } from '../ledger.ts';
-import type { BuildingId } from '@island/content';
 import type { Rotation } from '../state.ts';
 
 // Command types live in the sim; packages/protocol wraps them in messages (spec 12.2).
@@ -27,7 +27,14 @@ export interface PlaceBuildingCommand {
   rotation: Rotation;
 }
 
-export type Command = ClaimIslandCommand | CheckInCommand | PlaceBuildingCommand;
+export interface PlaceRoadCommand {
+  type: 'place-road';
+  slot: number;
+  /** [x, y] tiles; duplicates and existing road tiles are skipped and not charged. */
+  tiles: ReadonlyArray<readonly [number, number]>;
+}
+
+export type Command = ClaimIslandCommand | CheckInCommand | PlaceBuildingCommand | PlaceRoadCommand;
 
 /** Stable ids; the client turns them into words and icons (island-ui). */
 export type ReasonCode =
