@@ -37,6 +37,18 @@ the islands keep running while you're away, and you can watch each other's islan
 - Per-tick change sets for the server; the golden "Outpost to Settlement" scenario; the pacing harness in `tools/`
   checking the pace targets (first residents within about an hour, Settlement within the first day).
 
+**Carried over from plan 2** (found by its final review; nothing here blocks plan 3 unless it says so)
+- Soft lock (plan 2 decision 15): an island with no coins, no residents and nothing to sell cannot pay commuters and
+  stays stuck. A gentle way out must land within slice 1, before the plan 5 client is playtested. Wages are paid before
+  upkeep, so an island just short of money pays its commuters, who then idle at workplaces left unpaid by upkeep.
+- Plan 3: the load policy for retuned content. `validateWorld` bounds saved state by content numbers, so lowering a
+  bound or adding a good makes old snapshots fail to load (`invalid-data`). Decide between a migration per retune and
+  clamping the content-bounded fields on load.
+- Plan 3, when it touches snapshots: harden `validateWorld` so cargo must be addressed to an unbuilt landmark site that
+  still needs that good, and a shipment's destination must be a store, market or site.
+- Plan 3: the change-set diff re-serializes the terrain and road strings every tick; compare the strings directly.
+- Pacing report header: add the sim version and a content or git hash, as `pacing-harness.md` requires.
+
 **Plan 3, protocol and server** (spec 5, 12.3)
 - `packages/protocol`: Valibot schemas around the sim's commands, changes and events; the protocol version.
 - Accounts: argon2id, 90-day sliding sessions per device, registration with a world's invite code (account and claim

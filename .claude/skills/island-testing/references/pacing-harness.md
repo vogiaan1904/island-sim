@@ -87,7 +87,8 @@ The numbers above are made up to show the layout; they are not results or target
 - **Results move goldens.** Number changes that alter pacing also move golden hashes; update those deliberately
   (SKILL.md).
 - **Cost.** A full month is about a million ticks per island, far slower than a golden scenario. It is not part of
-  the every-change test run; whether CI runs it on a schedule is to be decided in slice 1.
+  the every-change test run; whether CI runs it on a schedule is still open and
+  is decided when CI is set up.
 - **Deterministic.** The same seed, bot and code give the same report, so a changed report always has a cause in the
   diff.
 
@@ -102,7 +103,8 @@ The numbers above are made up to show the layout; they are not results or target
   hours; keen, the first hour and then 10 minutes every 2 real hours.
 - Milestones (`pacing.ts`): first residents within 1,440 ticks; Settlement within 34,560 ticks, reported early
   under 8,640 (6 hours: the stage would feel too short). Early does not fail the run.
-- Result at the end of plan 2 (seeds 42 and 1 to 4, invariants on, same for every seed): first residents at tick
-  660 (28 min); Settlement at 10.0 h (casual) and 9.0 h (keen).
+- Result at the end of plan 2 (seeds 42 and 1 to 4, invariants on, the same to the hour on every seed; Settlement
+  comes at tick 14,465 on seed 42 and 14,468 on seeds 1, 2 and 4): first residents at tick 660 (28 min); Settlement
+  at 10.0 h (casual) and 9.0 h (keen).
 - To turn a pacing run into a golden scenario, record the accepted commands of `runPacing(...).log` into
   `packages/sim/test/scenarios.ts`, as "Outpost to Settlement" was.

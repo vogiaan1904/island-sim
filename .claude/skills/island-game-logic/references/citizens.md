@@ -1,6 +1,8 @@
 # Citizens, commuters, needs, migration, labor
 
-Spec 2.2, 4.3, 6.2 ("where crowds come from") and 12.1. All names are planned.
+Spec 2.2, 4.3, 6.2 ("where crowds come from") and 12.1. Counts, classes, needs, happiness, migration and the labor
+pass are built in `packages/sim` (slice 1 plans 1-2; `slice1-rules.md` has the rules as built). The client needs, the
+later classes and the later stages are still planned.
 
 Contents: counts, not people - residents and children - classes and homes - commuters and the ferry - needs and
 reach - happiness - migration - the labor pass - what the client needs - open points.

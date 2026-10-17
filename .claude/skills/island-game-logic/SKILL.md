@@ -19,7 +19,10 @@ description: Simulation rules and content data for Island Sim, the pure determin
 
 ## Where a change belongs
 
-| You are changing | Where it goes (planned) | Skill |
+Built (slice 1 plans 1-2): `packages/sim` and `packages/content`. Still planned: `apps/server`, `apps/client` and
+`packages/protocol` (plans 3-6).
+
+| You are changing | Where it goes | Skill |
 |---|---|---|
 | A rule, formula, check, pass, the order of passes, the world tick order | `packages/sim` | this one |
 | Command types (including claiming a slot and the check-in), snapshot migrations, the archipelago generator | `packages/sim` | this one |

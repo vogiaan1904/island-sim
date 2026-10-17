@@ -127,16 +127,17 @@ results never depend on the tick interval, so tests run ticks as fast as the mac
 Catch-up after downtime is capped at 24 real hours (34,560 ticks), and snapshots are taken every 5 real minutes,
 configurable for tests (spec 12.3).
 
-## Tooling (planned)
+## Tooling
 
 - **pnpm workspaces** (one install at the root; run a package's script with `pnpm --filter <package> <script>`),
   **TypeScript strict**, **Vitest** for unit and integration tests, **Playwright** for browser tests, **ESLint**.
-- Planned root scripts, names to be decided in slice 1: run all Vitest suites, typecheck, lint, Playwright, the
-  pacing harness, the asset checks. Until a script exists, do not claim to have run it; say what you ran instead.
+- Root scripts that exist: `pnpm test` (all Vitest projects), `pnpm test:watch`, `pnpm typecheck`, `pnpm lint`,
+  `pnpm check` (typecheck, lint and test) and `pnpm pacing` (the pacing harness). Still planned: Playwright and the
+  asset checks. Until a script exists, do not claim to have run it; say what you ran instead.
 - Typecheck and lint are part of "tests pass". A change that passes Vitest but fails strict `tsc` is not done.
-- Recommended: an ESLint rule in `packages/sim` that forbids `Math.random`, `Date`, `performance.now`, timers and
-  I/O imports, so determinism leaks fail before any test runs (rule list in `island-game-logic`; setup to be decided
-  in slice 1).
+- ESLint blocks `Math.random`, `Date`, timers, float `Math` functions, `async` and Node or server imports in
+  `packages/sim/src` and `packages/content/src`, so determinism leaks fail before any test runs (rule list in
+  `island-game-logic`).
 - Test file placement: next to the code as `*.test.ts`; shared helpers and whole-run tests in `packages/<name>/test/`.
 - **CI** once the repo has a remote (it has none yet): typecheck, lint, all Vitest suites including goldens, asset
   checks and Playwright. Whether the pacing harness runs in CI (it is slow) is to be decided; the real-phone

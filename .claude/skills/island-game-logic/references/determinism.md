@@ -1,6 +1,6 @@
 # Determinism in the sim
 
-Spec 4.1, 5.2, 9 and 12.2. Read this before writing any code in `packages/sim` (planned).
+Spec 4.1, 5.2, 9 and 12.2. Read this before writing any code in `packages/sim` (built, slice 1 plans 1-2).
 
 Contents: why it matters - the three inputs - the rules - state hash - versions and migrations - JavaScript traps -
 debugging a divergence - open points.
@@ -107,6 +107,12 @@ Spec 12.2:
   a test that loads a snapshot of the previous version (`island-testing`).
 - When a change alters results but not the shape (a new formula), golden hashes move; existing worlds simply continue
   under the new rules from their latest snapshot.
+- A content retune is not always shape-neutral, because `validateWorld` bounds saved state by content numbers. Raising
+  those bounds, or changing results only, lets existing worlds continue. Lowering a bound it checks, or adding a good,
+  makes old snapshots fail to load (`invalid-data`), so it needs a `SIM_VERSION` bump with a migration that clamps or
+  fills the affected fields: market prices (within each good's min and max) and the market's per-good lists,
+  `constructionLeft` (at most `buildTicks`), stock (at most storage, or the landmark's materials), workers (at most
+  jobs), work progress (at most the recipe cycle), residents (at most home capacity), commuters (at most ferry seats).
 
 ## JavaScript traps
 

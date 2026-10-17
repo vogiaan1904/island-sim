@@ -95,7 +95,9 @@ Claimed islands in slot order, each running these passes in this order, then the
 ## Running costs (`passes/upkeep.ts`, `passes/needs.ts`)
 
 - Upkeep every game hour per built building, higher priority first, then id; one the island cannot pay gets
-  `upkeepDue` ("waiting for money"), is not staffed and makes nothing, until a later hour's payment succeeds.
+  `upkeepDue` ("waiting for money") until a later hour's payment succeeds. Only producers stop: labor does not staff
+  a building with `upkeepDue` and production skips it. Services (market, well) and stores (dock, warehouse) keep
+  working, and still show the condition.
 - Rent every game hour: residents x `rentPerResidentHourCents` x happiness / 1000, one `rent` entry per island.
 
 ## Residents (`passes/needs.ts`, `passes/migration.ts`)
@@ -136,6 +138,10 @@ Claimed islands in slot order, each running these passes in this order, then the
 ## Known gaps
 
 - An island that spends every coin before it earns anything, with no residents, cannot pay commuters and so cannot
-  produce; only a reward still waiting to be collected gets it going again. The pacing bot never does this. A gentle way out (for
-  example the port master advancing a day's wages) is open for slice 2.
+  produce; only a reward still waiting to be collected gets it going again. The pacing bot never does this. A gentle
+  way out (for example the port master advancing a day's wages) is open: it must land within slice 1, before the
+  plan 5 client is playtested. Wages are paid before upkeep, so an island just short of money pays its commuters, who
+  then idle at workplaces that upkeep left unpaid.
+- The load policy for retuned content is decided in plan 3: a migration per retune, or clamping the content-bounded
+  fields on load (`validateWorld` rejects state that a lowered bound or a new good leaves out of range).
 - Placement checks do not include the landmark lock; the client checks `unlockedLandmarks` itself for the preview.

@@ -1,13 +1,14 @@
 # Content data, map, buildings, recipes, stages
 
-Spec 2.1, 3, 4.2, 6.1 (building card, placing), 12.1 and 12.4. All paths are planned. For the full flow of adding a
-building or good (brief, model, data, sim with tests first, 3D, UI, checks) use `island-content`; this file covers
-only the content and sim side.
+Spec 2.1, 3, 4.2, 6.1 (building card, placing), 12.1 and 12.4. `packages/content` and the slice 1 Outpost content are
+built (slice 1 plans 1-2); other stages and the client and server paths named here are still planned. For the full
+flow of adding a building or good (brief, model, data, sim with tests first, 3D, UI, checks) use `island-content`;
+this file covers only the content and sim side.
 
 Contents: the content package - the map - buildings - status - levels and upgrades - paying and construction -
 recipes - power - stages and landmarks - goals, wishes and rewards - slice 1 content - open points.
 
-## The content package (`packages/content`, planned)
+## The content package (`packages/content`, built for the Outpost stage)
 
 - **Data only, typed.** Goods, buildings, recipes, needs (per class), service reach, stages, landmarks, goals (per
   stage), event types with their importance (used to pick the news, spec 12.4) and key staff traits. Goods also carry
