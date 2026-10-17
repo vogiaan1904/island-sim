@@ -112,9 +112,10 @@ export type ResultMessage =
   | { type: 'result'; requestId: number; ok: true; data: Record<string, number> }
   | { type: 'result'; requestId: number; ok: false; reason: Reason; shortfallCents: number };
 
+/** A message that was not a command was refused; e.g. 'island-not-claimed' for opening an empty slot. */
 export interface ErrorMessage {
   type: 'error';
-  reason: ServerReason;
+  reason: Reason;
 }
 
 export type ServerMessage =

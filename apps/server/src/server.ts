@@ -9,6 +9,7 @@ import type { ServerConfig } from './config.ts';
 import { openDatabase } from './db.ts';
 import { createApi } from './http/api.ts';
 import { consoleLog, type Log } from './log.ts';
+import { Gateway } from './sync/gateway.ts';
 import { Worlds } from './worlds/registry.ts';
 import { WorldStore } from './worlds/store.ts';
 
@@ -25,6 +26,8 @@ export interface IslandServer {
   readonly config: ServerConfig;
   readonly accounts: Accounts;
   readonly worlds: Worlds;
+  /** The worlds' records, logs and snapshots. */
+  readonly store: WorldStore;
   /** Graceful shutdown: the worlds stop, each is snapshotted (spec 5.2), the listeners close, then the database. */
   close(): Promise<void>;
 }
@@ -39,13 +42,16 @@ export async function startServer(config: ServerConfig, options: StartOptions = 
   if (config.databasePath !== ':memory:') mkdirSync(dirname(config.databasePath), { recursive: true });
   const db = openDatabase(config.databasePath);
   const accounts = new Accounts(new AccountStore(db), clock);
-  const worlds = new Worlds({ store: new WorldStore(db), clock, config, log, username: (id) => accounts.username(id) });
+  const store = new WorldStore(db);
+  const worlds = new Worlds({ store, clock, config, log, username: (id) => accounts.username(id) });
   worlds.loadAll();
 
   const api = createApi({ config, clock, log, accounts, worlds });
   const http = createServer((req, res) => {
     void api(req, res);
   });
+  const gateway = new Gateway({ config, clock, log, worlds, store, accounts });
+  http.on('upgrade', (req, socket, head) => gateway.upgrade(req, socket, head));
   await listen(http, config.port, config.host);
   if (options.autoTick !== false) worlds.start();
   const url = `http://${config.host}:${(http.address() as AddressInfo).port}`;
@@ -53,6 +59,7 @@ export async function startServer(config: ServerConfig, options: StartOptions = 
 
   let closing: Promise<void> | null = null;
   const close = async () => {
+    gateway.close();
     worlds.stop();
     // A paused world is not snapshotted: its log and last good tick already rebuild it.
     for (const runtime of worlds.all()) {
@@ -68,6 +75,7 @@ export async function startServer(config: ServerConfig, options: StartOptions = 
     config,
     accounts,
     worlds,
+    store,
     close: () => (closing ??= close()),
   };
 }
