@@ -1,4 +1,4 @@
-import { randomInt, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto';
 
 // Server-side randomness: ids, seeds and codes. The sim's own randomness lives in its seeded stream (spec 4.1).
 
@@ -19,4 +19,14 @@ export function newCode(length: number): string {
   let code = '';
   for (let i = 0; i < length; i += 1) code += CODE_ALPHABET[randomInt(0, CODE_ALPHABET.length)];
   return code;
+}
+
+/** A session token: 256 random bits. Only its hash is stored. */
+export function newToken(): string {
+  return randomBytes(32).toString('base64url');
+}
+
+/** How tokens and codes are stored: a database copy holds no live session or usable code. */
+export function sha256(text: string): string {
+  return createHash('sha256').update(text).digest('hex');
 }
