@@ -44,7 +44,7 @@ describe('change sets', () => {
     });
   });
 
-  it('send removed entities by key, and copies that later ticks cannot change', () => {
+  it('send removed entities by key', () => {
     const world = village(1100);
     buildingOf(world, 2).stock = { vegetables: 5 };
     let capture = captureEntities(world);
@@ -57,6 +57,21 @@ describe('change sets', () => {
     tickWorld(world, SMALL);
     expect(diffEntities(capture, world).changes.removed).toEqual(['transit/0/5']);
     expect(sent?.value).toMatchObject({ amount: 5 });
+  });
+
+  it('hold copies: changing the world after a diff leaves the sent value alone', () => {
+    const world = village(1101);
+    buildingOf(world, 2).constructionLeft = 50;
+    const capture = captureEntities(world);
+    tickWorld(world, SMALL);
+    const sent = diffEntities(capture, world).changes.changed.find((c) => c.key === 'building/0/2');
+    const before = structuredClone(sent?.value);
+    expect(before).toMatchObject({ constructionLeft: expect.any(Number), priority: 1, stock: {} });
+    const farm = buildingOf(world, 2);
+    farm.priority = 3;
+    farm.stock = { vegetables: 9 };
+    farm.constructionLeft = 10;
+    expect(sent?.value).toEqual(before);
   });
 
   it('send nothing for a world with no claimed island between hours', () => {
