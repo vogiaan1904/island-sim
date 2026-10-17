@@ -54,4 +54,28 @@ export default defineConfig([
     ignores: ['**/*.test.ts'],
     rules: deterministicRules,
   },
+  {
+    // The protocol is shared by the server and the browser client: no Node-only or browser-only APIs (island-server).
+    files: ['packages/protocol/src/**/*.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        ...['process', 'Buffer', 'window', 'document', 'localStorage'].map((name) => ({
+          name,
+          message: 'The protocol runs on the server and in the browser.',
+        })),
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['node:*', 'fs', 'path', 'os', 'crypto', 'ws', 'better-sqlite3', '@island/server', '@island/client'],
+              message: 'The protocol runs on the server and in the browser.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);

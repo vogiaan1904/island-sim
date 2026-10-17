@@ -1,0 +1,14 @@
+{
+  "name": "@island/protocol",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@island/content": "workspace:*",
+    "@island/sim": "workspace:*",
+    "valibot": "^1.5.0"
+  }
+}
