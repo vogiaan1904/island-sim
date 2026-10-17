@@ -30,15 +30,15 @@ describe('checkInvariants', () => {
   it('catches goods that appear or vanish outside the ledger, wherever they are held', () => {
     const world = smallWorld();
     const island = islandOf(world, 0);
-    island.buildings.push(building('warehouse', 1, 2, 4));
-    world.nextId = 2;
+    island.buildings.push(building('warehouse', 1, 2, 4), building('island-hall', 2, 4, 4, { constructionLeft: 1_440 }));
+    world.nextId = 3;
     const before = structuredClone(world);
     island.buildings[0]!.stock = { wood: 5 };
     expect(checkInvariants(before, world, [], SMALL).map((v) => v.message)).toEqual(['wood changed outside the ledger']);
     const ledger = [{ kind: 'goods' as const, slot: 0, good: 'wood' as const, delta: 5, reason: 'produced' as const }];
     expect(checkInvariants(before, world, ledger, SMALL)).toEqual([]);
-    island.cargo.push({ good: 'fish', amount: 2, to: 1 });
-    expect(checkInvariants(before, world, ledger, SMALL).map((v) => v.message)).toEqual(['fish changed outside the ledger']);
+    island.cargo.push({ good: 'wood', amount: 2, to: 2 });
+    expect(checkInvariants(before, world, ledger, SMALL).map((v) => v.message)).toEqual(['wood changed outside the ledger']);
   });
 
   it('catches buildings that overlap, sit on a road or stand in the water', () => {

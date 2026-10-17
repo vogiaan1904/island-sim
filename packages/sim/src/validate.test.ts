@@ -1,6 +1,6 @@
 import { content } from '@island/content';
 import { describe, expect, it } from 'vitest';
-import { SMALL, islandOf, smallWorld } from '../test/fixtures.ts';
+import { SMALL, building, buildingOf, hallSite, islandOf, smallWorld } from '../test/fixtures.ts';
 import { applyCommand } from './commands/apply.ts';
 import type { BuildingState, WorldState } from './state.ts';
 import { validateWorld } from './validate.ts';
@@ -57,6 +57,9 @@ describe('validateWorld', () => {
       w.nextId += 1;
     }, /future arrival tick/],
     ['cargo for a building that does not exist', (w) => { islandOf(w, 0).cargo.push({ good: 'wood', amount: 5, to: 999 }); }, /cargo 0/],
+    ['cargo for a building that is not a landmark site', (w) => {
+      islandOf(w, 0).cargo.push({ good: 'wood', amount: 5, to: dockOf(w).id });
+    }, /cargo 0: .*landmark site/],
     ['a reward for a goal not reached', (w) => { islandOf(w, 0).rewards.push('first-farm'); }, /rewards must be/],
     ['an unknown landmark unlocked', (w) => { islandOf(w, 0).unlockedLandmarks.push('farm'); }, /unlockedLandmarks/],
     ['a port master without a name', (w) => { const pm = islandOf(w, 0).staff[0]; if (pm) pm.name = ''; }, /plain name/],
@@ -69,6 +72,48 @@ describe('validateWorld', () => {
       const world = claimedWorld();
       breakIt(world);
       expect(validateWorld(world, content).join('\n')).toMatch(message);
+    });
+  }
+});
+
+describe('validateWorld: goods on their way', () => {
+  /** The hall site (id 2) with bought wood in the ferry's hold and wood on the road from the dock (id 1). */
+  function siteWithWoodComing(): WorldState {
+    const world = hallSite(600);
+    const island = islandOf(world, 0);
+    island.cargo.push({ good: 'wood', amount: 100, to: 2 });
+    island.transit.push({ id: 3, good: 'wood', amount: 50, from: 1, to: 2, arriveTick: world.tick + 5 });
+    world.nextId = 4;
+    return world;
+  }
+
+  it('accepts materials bought and carried for a site, up to what it needs', () => {
+    expect(validateWorld(siteWithWoodComing(), SMALL)).toEqual([]);
+  });
+
+  const broken: Array<[string, (world: WorldState) => void, RegExp]> = [
+    ['cargo of a good the site does not need', (w) => { islandOf(w, 0).cargo.push({ good: 'fish', amount: 5, to: 2 }); }, /cargo 1/],
+    ['more wood held for the site than it needs', (w) => { buildingOf(w, 2).stock = { wood: 1 }; }, /more wood is held for building 2/],
+    ['cargo for a site that is already built', (w) => {
+      buildingOf(w, 2).constructionLeft = 0;
+      buildingOf(w, 2).conditions = [];
+    }, /cargo 0/],
+    ['a shipment to a building that takes no goods', (w) => {
+      islandOf(w, 0).buildings.push(building('cottage', 4, 5, 5));
+      islandOf(w, 0).transit.push({ id: 5, good: 'fish', amount: 1, from: 1, to: 4, arriveTick: w.tick + 1 });
+      w.nextId = 6;
+    }, /shipment 1/],
+    ['a shipment to a market of a good it does not sell', (w) => {
+      islandOf(w, 0).buildings.push(building('market', 4, 5, 5));
+      islandOf(w, 0).transit.push({ id: 5, good: 'wood', amount: 1, from: 1, to: 4, arriveTick: w.tick + 1 });
+      w.nextId = 6;
+    }, /shipment 1/],
+  ];
+  for (const [what, breakIt, message] of broken) {
+    it(`finds ${what}`, () => {
+      const world = siteWithWoodComing();
+      breakIt(world);
+      expect(validateWorld(world, SMALL).join('\n')).toMatch(message);
     });
   }
 });

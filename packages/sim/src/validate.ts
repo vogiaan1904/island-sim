@@ -125,13 +125,14 @@ function validateIsland(raw: unknown, slot: number, ctx: Ctx): void {
   }
 
   const buildings = raw.buildings;
-  const ids = new Set<number>();
+  const placed = new Map<number, Placed>();
   if (!Array.isArray(buildings)) problems.push(`${at}: buildings must be a list`);
-  else validateBuildings(buildings, at, ids, ctx);
+  else validateBuildings(buildings, at, placed, ctx);
 
   validateCommuters(raw.commuters, at, ctx);
-  validateCargo(raw.cargo, at, ids, ctx);
-  validateTransit(raw.transit, at, ids, ctx);
+  validateCargo(raw.cargo, at, placed, ctx);
+  validateTransit(raw.transit, at, placed, ctx);
+  validateSiteTotals(raw, at, placed, ctx);
   validateAutoSell(raw.autoSell, at, ctx);
   validateStaff(raw.staff, at, ctx);
   validateProgress(raw, at, ctx);
@@ -179,7 +180,14 @@ function takeId(id: unknown, lastId: number, where: string, ctx: Ctx): id is num
   return true;
 }
 
-function validateBuildings(buildings: unknown[], at: string, ids: Set<number>, ctx: Ctx): void {
+/** A building of one island whose type is known, as the goods checks need it. */
+interface Placed {
+  def: BuildingDef;
+  built: boolean;
+  stock: unknown;
+}
+
+function validateBuildings(buildings: unknown[], at: string, placed: Map<number, Placed>, ctx: Ctx): void {
   const { content, problems } = ctx;
   const size = content.rules.islandSize;
   let lastId = 0;
@@ -189,15 +197,14 @@ function validateBuildings(buildings: unknown[], at: string, ids: Set<number>, c
       problems.push(`${where}: not an object`);
       return;
     }
-    if (takeId(building.id, lastId, where, ctx)) {
-      lastId = building.id;
-      ids.add(building.id);
-    }
+    const id = building.id;
+    if (takeId(id, lastId, where, ctx)) lastId = id;
     const def = findBuildingDef(content, building.type);
     if (!def) {
       problems.push(`${where}: unknown building type`);
       return;
     }
+    if (isWhole(id)) placed.set(id, { def, built: building.constructionLeft === 0, stock: building.stock });
     if (!isRotation(building.rotation)) {
       problems.push(`${where}: rotation must be 0 to 3`);
       return;
@@ -299,24 +306,38 @@ function validateCommuters(raw: unknown, at: string, ctx: Ctx): void {
   }
 }
 
-function validateCargo(raw: unknown, at: string, buildingIds: Set<number>, ctx: Ctx): void {
+/** Where goods of a kind may be carried: a built store, a built service that sells them, or a site that needs them. */
+function takesGood(placed: Placed | undefined, good: unknown, content: Content): boolean {
+  if (!placed || typeof good !== 'string') return false;
+  const { def, built } = placed;
+  if (def.landmark) return !built && def.landmark.materials.some((m) => m.good === good);
+  if (!built) return false;
+  if (def.isStore) return true;
+  const need = def.serves ? content.needs.find((n) => n.id === def.serves?.need) : undefined;
+  return need !== undefined && need.goods.some((g) => g === good);
+}
+
+/** Cargo is bought for landmark sites only (spec 12.1). */
+function validateCargo(raw: unknown, at: string, placed: Map<number, Placed>, ctx: Ctx): void {
   if (!Array.isArray(raw)) {
     ctx.problems.push(`${at}: cargo must be a list`);
     return;
   }
   const goods = new Set<string>(ctx.content.goods.map((g) => g.id));
   raw.forEach((item: unknown, index: number) => {
+    const site = isRecord(item) ? placed.get(item.to as number) : undefined;
     const ok =
       isRecord(item) &&
       goods.has(item.good as string) &&
       isWhole(item.amount) &&
       item.amount > 0 &&
-      buildingIds.has(item.to as number);
-    if (!ok) ctx.problems.push(`${at} cargo ${index}: needs a known good, an amount and a building on the island`);
+      Boolean(site?.def.landmark) &&
+      takesGood(site, item.good, ctx.content);
+    if (!ok) ctx.problems.push(`${at} cargo ${index}: needs a known good, an amount and a landmark site that needs it`);
   });
 }
 
-function validateTransit(raw: unknown, at: string, buildingIds: Set<number>, ctx: Ctx): void {
+function validateTransit(raw: unknown, at: string, placed: Map<number, Placed>, ctx: Ctx): void {
   if (!Array.isArray(raw)) {
     ctx.problems.push(`${at}: transit must be a list`);
     return;
@@ -334,12 +355,36 @@ function validateTransit(raw: unknown, at: string, buildingIds: Set<number>, ctx
       goods.has(item.good as string) &&
       isWhole(item.amount) &&
       item.amount > 0 &&
-      buildingIds.has(item.from as number) &&
-      buildingIds.has(item.to as number) &&
+      placed.has(item.from as number) &&
+      takesGood(placed.get(item.to as number), item.good, ctx.content) &&
       isWhole(item.arriveTick) &&
       item.arriveTick > ctx.tick;
-    if (!ok) ctx.problems.push(`${where}: needs a known good, an amount, two buildings and a future arrival tick`);
+    if (!ok) {
+      ctx.problems.push(`${where}: needs a known good, an amount, a building that takes it and a future arrival tick`);
+    }
   });
+}
+
+/** A landmark site never has more of a material on site, on the roads and in the ferry's hold than it needs. */
+function validateSiteTotals(raw: Record<string, unknown>, at: string, placed: Map<number, Placed>, ctx: Ctx): void {
+  const onTheWay = new Map<string, number>();
+  for (const list of [raw.cargo, raw.transit]) {
+    if (!Array.isArray(list)) continue;
+    for (const item of list as unknown[]) {
+      if (!isRecord(item) || !isCount(item.amount) || !isWhole(item.to)) continue;
+      const key = `${item.to}/${String(item.good)}`;
+      onTheWay.set(key, (onTheWay.get(key) ?? 0) + item.amount);
+    }
+  }
+  for (const [id, { def, built, stock }] of placed) {
+    if (!def.landmark || built) continue;
+    for (const { good, amount } of def.landmark.materials) {
+      const held = isRecord(stock) && isCount(stock[good]) ? stock[good] : 0;
+      if (held + (onTheWay.get(`${id}/${good}`) ?? 0) > amount) {
+        ctx.problems.push(`${at}: more ${good} is held for building ${id} than the landmark needs`);
+      }
+    }
+  }
 }
 
 function validateAutoSell(raw: unknown, at: string, ctx: Ctx): void {
