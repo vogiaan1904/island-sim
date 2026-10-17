@@ -39,3 +39,5 @@ export type { RoadsFrom } from './roads.ts';
 export { accessTiles, roadsFrom } from './roads.ts';
 export { childrenOf, residentsOf, workersOf } from './people.ts';
 export { buyPriceCents, mainlandPaysEnough, storedForSale } from './mainland.ts';
+export type { EntityCapture, EntityChange, WorldChanges } from './changes.ts';
+export { applyChanges, captureEntities, diffEntities, worldEntities } from './changes.ts';
