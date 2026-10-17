@@ -9,9 +9,10 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p packages/content && tsc -p packages/sim",
+    "typecheck": "tsc -p packages/content && tsc -p packages/sim && tsc -p tools/pacing",
     "lint": "eslint .",
-    "check": "pnpm typecheck && pnpm lint && pnpm test"
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "pacing": "node --disable-warning=ExperimentalWarning tools/pacing/src/run.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

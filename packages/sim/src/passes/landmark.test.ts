@@ -39,7 +39,7 @@ describe('building a landmark', () => {
   it('waits for its materials, missing input, and loses nothing while it waits', () => {
     const world = hallSite(1100);
     for (let i = 0; i < 30; i += 1) tickChecked(world);
-    expect(hall(world).constructionLeft).toBe(720);
+    expect(hall(world).constructionLeft).toBe(1_440);
     expect(hall(world).conditions).toEqual(['under-construction', 'missing-input']);
   });
 
@@ -53,11 +53,11 @@ describe('building a landmark', () => {
 
   it('builds in its materials when finished and starts the next stage with a celebration', () => {
     const world = hallSite(1100, { delivered: true });
-    for (let i = 0; i < 719; i += 1) tickChecked(world);
+    for (let i = 0; i < 1_439; i += 1) tickChecked(world);
     expect(islandOf(world, 0).stage).toBe('outpost');
     const { ledger, events } = tickChecked(world);
     expect(hall(world).stock).toEqual({});
-    expect(ledger).toContainEqual({ kind: 'goods', slot: 0, good: 'wood', delta: -100, reason: 'used-in-construction' });
+    expect(ledger).toContainEqual({ kind: 'goods', slot: 0, good: 'wood', delta: -150, reason: 'used-in-construction' });
     expect(events.map((e) => e.type)).toEqual(['construction-finished', 'stage-reached']);
     expect(events[1]?.data).toEqual({ stage: 'settlement', buildingId: 2 });
     expect(islandOf(world, 0).stage).toBe('settlement');
@@ -69,7 +69,7 @@ describe('buy-materials', () => {
 
   it('pays up front for every missing material, which waits for the next ferry', () => {
     const world = hallSite(600);
-    hall(world).stock = { wood: 40 };
+    hall(world).stock = { wood: 90 };
     expect(apply(world, buy)).toEqual({
       ok: true,
       ledger: [
@@ -86,14 +86,14 @@ describe('buy-materials', () => {
 
   it('lands on the next ferry and is carried from the dock to the site', () => {
     const world = hallSite(1019);
-    hall(world).stock = { wood: 40 };
+    hall(world).stock = { wood: 90 };
     expect(apply(world, buy).ok).toBe(true);
     tickChecked(world);
     const { events } = tickChecked(world);
     expect(events).toContainEqual(expect.objectContaining({ type: 'cargo-arrived', data: { units: 60 } }));
     expect(islandOf(world, 0).cargo).toEqual([]);
     for (let i = 0; i < 3; i += 1) tickChecked(world);
-    expect(hall(world).stock).toEqual({ wood: 100 });
+    expect(hall(world).stock).toEqual({ wood: 150 });
   });
 
   it('fills the cargo hold first; the rest waits for the next trip', () => {
@@ -101,13 +101,13 @@ describe('buy-materials', () => {
     expect(apply(world, buy).ok).toBe(true);
     tickChecked(world);
     tickChecked(world);
-    expect(islandOf(world, 0).cargo).toEqual([{ good: 'wood', amount: 40, to: 2 }]);
+    expect(islandOf(world, 0).cargo).toEqual([{ good: 'wood', amount: 90, to: 2 }]);
   });
 
   it('is refused without the full price, with the shortfall, and changes nothing', () => {
     const world = hallSite(600, { coinsCents: 1_000 });
     const before = stateHash(world);
-    expect(apply(world, buy)).toEqual({ ok: false, reason: 'not-enough-coins', shortfallCents: 89_000 });
+    expect(apply(world, buy)).toEqual({ ok: false, reason: 'not-enough-coins', shortfallCents: 134_000 });
     expect(stateHash(world)).toBe(before);
   });
 

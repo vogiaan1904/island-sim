@@ -43,7 +43,7 @@ describe('auto-sell', () => {
   it('keeps the materials a landmark site still waits for (a safety rule)', () => {
     const world = harbor();
     // Where the site stands does not matter to auto-sell, only what it still waits for.
-    islandOf(world, 0).buildings.push(building('island-hall', 6, 1, 5, { constructionLeft: 720 }));
+    islandOf(world, 0).buildings.push(building('island-hall', 6, 1, 5, { constructionLeft: 1_440 }));
     world.nextId = 7;
     buildingOf(world, 4).stock = { wood: 30 };
     islandOf(world, 0).autoSell = { wood: 0 };

@@ -35,6 +35,15 @@ importers:
         specifier: workspace:*
         version: link:../content
 
+  tools/pacing:
+    dependencies:
+      '@island/content':
+        specifier: workspace:*
+        version: link:../../packages/content
+      '@island/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
+
 packages:
 
   '@cacheable/memory@2.2.0':

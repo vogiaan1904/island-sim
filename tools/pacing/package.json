@@ -1,0 +1,10 @@
+{
+  "name": "@island/pacing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@island/content": "workspace:*",
+    "@island/sim": "workspace:*"
+  }
+}

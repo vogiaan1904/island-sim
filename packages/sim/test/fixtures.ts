@@ -113,8 +113,8 @@ export const HALL_MAP: readonly string[] = [
 export function hallSite(minute: number, options: { delivered?: boolean; coinsCents?: number } = {}): WorldState {
   const world = nextTickAt(smallWorld(HALL_MAP, options.coinsCents), minute);
   const island = islandOf(world, 0);
-  const hall = building('island-hall', 2, 2, 4, { constructionLeft: 720 });
-  if (options.delivered) hall.stock = { wood: 100 };
+  const hall = building('island-hall', 2, 2, 4, { constructionLeft: 1_440 });
+  if (options.delivered) hall.stock = { wood: 150 };
   island.buildings.push(building('dock', 1, 5, 1), hall);
   island.unlockedLandmarks = ['island-hall'];
   world.nextId = 3;

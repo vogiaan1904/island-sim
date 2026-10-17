@@ -126,9 +126,9 @@ export const content: Content = {
       id: 'island-hall',
       footprint: { w: 3, h: 3 },
       placement: 'land',
-      priceCents: 150_000,
-      buildTicks: 720,
-      landmark: { unlockResidents: 10, materials: [{ good: 'wood', amount: 100 }], startsStage: 'settlement' },
+      priceCents: 250_000,
+      buildTicks: 1_440,
+      landmark: { unlockResidents: 10, materials: [{ good: 'wood', amount: 150 }], startsStage: 'settlement' },
     },
   ],
   goals: [
