@@ -26,6 +26,6 @@ describe('golden scenario: first buildings', () => {
     ]);
     expect(palmCove.buildings.every((b) => b.constructionLeft === 0)).toBe(true);
     expect(islandOf(world, 1).owner).toBe('bob');
-    expect(stateHash(world)).toBe('144028f930f136');
+    expect(stateHash(world)).toBe('1f2f9598bceb3e');
   });
 });

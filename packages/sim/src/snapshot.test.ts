@@ -1,9 +1,13 @@
 import { content } from '@island/content';
 import { describe, expect, it } from 'vitest';
+import { SMALL, smallWorld } from '../test/fixtures.ts';
+import { newBuilding } from './buildings.ts';
 import { applyCommand } from './commands/apply.ts';
 import { stateHash } from './hash.ts';
+import { buildingDefOf } from './lookup.ts';
 import { SnapshotError, loadWorld, serializeWorld, type SnapshotErrorCode } from './snapshot.ts';
-import { createWorld } from './world.ts';
+import { SIM_VERSION } from './version.ts';
+import { createWorld, emptyIsland, newMarket } from './world.ts';
 
 function codeOf(load: () => unknown): SnapshotErrorCode | 'no-error' {
   try {
@@ -30,7 +34,7 @@ describe('snapshots', () => {
   });
 
   it('refuse a snapshot from a newer sim version', () => {
-    const json = serializeWorld({ ...claimedWorld(), simVersion: 2 });
+    const json = serializeWorld({ ...claimedWorld(), simVersion: SIM_VERSION + 1 });
     expect(codeOf(() => loadWorld(json, content))).toBe('newer-sim-version');
   });
 
@@ -46,7 +50,7 @@ describe('snapshots', () => {
   });
 
   it('refuse snapshots whose shape is broken', () => {
-    expect(codeOf(() => loadWorld('{"simVersion":1}', content))).toBe('invalid-data');
+    expect(codeOf(() => loadWorld(`{"simVersion":${SIM_VERSION}}`, content))).toBe('invalid-data');
     const json = serializeWorld(claimedWorld());
     expect(codeOf(() => loadWorld(json.replace('"type":"dock"', '"type":"castle"'), content))).toBe('invalid-data');
     expect(codeOf(() => loadWorld(json.replace('"roads":"0', '"roads":"'), content))).toBe('invalid-data');
@@ -57,18 +61,90 @@ describe('snapshots', () => {
     const failing = () => {
       throw new Error('boom');
     };
-    expect(codeOf(() => loadWorld(json, content, { 1: failing }, 2))).toBe('migration-failed');
+    expect(codeOf(() => loadWorld(json, content, { [SIM_VERSION]: failing }, SIM_VERSION + 1))).toBe('migration-failed');
   });
 
   it('migrate older snapshots one version at a time', () => {
     const json = serializeWorld(claimedWorld());
-    const migrated = loadWorld(json, content, { 1: (data) => ({ ...data, harbor: 7 }) }, 2) as unknown as Record<string, unknown>;
-    expect(migrated.simVersion).toBe(2);
+    const migrations = { [SIM_VERSION]: (data: Record<string, unknown>) => ({ ...data, harbor: 7 }) };
+    const migrated = loadWorld(json, content, migrations, SIM_VERSION + 1) as unknown as Record<string, unknown>;
+    expect(migrated.simVersion).toBe(SIM_VERSION + 1);
     expect(migrated.harbor).toBe(7);
   });
 
   it('stop when a migration is missing', () => {
     const json = serializeWorld(claimedWorld());
-    expect(codeOf(() => loadWorld(json, content, {}, 2))).toBe('missing-migration');
+    expect(codeOf(() => loadWorld(json, content, {}, SIM_VERSION + 1))).toBe('missing-migration');
+  });
+});
+
+describe('migration from sim version 1', () => {
+  it('adds the market, people, goods, staff and goals with their starting values', () => {
+    const painted = smallWorld();
+    const [alice, empty] = painted.islands;
+    if (!alice || !empty) throw new Error('two slots expected');
+    const v1 = {
+      simVersion: 1,
+      seed: 1,
+      tick: 30,
+      rng: 12345,
+      nextId: 3,
+      islands: [
+        {
+          slot: 0,
+          position: alice.position,
+          terrain: alice.terrain,
+          roads: alice.roads,
+          owner: 'alice',
+          name: 'Test Isle',
+          stage: 'outpost',
+          coinsCents: 480_000,
+          buildings: [
+            { id: 1, type: 'dock', x: 1, y: 5, rotation: 0, constructionLeft: 0 },
+            { id: 2, type: 'cottage', x: 2, y: 2, rotation: 0, constructionLeft: 90 },
+          ],
+          lastCheckInTick: 0,
+        },
+        {
+          slot: 1,
+          position: empty.position,
+          terrain: empty.terrain,
+          roads: empty.roads,
+          owner: null,
+          name: null,
+          stage: 'outpost',
+          coinsCents: 0,
+          buildings: [],
+          lastCheckInTick: null,
+        },
+      ],
+    };
+    const world = loadWorld(JSON.stringify(v1), SMALL);
+    const cottage = { ...newBuilding(buildingDefOf(SMALL, 'cottage'), 2, 2, 2, 0), constructionLeft: 90 };
+    expect(world).toEqual({
+      simVersion: SIM_VERSION,
+      seed: 1,
+      tick: 30,
+      rng: 12345,
+      nextId: 4,
+      market: newMarket(SMALL),
+      islands: [
+        {
+          ...emptyIsland(0, alice.position, alice.terrain, 8),
+          roads: alice.roads,
+          owner: 'alice',
+          name: 'Test Isle',
+          coinsCents: 480_000,
+          lastCheckInTick: 0,
+          buildings: [newBuilding(buildingDefOf(SMALL, 'dock'), 1, 1, 5, 0), cottage],
+          staff: [{ id: 3, role: 'port-master', name: 'Lena', look: 3 }],
+        },
+        emptyIsland(1, empty.position, empty.terrain, 8),
+      ],
+    });
+  });
+
+  it('reports version 1 data it cannot read as migration-failed', () => {
+    expect(codeOf(() => loadWorld('{"simVersion":1}', content))).toBe('migration-failed');
   });
 });

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { BEACH, GRASS, NEIGHBORS4, WATER, inBounds, tileIndex } from './grid.ts';
 import { stateHash } from './hash.ts';
 import type { IslandState } from './state.ts';
+import { SIM_VERSION } from './version.ts';
 import { createWorld } from './world.ts';
 
 const size = content.rules.islandSize;
@@ -33,7 +34,7 @@ function connectedLandCount(island: IslandState): number {
 
 describe('createWorld', () => {
   it('is deterministic for a seed', () => {
-    expect(stateHash(createWorld(42, content))).toBe('0e471c41391880');
+    expect(stateHash(createWorld(42, content))).toBe('19374e5e948106');
     expect(stateHash(createWorld(42, content))).toBe(stateHash(createWorld(42, content)));
   });
 
@@ -43,7 +44,7 @@ describe('createWorld', () => {
 
   it('starts with every slot empty', () => {
     const world = createWorld(42, content);
-    expect(world).toMatchObject({ simVersion: 1, seed: 42, tick: 0, nextId: 1 });
+    expect(world).toMatchObject({ simVersion: SIM_VERSION, seed: 42, tick: 0, nextId: 1 });
     expect(world.islands).toHaveLength(10);
     world.islands.forEach((island, index) => {
       expect(island).toMatchObject({
@@ -54,8 +55,24 @@ describe('createWorld', () => {
         coinsCents: 0,
         buildings: [],
         lastCheckInTick: null,
+        commuters: { hired: 0, present: 0 },
+        cargo: [],
+        transit: [],
+        autoSell: {},
+        staff: [],
+        unlockedLandmarks: [],
+        completedGoals: [],
+        rewards: [],
       });
       expect(island.roads).toBe('0'.repeat(size * size));
+    });
+  });
+
+  it('opens the Mainland market at base prices with nothing traded', () => {
+    expect(createWorld(42, content).market).toEqual({
+      prices: { wood: 600, fish: 500, vegetables: 400 },
+      sold: { wood: 0, fish: 0, vegetables: 0 },
+      bought: { wood: 0, fish: 0, vegetables: 0 },
     });
   });
 

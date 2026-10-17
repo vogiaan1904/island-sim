@@ -1,3 +1,4 @@
+import { newBuilding } from '../buildings.ts';
 import { emit } from '../events.ts';
 import { pay } from '../ledger.ts';
 import { findBuildingDef, stageOrder } from '../lookup.ts';
@@ -34,7 +35,7 @@ export function placeBuilding(ctx: CommandContext, command: PlaceBuildingCommand
   pay(island, def.priceCents, 'building-purchase', ctx.ledger);
   const id = world.nextId;
   world.nextId += 1;
-  island.buildings.push({ id, type: def.id, x, y, rotation, constructionLeft: def.buildTicks });
+  island.buildings.push(newBuilding(def, id, x, y, rotation));
   emit(ctx.sink, 'construction-started', island.slot, { buildingId: id, building: def.id });
   return accept(ctx, { buildingId: id });
 }

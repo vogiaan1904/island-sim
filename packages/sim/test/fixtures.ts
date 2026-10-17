@@ -1,5 +1,7 @@
-import { content, type Content } from '@island/content';
-import type { IslandState, WorldState } from '../src/state.ts';
+import { content, type BuildingId, type Content } from '@island/content';
+import { newBuilding } from '../src/buildings.ts';
+import { buildingDefOf } from '../src/lookup.ts';
+import type { BuildingState, IslandState, Rotation, WorldState } from '../src/state.ts';
 import { createWorld } from '../src/world.ts';
 
 /** Content for hand-painted test maps: 8 x 8 islands, 2 slots. */
@@ -39,4 +41,17 @@ export function smallWorld(rows: readonly string[] = DEFAULT_MAP, coinsCents = 5
   island.coinsCents = coinsCents;
   island.lastCheckInTick = 0;
   return world;
+}
+
+/** A building as the sim stores it, already built unless constructionLeft says otherwise. */
+export function building(
+  type: BuildingId,
+  id: number,
+  x: number,
+  y: number,
+  options: { rotation?: Rotation; constructionLeft?: number } = {},
+): BuildingState {
+  const made = newBuilding(buildingDefOf(content, type), id, x, y, options.rotation ?? 0);
+  const left = options.constructionLeft ?? 0;
+  return { ...made, constructionLeft: left, conditions: left > 0 ? ['under-construction'] : [] };
 }

@@ -1,6 +1,6 @@
 import { content } from '@island/content';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MAP, SMALL, islandOf, paint, smallWorld } from '../test/fixtures.ts';
+import { DEFAULT_MAP, SMALL, building, islandOf, paint, smallWorld } from '../test/fixtures.ts';
 import { applyCommand } from './commands/apply.ts';
 import type { Command } from './commands/types.ts';
 import type { WorldState } from './state.ts';
@@ -51,7 +51,7 @@ describe('tickWorld', () => {
   it('does not simulate empty slots', () => {
     const world = smallWorld();
     const empty = islandOf(world, 1);
-    empty.buildings.push({ id: 9, type: 'cottage', x: 2, y: 2, rotation: 0, constructionLeft: 5 });
+    empty.buildings.push(building('cottage', 9, 2, 2, { constructionLeft: 5 }));
     tickWorld(world, SMALL);
     expect(empty.buildings[0]?.constructionLeft).toBe(5);
   });

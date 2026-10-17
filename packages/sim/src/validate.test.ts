@@ -45,6 +45,24 @@ describe('validateWorld', () => {
       if (bobDock) bobDock.id = dockOf(w).id;
     }, /used twice/],
     ['an invalid island name', (w) => { islandOf(w, 0).name = 'x'; }, /invalid island name/],
+    ['a dock holding more than its storage', (w) => { dockOf(w).stock = { wood: 31 }; }, /more than its storage/],
+    ['an unknown good in stock', (w) => { dockOf(w).stock = { gold: 1 } as never; }, /unknown good gold/],
+    ['a zero amount in stock', (w) => { dockOf(w).stock = { fish: 0 }; }, /fish must be a whole amount/],
+    ['work on a building without jobs', (w) => { dockOf(w).work = { residents: 0, commuters: 0, ratePermille: 0, progress: 0 }; }, /only workplaces/],
+    ['conditions out of order', (w) => { dockOf(w).conditions = ['output-full', 'no-workers']; }, /shown order/],
+    ['priority 3', (w) => { dockOf(w).priority = 3; }, /priority must be/],
+    ['more commuters than seats', (w) => { islandOf(w, 0).commuters.hired = 13; }, /commuters must be/],
+    ['a shipment that arrived in the past', (w) => {
+      islandOf(w, 0).transit.push({ id: w.nextId, good: 'fish', amount: 1, from: dockOf(w).id, to: dockOf(w).id, arriveTick: 0 });
+      w.nextId += 1;
+    }, /future arrival tick/],
+    ['cargo for a building that does not exist', (w) => { islandOf(w, 0).cargo.push({ good: 'wood', amount: 5, to: 999 }); }, /cargo 0/],
+    ['a reward for a goal not reached', (w) => { islandOf(w, 0).rewards.push('first-farm'); }, /rewards must be/],
+    ['an unknown landmark unlocked', (w) => { islandOf(w, 0).unlockedLandmarks.push('farm'); }, /unlockedLandmarks/],
+    ['a port master without a name', (w) => { const pm = islandOf(w, 0).staff[0]; if (pm) pm.name = ''; }, /plain name/],
+    ['an unclaimed island with staff', (w) => { islandOf(w, 1).staff.push({ id: w.nextId, role: 'port-master', name: 'Lena', look: 3 }); w.nextId += 1; }, /unclaimed island/],
+    ['a market price below its minimum', (w) => { w.market.prices.fish = 1; }, /market prices for fish/],
+    ['a market without every good', (w) => { delete (w.market.sold as Partial<Record<string, number>>).wood; }, /market sold must list every good/],
   ];
   for (const [what, breakIt, message] of broken) {
     it(`finds ${what}`, () => {

@@ -1,7 +1,10 @@
 import type { WorldRules } from '@island/content';
+import { newBuilding } from '../buildings.ts';
 import { emit } from '../events.ts';
 import { credit } from '../ledger.ts';
+import { buildingDefOf } from '../lookup.ts';
 import { findDockSpot } from '../placement.ts';
+import { draw } from '../rng.ts';
 import { accept, reject, type CommandContext } from './context.ts';
 import type { ClaimIslandCommand, CommandResult } from './types.ts';
 
@@ -20,7 +23,10 @@ export function isValidIslandName(name: unknown, rules: WorldRules): name is str
   );
 }
 
-/** Claims the lowest free slot for an account, names the island, pays the starting coins and places the dock. */
+/**
+ * Claims the lowest free slot for an account, names the island, pays the starting coins, places the dock and brings
+ * the port master, picked from the candidates with the world's random stream.
+ */
 export function claimIsland(ctx: CommandContext, command: ClaimIslandCommand): CommandResult {
   const { world, content } = ctx;
   const owner: unknown = command.owner;
@@ -37,7 +43,11 @@ export function claimIsland(ctx: CommandContext, command: ClaimIslandCommand): C
   island.name = name;
   island.lastCheckInTick = world.tick;
   credit(island, content.rules.startingCoinsCents, 'starting-coins', ctx.ledger);
-  island.buildings.push({ id: world.nextId, type: 'dock', x: dock.x, y: dock.y, rotation: 0, constructionLeft: 0 });
+  island.buildings.push(newBuilding(buildingDefOf(content, 'dock'), world.nextId, dock.x, dock.y, 0));
+  world.nextId += 1;
+  const candidate = content.portMasterCandidates[draw(world, content.portMasterCandidates.length)];
+  if (!candidate) throw new Error('claimIsland: content has no port master candidates');
+  island.staff.push({ id: world.nextId, role: 'port-master', name: candidate.name, look: candidate.look });
   world.nextId += 1;
   emit(ctx.sink, 'island-claimed', island.slot, { slot: island.slot });
   return accept(ctx, { slot: island.slot });

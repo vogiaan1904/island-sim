@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SMALL, islandOf, smallWorld } from '../test/fixtures.ts';
+import { SMALL, building, islandOf, smallWorld } from '../test/fixtures.ts';
 import { applyCommand } from './commands/apply.ts';
 import type { Command } from './commands/types.ts';
 import { checkInvariants } from './invariants.ts';
@@ -30,10 +30,10 @@ describe('checkInvariants', () => {
   it('catches buildings that overlap, sit on a road or stand in the water', () => {
     const world = smallWorld();
     islandOf(world, 0).buildings.push(
-      { id: 1, type: 'cottage', x: 2, y: 2, rotation: 0, constructionLeft: 0 },
-      { id: 2, type: 'cottage', x: 2, y: 2, rotation: 0, constructionLeft: 0 },
-      { id: 3, type: 'cottage', x: 3, y: 3, rotation: 0, constructionLeft: 0 },
-      { id: 4, type: 'cottage', x: 0, y: 0, rotation: 0, constructionLeft: 0 },
+      building('cottage', 1, 2, 2),
+      building('cottage', 2, 2, 2),
+      building('cottage', 3, 3, 3),
+      building('cottage', 4, 0, 0),
     );
     world.nextId = 5;
     expect(checkInvariants(structuredClone(world), world, [], SMALL).map((v) => v.message)).toEqual([
@@ -47,7 +47,7 @@ describe('checkInvariants', () => {
     const world = smallWorld();
     const before = structuredClone(world);
     islandOf(world, 0).roads = `1${islandOf(world, 0).roads.slice(1)}`;
-    islandOf(world, 0).buildings.push({ id: 1, type: 'castle' as 'cottage', x: 2, y: 2, rotation: 0, constructionLeft: 0 });
+    islandOf(world, 0).buildings.push({ ...building('cottage', 1, 2, 2), type: 'castle' as 'cottage' });
     world.nextId = 2;
     const messages = checkInvariants(before, world, [], SMALL).map((v) => v.message).join('\n');
     expect(messages).toMatch(/road on water/);

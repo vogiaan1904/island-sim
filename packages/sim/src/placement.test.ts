@@ -1,6 +1,6 @@
 import { content } from '@island/content';
 import { describe, expect, it } from 'vitest';
-import { SMALL, islandOf, smallWorld } from '../test/fixtures.ts';
+import { SMALL, building, islandOf, smallWorld } from '../test/fixtures.ts';
 import { buildingDefOf } from './lookup.ts';
 import { checkPlacement, findDockSpot, footprintSize, occupancyGrid } from './placement.ts';
 import type { IslandState, Rotation } from './state.ts';
@@ -65,7 +65,7 @@ describe('checkPlacement', () => {
 
   it('refuses tiles taken by another building', () => {
     const i = island();
-    i.buildings.push({ id: 7, type: 'farm', x: 2, y: 4, rotation: 0, constructionLeft: 0 });
+    i.buildings.push(building('farm', 7, 2, 4));
     expect(occupancyGrid(i, SMALL)[4 * 8 + 3]).toBe(7);
     expect(failed(i, 'cottage', 4, 5)).toEqual(['free', 'road-access']);
   });

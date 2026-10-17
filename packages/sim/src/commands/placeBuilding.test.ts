@@ -24,7 +24,22 @@ describe('place-building', () => {
     });
     const island = islandOf(world, 0);
     expect(island.coinsCents).toBe(480_000);
-    expect(island.buildings).toEqual([{ id: 1, type: 'cottage', x: 2, y: 2, rotation: 0, constructionLeft: 120 }]);
+    expect(island.buildings).toEqual([
+      {
+        id: 1,
+        type: 'cottage',
+        x: 2,
+        y: 2,
+        rotation: 0,
+        constructionLeft: 120,
+        priority: 1,
+        stock: {},
+        conditions: ['under-construction'],
+        upkeepDue: false,
+        work: null,
+        home: { residents: 0, happiness: 1000, unmetNeeds: [] },
+      },
+    ]);
     expect(world.nextId).toBe(2);
   });
 

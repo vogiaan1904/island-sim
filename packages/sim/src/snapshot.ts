@@ -1,5 +1,6 @@
 import type { Content } from '@island/content';
 import { canonicalJson } from './hash.ts';
+import { migrateV1 } from './migrations.ts';
 import type { WorldState } from './state.ts';
 import { validateWorld } from './validate.ts';
 import { SIM_VERSION } from './version.ts';
@@ -25,10 +26,10 @@ export class SnapshotError extends Error {
 }
 
 /** Upgrades snapshot data from one version to the next. Pure and deterministic like the rest of the sim. */
-export type Migration = (data: Record<string, unknown>) => Record<string, unknown>;
+export type Migration = (data: Record<string, unknown>, content: Content) => Record<string, unknown>;
 
-/** Key: the version a migration upgrades from. Empty until the state shape first changes. */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = {};
+/** Key: the version a migration upgrades from. */
+export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: migrateV1 };
 
 export function serializeWorld(world: WorldState): string {
   return canonicalJson(world);
@@ -62,7 +63,7 @@ export function loadWorld(
     if (!migrate) throw new SnapshotError('missing-migration', `no migration from sim version ${version}`);
     let migrated: Record<string, unknown>;
     try {
-      migrated = migrate(current);
+      migrated = migrate(current, content);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       throw new SnapshotError('migration-failed', `migration from sim version ${version} failed: ${reason}`);

@@ -11,7 +11,7 @@ const claim = (world: WorldState, owner: string, name: string, sequence = 1) =>
   applyCommand(world, content, { type: 'claim-island', owner, name }, { sequence });
 
 describe('claim-island', () => {
-  it('claims the lowest free slot, pays the starting coins and places the dock', () => {
+  it('claims the lowest free slot, pays the starting coins, places the dock and brings the port master', () => {
     const world = createWorld(7, content);
     const dockSpot = findDockSpot(islandOf(world, 0), content);
     const result = claim(world, 'alice', 'Palm Cove');
@@ -26,9 +26,10 @@ describe('claim-island', () => {
       name: 'Palm Cove',
       coinsCents: 500_000,
       lastCheckInTick: 0,
-      buildings: [{ id: 1, type: 'dock', ...dockSpot, rotation: 0, constructionLeft: 0 }],
+      buildings: [{ id: 1, type: 'dock', ...dockSpot, rotation: 0, constructionLeft: 0, conditions: [], stock: {} }],
+      staff: [{ id: 2, role: 'port-master', name: 'Kofi', look: 11 }],
     });
-    expect(world.nextId).toBe(2);
+    expect(world.nextId).toBe(3);
   });
 
   it('gives the next account the next slot and refuses a second island for the same account', () => {
