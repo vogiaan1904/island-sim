@@ -33,3 +33,6 @@ export { checkInvariants } from './invariants.ts';
 export type { Migration, SnapshotErrorCode } from './snapshot.ts';
 export { MIGRATIONS, SnapshotError, loadWorld, serializeWorld } from './snapshot.ts';
 export { validateWorld } from './validate.ts';
+export { MINUTES_PER_HOUR, dayOf, isDayShift, minuteOfDay } from './clock.ts';
+export type { RoadsFrom } from './roads.ts';
+export { accessTiles, roadsFrom } from './roads.ts';
