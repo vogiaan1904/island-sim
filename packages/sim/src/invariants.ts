@@ -1,9 +1,10 @@
 import type { Content } from '@island/content';
 import { inBounds, isLand, isRoad, tileIndex } from './grid.ts';
 import type { LedgerEntry } from './ledger.ts';
-import { buildingDefOf } from './lookup.ts';
+import { findBuildingDef } from './lookup.ts';
 import { footprintSize, footprintTiles } from './placement.ts';
 import type { WorldState } from './state.ts';
+import { validateWorld } from './validate.ts';
 
 export interface InvariantViolation {
   /** -1 for world-level problems. */
@@ -12,8 +13,9 @@ export interface InvariantViolation {
 }
 
 /**
- * What must hold after any tick or command (spec 12.2): money never below zero and changed only through the ledger,
- * buildings sorted by unique ids below nextId, every footprint inside the map, on land, off roads and not overlapping.
+ * What must hold after any tick or command (spec 12.2): a valid world shape (validateWorld), the tick moving by 0
+ * (command) or 1 (tick), money never below zero and changed only through the ledger, buildings sorted by unique ids
+ * below nextId, every footprint inside the map, on land, off roads and not overlapping.
  */
 export function checkInvariants(
   before: WorldState,
@@ -23,7 +25,9 @@ export function checkInvariants(
 ): InvariantViolation[] {
   const violations: InvariantViolation[] = [];
   const size = content.rules.islandSize;
-  if (after.tick < before.tick) violations.push({ slot: -1, message: 'tick went backwards' });
+  for (const problem of validateWorld(after, content)) violations.push({ slot: -1, message: `invalid state: ${problem}` });
+  const tickDelta = after.tick - before.tick;
+  if (tickDelta !== 0 && tickDelta !== 1) violations.push({ slot: -1, message: `tick moved by ${tickDelta}` });
   if (after.nextId < before.nextId) violations.push({ slot: -1, message: 'nextId went backwards' });
 
   for (const island of after.islands) {
@@ -45,7 +49,9 @@ export function checkInvariants(
       if (building.id <= lastId) violations.push({ slot, message: `building ${building.id} out of id order` });
       if (building.id >= after.nextId) violations.push({ slot, message: `building ${building.id} >= nextId` });
       lastId = building.id;
-      const { w, h } = footprintSize(buildingDefOf(content, building.type), building.rotation);
+      const def = findBuildingDef(content, building.type);
+      if (!def) continue; // reported by validateWorld
+      const { w, h } = footprintSize(def, building.rotation);
       for (const [x, y] of footprintTiles(building.x, building.y, w, h)) {
         if (!inBounds(size, x, y) || !isLand(island, size, x, y)) {
           violations.push({ slot, message: `building ${building.id} is off the land at ${x},${y}` });

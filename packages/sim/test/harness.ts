@@ -81,7 +81,7 @@ export function runScript(
 
 /** Rebuilds a world from a snapshot plus the logged commands after it, up to a tick (crash recovery). */
 export function replay(snapshot: Snapshot, log: readonly LoggedCommand[], untilTick: number): WorldState {
-  const world = loadWorld(snapshot.json);
+  const world = loadWorld(snapshot.json, content);
   const pending = log.filter((entry) => entry.sequence > snapshot.lastSequence);
   for (;;) {
     for (const entry of pending) {

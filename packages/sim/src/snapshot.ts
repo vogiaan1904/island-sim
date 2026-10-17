@@ -1,11 +1,18 @@
+import type { Content } from '@island/content';
 import { canonicalJson } from './hash.ts';
 import type { WorldState } from './state.ts';
+import { validateWorld } from './validate.ts';
 import { SIM_VERSION } from './version.ts';
 
 // Snapshots are canonical JSON of the world (spec 5.2, 12.2). An older snapshot is migrated step by step to the
-// current sim version; a newer one is refused.
+// current sim version; a newer one is refused, and so is one whose shape validateWorld rejects.
 
-export type SnapshotErrorCode = 'not-a-snapshot' | 'newer-sim-version' | 'missing-migration' | 'invalid-data';
+export type SnapshotErrorCode =
+  | 'not-a-snapshot'
+  | 'newer-sim-version'
+  | 'missing-migration'
+  | 'migration-failed'
+  | 'invalid-data';
 
 export class SnapshotError extends Error {
   code: SnapshotErrorCode;
@@ -29,6 +36,7 @@ export function serializeWorld(world: WorldState): string {
 
 export function loadWorld(
   json: string,
+  content: Content,
   migrations: Readonly<Record<number, Migration>> = MIGRATIONS,
   targetVersion: number = SIM_VERSION,
 ): WorldState {
@@ -52,13 +60,22 @@ export function loadWorld(
   while (version < targetVersion) {
     const migrate = migrations[version];
     if (!migrate) throw new SnapshotError('missing-migration', `no migration from sim version ${version}`);
+    let migrated: Record<string, unknown>;
+    try {
+      migrated = migrate(current);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new SnapshotError('migration-failed', `migration from sim version ${version} failed: ${reason}`);
+    }
     version += 1;
-    current = { ...migrate(current), simVersion: version };
+    current = { ...migrated, simVersion: version };
   }
   try {
     canonicalJson(current);
   } catch (error) {
     throw new SnapshotError('invalid-data', error instanceof Error ? error.message : String(error));
   }
+  const problems = validateWorld(current, content);
+  if (problems.length > 0) throw new SnapshotError('invalid-data', problems.slice(0, 5).join('; '));
   return current as unknown as WorldState;
 }

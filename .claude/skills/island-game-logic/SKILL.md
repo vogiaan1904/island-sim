@@ -66,8 +66,8 @@ the same placement checks as the server.
 | Commands | `commands/` | `applyCommand(world, content, command, { sequence })` |
 | Ledger and events | `ledger.ts`, `events.ts` | `LedgerEntry`, `SimEvent`, `TICK_SOURCE` (0) |
 | The tick | `tick.ts` | `tickWorld(world, content)` |
-| Invariants | `invariants.ts` | `checkInvariants(before, after, ledger, content)` |
-| Snapshots and versions | `snapshot.ts`, `version.ts` | `serializeWorld`, `loadWorld`, `MIGRATIONS`, `SIM_VERSION` |
+| Invariants (runs `validateWorld`; tick moves by 0 or 1) | `invariants.ts` | `checkInvariants(before, after, ledger, content)` |
+| Snapshots, versions and the world shape | `snapshot.ts`, `version.ts`, `validate.ts` | `serializeWorld`, `loadWorld(json, content)`, `validateWorld`, `MIGRATIONS`, `SIM_VERSION` |
 | Content data | `packages/content/src/` | `content`, `Content`, `BuildingDef`, `WorldRules` |
 
 All paths except the last row are under `packages/sim/src/`. The sim mutates the world it is given; callers that

@@ -18,3 +18,4 @@ export { tickWorld } from './tick.ts';
 export { checkInvariants } from './invariants.ts';
 export type { Migration, SnapshotErrorCode } from './snapshot.ts';
 export { MIGRATIONS, SnapshotError, loadWorld, serializeWorld } from './snapshot.ts';
+export { validateWorld } from './validate.ts';
