@@ -57,6 +57,14 @@ export interface SetAutoSellCommand {
   keep: number | null;
 }
 
+/** Sells goods from the island's stores to the Mainland at the current price. */
+export interface SellCommand {
+  type: 'sell';
+  slot: number;
+  good: GoodId;
+  amount: number;
+}
+
 export type Command =
   | ClaimIslandCommand
   | CheckInCommand
@@ -64,7 +72,8 @@ export type Command =
   | PlaceRoadCommand
   | HireCommutersCommand
   | SetPriorityCommand
-  | SetAutoSellCommand;
+  | SetAutoSellCommand
+  | SellCommand;
 
 /** Stable ids; the client turns them into words and icons (island-ui). */
 export type ReasonCode =
@@ -86,7 +95,9 @@ export type ReasonCode =
   | 'nothing-to-build'
   | 'not-enough-seats'
   | 'no-such-building'
-  | 'unknown-good';
+  | 'unknown-good'
+  | 'not-enough-goods'
+  | 'price-below-floor';
 
 export type CommandResult =
   | { ok: true; ledger: LedgerEntry[]; events: SimEvent[]; data: Record<string, number> }

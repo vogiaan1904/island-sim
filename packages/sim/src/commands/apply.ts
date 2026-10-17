@@ -3,6 +3,7 @@ import type { WorldState } from '../state.ts';
 import { checkIn } from './checkIn.ts';
 import { claimIsland } from './claimIsland.ts';
 import { reject, type CommandContext } from './context.ts';
+import { sell } from './sell.ts';
 import { hireCommuters, setAutoSell, setPriority } from './settings.ts';
 import { placeBuilding } from './placeBuilding.ts';
 import { placeRoad } from './placeRoad.ts';
@@ -39,6 +40,8 @@ export function applyCommand(world: WorldState, content: Content, command: Comma
       return setPriority(ctx, command);
     case 'set-auto-sell':
       return setAutoSell(ctx, command);
+    case 'sell':
+      return sell(ctx, command);
     default:
       return reject('bad-input');
   }

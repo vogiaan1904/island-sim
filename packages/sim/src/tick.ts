@@ -2,11 +2,13 @@ import type { Content } from '@island/content';
 import { isHourStart, isSlowPass, minuteOfDay } from './clock.ts';
 import { TICK_SOURCE, type SimEvent } from './events.ts';
 import type { LedgerEntry } from './ledger.ts';
+import { runAutoSell } from './passes/autoSell.ts';
 import { refreshConditions } from './passes/conditions.ts';
 import { advanceConstruction } from './passes/construction.ts';
 import type { TickContext } from './passes/context.ts';
 import { runFerry } from './passes/ferry.ts';
 import { runLabor } from './passes/labor.ts';
+import { updateMarket } from './passes/market.ts';
 import { runProduction } from './passes/production.ts';
 import { deliverShipments, dispatchGoods } from './passes/transport.ts';
 import { chargeUpkeep } from './passes/upkeep.ts';
@@ -36,6 +38,7 @@ export function tickWorld(world: WorldState, content: Content): TickResult {
     if (island.owner === null) continue;
     runIsland(ctx, island);
   }
+  if (isHourStart(ctx.minute)) updateMarket(ctx);
   world.tick = tick;
   return { ledger: ctx.ledger, events: ctx.sink.events };
 }
@@ -51,5 +54,6 @@ function runIsland(ctx: TickContext, island: IslandState): void {
   runProduction(ctx, island);
   deliverShipments(ctx, island);
   if (slow) dispatchGoods(ctx, island);
+  if (hour) runAutoSell(ctx, island);
   refreshConditions(ctx, island);
 }

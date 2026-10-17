@@ -3,8 +3,8 @@ import { inBounds, isLand, isRoad, tileIndex } from './grid.ts';
 import type { LedgerEntry } from './ledger.ts';
 import { findBuildingDef } from './lookup.ts';
 import { footprintSize, footprintTiles } from './placement.ts';
-import type { IslandState, WorldState } from './state.ts';
-import { stockOf } from './stock.ts';
+import type { WorldState } from './state.ts';
+import { goodsHeld } from './stock.ts';
 import { validateWorld } from './validate.ts';
 
 export interface InvariantViolation {
@@ -77,13 +77,4 @@ export function checkInvariants(
     }
   }
   return violations;
-}
-
-/** Every unit of a good the island holds: in buildings, on the roads and waiting in the ferry's cargo. */
-export function goodsHeld(island: IslandState, good: GoodId): number {
-  let total = 0;
-  for (const building of island.buildings) total += stockOf(building.stock, good);
-  for (const shipment of island.transit) if (shipment.good === good) total += shipment.amount;
-  for (const item of island.cargo) if (item.good === good) total += item.amount;
-  return total;
 }

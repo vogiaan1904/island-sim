@@ -1,5 +1,5 @@
 import type { Content, GoodId } from '@island/content';
-import type { Stock } from './state.ts';
+import type { IslandState, Stock } from './state.ts';
 
 // Stock records list only goods with a positive amount. Never iterate a stock by its keys: a snapshot stores keys
 // sorted, so key order differs between a live world and a loaded one. Walk content.goods instead.
@@ -32,4 +32,13 @@ function assertAmount(amount: number): void {
   if (!Number.isSafeInteger(amount) || amount <= 0) {
     throw new Error(`stock amount must be a whole number > 0, got ${String(amount)}`);
   }
+}
+
+/** Every unit of a good the island holds: in buildings, on the roads and waiting in the ferry's cargo. */
+export function goodsHeld(island: IslandState, good: GoodId): number {
+  let total = 0;
+  for (const building of island.buildings) total += stockOf(building.stock, good);
+  for (const shipment of island.transit) if (shipment.good === good) total += shipment.amount;
+  for (const item of island.cargo) if (item.good === good) total += item.amount;
+  return total;
 }
