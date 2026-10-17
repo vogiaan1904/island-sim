@@ -49,4 +49,5 @@ in always-running private multiplayer worlds. **Status: slice 1 in progress; pla
 
 ## Git
 
-- Repo initialized, nothing committed yet. Commit only when the user asks.
+- Commits are allowed without asking: commit as work completes (one commit per plan task), on a feature branch.
+  Ask before merging into `main`, pushing, or rewriting published history. Never commit `.claude/settings.local.json`.

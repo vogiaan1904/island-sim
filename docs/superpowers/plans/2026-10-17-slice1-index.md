@@ -13,7 +13,7 @@ the islands keep running while you're away, and you can watch each other's islan
 | # | Plan | Delivers | Needs | Status |
 |---|---|---|---|---|
 | 1 | Workspace and simulation kernel | pnpm monorepo, `packages/content`, `packages/sim`: seeded worlds, claiming, check-in, buildings and roads paid up front, construction, ledger, events, snapshots, determinism, replay and golden tests | nothing | written: `2026-10-17-slice1-plan1-sim-kernel.md` |
-| 2 | Simulation: Outpost to Settlement | The gameplay of the first stage, headless and tested | plan 1 | not written |
+| 2 | Simulation: Outpost to Settlement | The gameplay of the first stage, headless and tested | plan 1 | written: `2026-10-17-slice1-plan2-outpost-gameplay.md` |
 | 3 | Protocol and server | `packages/protocol`, `apps/server`: the always-running worlds behind accounts and invite codes | plans 1-2 | not written |
 | 4 | Art direction and asset pipeline | The chosen look, the conventions, and every slice 1 model and icon | the user and Blender (can run beside plans 1-3) | not written |
 | 5 | Client | `apps/client`: the 3D island and the style A UI on phones | plans 1-3; plan 4 for final models | not written |
