@@ -19,8 +19,9 @@ export function reject(reason: ReasonCode, shortfallCents = 0): CommandResult {
   return { ok: false, reason, shortfallCents };
 }
 
+/** A safe integer, but never -0: JSON can carry -0, and canonical JSON (snapshots, the state hash) refuses it. */
 export function isWhole(value: unknown): value is number {
-  return typeof value === 'number' && Number.isSafeInteger(value);
+  return typeof value === 'number' && Number.isSafeInteger(value) && !Object.is(value, -0);
 }
 
 export function isRotation(value: unknown): value is Rotation {

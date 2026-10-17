@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SMALL, islandOf, smallWorld } from '../../test/fixtures.ts';
 import { stateHash } from '../hash.ts';
+import { serializeWorld } from '../snapshot.ts';
 import type { WorldState } from '../state.ts';
 import { applyCommand } from './apply.ts';
 import type { Command } from './types.ts';
@@ -55,6 +56,13 @@ describe('place-building', () => {
   it('answers huge coordinates with out-of-bounds instead of hanging', () => {
     expect(place(smallWorld(), 'farm', Number.MAX_SAFE_INTEGER, 2, 0)).toMatchObject({ ok: false, reason: 'out-of-bounds' });
     expect(place(smallWorld(), 'farm', 2, Number.MAX_SAFE_INTEGER, 1)).toMatchObject({ ok: false, reason: 'out-of-bounds' });
+  });
+
+  it('refuses -0 coordinates from parsed JSON, which would make the world impossible to save', () => {
+    const world = smallWorld(['~~~~~~~~', ',,,,~~~~', '#,,,~~~~', ',,,,~~~~', '~~~~~~~~', '~~~~~~~~', '~~~~~~~~', '~~~~~~~~']);
+    const command = JSON.parse('{"type":"place-building","slot":0,"building":"cottage","x":-0,"y":1,"rotation":0}') as Command;
+    expect(applyCommand(world, SMALL, command, { sequence: 1 })).toMatchObject({ ok: false, reason: 'bad-input' });
+    expect(() => serializeWorld(world)).not.toThrow();
   });
 
   it('refuses a spot another building already took', () => {

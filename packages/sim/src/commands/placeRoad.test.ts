@@ -55,6 +55,10 @@ describe('place-road', () => {
     });
   });
 
+  it('refuses -0 in a tile from parsed JSON', () => {
+    expect(road(smallWorld(), JSON.parse('[[-0, 2]]'))).toMatchObject({ ok: false, reason: 'bad-input' });
+  });
+
   it('refuses malformed tile lists', () => {
     for (const tiles of [[], 'x', [[2.5, 1]], [[2]], [null]]) {
       expect(road(smallWorld(), tiles)).toMatchObject({ ok: false, reason: 'bad-input' });
