@@ -83,3 +83,13 @@ export function buildingOf(world: WorldState, id: number, slot = 0): BuildingSta
   if (!found) throw new Error(`no building ${id} in slot ${slot}`);
   return found;
 }
+
+/** The village plus a market (id 5) stocked with 10 fish and a well (id 6), both in reach of the cottage. */
+export function town(minute: number, coinsCents = 500_000): WorldState {
+  const world = village(minute, coinsCents);
+  const market = building('market', 5, 3, 1);
+  market.stock = { fish: 10 };
+  islandOf(world, 0).buildings.push(market, building('well', 6, 6, 3));
+  world.nextId = 7;
+  return world;
+}

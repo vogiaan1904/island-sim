@@ -17,9 +17,9 @@ describe('auto-sell', () => {
     const world = harbor();
     buildingOf(world, 4).stock = { wood: 20 };
     islandOf(world, 0).autoSell = { wood: 5 };
-    tickWorld(world, SMALL);
+    const { ledger } = tickWorld(world, SMALL);
     expect(buildingOf(world, 4).stock).toEqual({ wood: 5 });
-    expect(islandOf(world, 0).coinsCents).toBe(500_000 + 15 * 600 - 40);
+    expect(ledger).toContainEqual({ kind: 'money', slot: 0, deltaCents: 15 * 600, reason: 'sale' });
   });
 
   it('leaves goods that are not listed, and sells nothing below the floor price', () => {

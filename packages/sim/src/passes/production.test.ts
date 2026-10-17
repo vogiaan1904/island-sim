@@ -43,6 +43,8 @@ describe('production', () => {
     islandOf(night, 0).commuters.present = 4;
     expect(run(night, 120)).toEqual([]);
     const broke = village(480, 0);
+    buildingOf(broke, 1).home = { residents: 0, happiness: 1000, unmetNeeds: [] };
+    islandOf(broke, 0).commuters.present = 4;
     expect(run(broke, 120)).toEqual([]);
   });
 });
