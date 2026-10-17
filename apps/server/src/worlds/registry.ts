@@ -69,6 +69,20 @@ export class Worlds {
     return record && this.runtimes.get(record.id);
   }
 
+  /** A world's record, loaded or not. */
+  record(id: string): WorldRecord | undefined {
+    return this.runtimes.get(id)?.record ?? this.deps.store.world(id);
+  }
+
+  recordByInviteCode(code: string): WorldRecord | undefined {
+    return this.deps.store.worldByInviteCode(code);
+  }
+
+  /** The worlds an account has an island in, from the membership mirror. */
+  membershipsOf(accountId: string): Array<{ worldId: string; slot: number }> {
+    return this.deps.store.memberships(accountId);
+  }
+
   /** Creates a world with a new invite code, and claims its first island for the creator (spec 12.3). */
   create(creatorId: string, islandName: string, seed: number = newSeed()): ClaimResult {
     const now = this.deps.clock.now();
