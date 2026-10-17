@@ -16,3 +16,5 @@ export type { TickResult } from './tick.ts';
 export type { InvariantViolation } from './invariants.ts';
 export { tickWorld } from './tick.ts';
 export { checkInvariants } from './invariants.ts';
+export type { Migration, SnapshotErrorCode } from './snapshot.ts';
+export { MIGRATIONS, SnapshotError, loadWorld, serializeWorld } from './snapshot.ts';
