@@ -1,4 +1,4 @@
-import type { BuildingId } from '@island/content';
+import type { BuildingId, GoodId } from '@island/content';
 import type { SimEvent } from '../events.ts';
 import type { LedgerEntry } from '../ledger.ts';
 import type { Rotation } from '../state.ts';
@@ -34,7 +34,37 @@ export interface PlaceRoadCommand {
   tiles: ReadonlyArray<readonly [number, number]>;
 }
 
-export type Command = ClaimIslandCommand | CheckInCommand | PlaceBuildingCommand | PlaceRoadCommand;
+/** Sets how many Mainland commuters are hired from the next morning ferry on (0 to the ferry's seats). */
+export interface HireCommutersCommand {
+  type: 'hire-commuters';
+  slot: number;
+  count: number;
+}
+
+/** 0 low, 1 normal, 2 high: who gets workers and upkeep first. */
+export interface SetPriorityCommand {
+  type: 'set-priority';
+  slot: number;
+  buildingId: number;
+  priority: number;
+}
+
+/** The port master's rule: auto-sell a good above `keep` units in storage, or stop with null. */
+export interface SetAutoSellCommand {
+  type: 'set-auto-sell';
+  slot: number;
+  good: GoodId;
+  keep: number | null;
+}
+
+export type Command =
+  | ClaimIslandCommand
+  | CheckInCommand
+  | PlaceBuildingCommand
+  | PlaceRoadCommand
+  | HireCommutersCommand
+  | SetPriorityCommand
+  | SetAutoSellCommand;
 
 /** Stable ids; the client turns them into words and icons (island-ui). */
 export type ReasonCode =
@@ -53,7 +83,10 @@ export type ReasonCode =
   | 'no-road-access'
   | 'not-enough-coins'
   | 'too-many-tiles'
-  | 'nothing-to-build';
+  | 'nothing-to-build'
+  | 'not-enough-seats'
+  | 'no-such-building'
+  | 'unknown-good';
 
 export type CommandResult =
   | { ok: true; ledger: LedgerEntry[]; events: SimEvent[]; data: Record<string, number> }

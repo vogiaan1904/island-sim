@@ -1,7 +1,7 @@
 import type { Content } from '@island/content';
 import type { EventSink } from '../events.ts';
 import type { LedgerEntry } from '../ledger.ts';
-import type { IslandState, Rotation, WorldState } from '../state.ts';
+import type { BuildingState, IslandState, Rotation, WorldState } from '../state.ts';
 import type { CommandResult, ReasonCode } from './types.ts';
 
 export interface CommandContext {
@@ -35,4 +35,10 @@ export function claimedIsland(world: WorldState, slot: unknown): IslandState | R
   if (!island) return 'no-such-island';
   if (island.owner === null) return 'island-not-claimed';
   return island;
+}
+
+/** The building with this id on the island, or null. */
+export function findBuilding(island: IslandState, id: unknown): BuildingState | null {
+  if (!isWhole(id)) return null;
+  return island.buildings.find((building) => building.id === id) ?? null;
 }
