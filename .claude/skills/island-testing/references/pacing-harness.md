@@ -1,7 +1,8 @@
 # Pacing harness
 
-Planned home: `tools/` (spec 3 lists "pacing harness" there). Folder name, command and report file are to be decided
-in slice 1.
+Home: `tools/pacing/` (package `@island/pacing`). Run `pnpm pacing` from the repo root; it prints one report per
+seed and check-in pattern and exits with 1 when a milestone is late or never reached. `--seeds 42,1` picks seeds
+(default 42 and 1 to 4); `--fast` turns the invariant checks off. A full run takes about 15 seconds.
 
 Contents: what it answers - how it works - targets in ticks - the bot's check-in pattern - the report - using it.
 
@@ -89,3 +90,19 @@ The numbers above are made up to show the layout; they are not results or target
   the every-change test run; whether CI runs it on a schedule is to be decided in slice 1.
 - **Deterministic.** The same seed, bot and code give the same report, so a changed report always has a cause in the
   diff.
+
+## Slice 1 setup (plan 2)
+
+- Bot `outpost-v1` (`tools/pacing/src/bot.ts`): stateless, decides every 10 ticks while present. It lays a road
+  north from the dock with cross streets, sets auto-sell (keeping the Island Hall's wood), builds a fishing hut,
+  farm, market, well, 3 cottages, lumber camp and warehouse nearest the dock, hires commuters for the jobs residents
+  leave open, collects rewards, places the Island Hall once unlocked and affordable, and buys its missing wood when
+  the stores cannot cover it.
+- Check-in patterns (documented assumptions, `patterns.ts`): casual, the first hour and then 10 minutes every 8 real
+  hours; keen, the first hour and then 10 minutes every 2 real hours.
+- Milestones (`pacing.ts`): first residents within 1,440 ticks; Settlement within 34,560 ticks, reported early
+  under 8,640 (6 hours: the stage would feel too short). Early does not fail the run.
+- Result at the end of plan 2 (seeds 42 and 1 to 4, invariants on, same for every seed): first residents at tick
+  660 (28 min); Settlement at 10.0 h (casual) and 9.0 h (keen).
+- To turn a pacing run into a golden scenario, record the accepted commands of `runPacing(...).log` into
+  `packages/sim/test/scenarios.ts`, as "Outpost to Settlement" was.

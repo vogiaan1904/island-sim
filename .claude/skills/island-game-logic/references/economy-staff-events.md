@@ -140,9 +140,13 @@ from the needs in content; their numbers come from the pacing harness.
 - Storms and other gentle weather come from the seeded generator and follow the chill rules. They are a cross-cutting
   roadmap item, not required in slice 1.
 
+## Decided in slice 1, plan 2
+
+- Upkeep and rent every game hour (upkeep by priority, then id), wages as commuters board, the market's revert,
+  drift and reaction, floor prices in content, auto-sell every game hour with its safety rules: `slice1-rules.md`.
+- The event shape is `SimEvent`: `{ tick, source, index, type, slot, data }`, `data` holding numbers and strings.
+
 ## Open points
 
-- Which building is paid first when money is short; when running costs, rent and taxes are charged.
-- Market drift and reaction formulas; floor price values.
-- Rule evaluation order and cadence.
-- The event shape.
+- The evaluation order and cadence of several automation rules (slice 2 brings more templates).
+- A gentle way out for an island with no coins, no residents and no income (`slice1-rules.md`, known gaps).

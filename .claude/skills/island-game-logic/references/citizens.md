@@ -131,10 +131,13 @@ ferry timetables (spec 6.2). Placement is deterministic from island state plus g
 shopping or migration is computed, check with `island-3d-client` that the flows it renders are still in the state
 (as counts per route or per building), not hidden inside a pass.
 
+## Decided in slice 1, plan 2
+
+- Children are 25% of each home, rounded down; happiness is permille and steps 100 an hour toward the share of needs
+  met; newcomers, leavers and their seats, reach (12 road tiles), wages per commuter per day paid as they board:
+  `slice1-rules.md`.
+
 ## Open points
 
-- The children share, migration thresholds and rates, and reach distances (balancing).
-- The happiness scale.
-- When wages are charged; wages per building or per class; class requirements for staff slots.
-- The shift hours, and how slots split between the day and night shift for around-the-clock buildings.
-- Whether leaving residents also share the evening ferry's seats with commuters going home.
+- Wages per class, and class requirements for staff slots (from Village, with skilled workers).
+- How slots split between the day and night shift for around-the-clock buildings.

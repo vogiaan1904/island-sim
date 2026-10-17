@@ -157,9 +157,11 @@ server's local admin interface, and the world catches up the paused time with th
 ticks run with no commands in between. The sim does not need to protect against its own half-updated state, but it
 must be exactly replayable (`determinism.md`).
 
+## Decided in slice 1, plan 2
+
+- The clock (worlds start at 06:00), the day shift and ferry times, sunrise and sunset, the pass order and cadence
+  (slow passes every 10 game minutes), and reason codes with data (`shortfallCents`): `slice1-rules.md`.
+
 ## Open points
 
-- Exact labor and transport interval, the full pass order, and the cadence of passes the spec does not list.
-- The clock's start offset; sunrise and sunset; ferry times, shift hours, and which buildings run around the
-  clock (from Settlement on; none in slice 1).
-- The shape of reason codes with data.
+- Which buildings run around the clock, and their night shift (from Settlement on).

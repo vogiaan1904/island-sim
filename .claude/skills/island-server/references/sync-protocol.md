@@ -79,6 +79,10 @@ Conceptual list; names, fields and grouping are still open.
 - **The sim produces the changes** (spec 12.2): each tick, and each accepted command, returns the set of changed and
   removed entities. The server only wraps them in a message per open island and sends them; it never diffs states
   itself.
+- **From the sim (plan 2):** `packages/sim/src/changes.ts` defines the entities and their keys (`island/<slot>`,
+  `terrain/<slot>`, `roads/<slot>`, `building/<slot>/<id>`, `transit/<slot>/<id>`, `market`). Keep the
+  `captureEntities(world)` result per world; after each tick or accepted command, `diffEntities(capture, world)`
+  returns `{ changes: { changed, removed }, capture }`. Filter by the slot in the key to send one island.
 - **Changed entities and removed ids.** The natural reading of the spec: each changed entity is sent whole and
   replaces the client's copy; removed entities are sent as ids. Island-wide values (money, tick, counts) need a place
   in the changes too. The exact shape is still open.

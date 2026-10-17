@@ -5,10 +5,10 @@ description: Simulation rules and content data for Island Sim, the pure determin
 
 # Island Sim: game logic
 
-> **Status (slice 1, plan 1 done):** the kernel is real code: `packages/content` and `packages/sim` (world creation,
-> claiming, check-in, placing buildings and roads, construction ticks, ledger, events, snapshots). Gameplay passes
-> (commuters, production, residents, stages) arrive in plan 2; names this file still marks as planned are not built
-> yet. When you change a rule, keep this file in step with the code.
+> **Status (slice 1, plan 2 done):** `packages/sim` runs the whole Outpost stage: the clock and the ferry,
+> commuters, labor, production, goods on the roads, the Mainland market with auto-sell, residents and their needs,
+> goals, and the Island Hall that starts Settlement. Every rule as built is in `references/slice1-rules.md`. When
+> you change a rule, keep this file and that one in step with the code.
 
 - Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md`, sections 2 (game design), 3
   (architecture), 4 (simulation model) and 12.1 and 12.2 (resolved game rules and simulation details). Section 12
@@ -53,7 +53,7 @@ change a result. That single property is what makes crash recovery exact (snapsh
 anyone reproduce a bug locally from a log, lets tests fast-forward a game month in seconds, and lets the client run
 the same placement checks as the server.
 
-## Implemented so far (slice 1, plan 1)
+## Implemented so far (slice 1, plans 1 and 2)
 
 | What | Where | API |
 |---|---|---|
@@ -63,9 +63,16 @@ the same placement checks as the server.
 | State shape | `state.ts` | `WorldState`, `IslandState`, `BuildingState`, `Rotation` |
 | World and island generation (integer-only) | `world.ts`, `terrain.ts` | `createWorld(seed, content)` |
 | Placement checks shared with the client preview | `placement.ts` | `checkPlacement`, `findDockSpot`, `footprintSize` |
-| Commands | `commands/` | `applyCommand(world, content, command, { sequence })` |
-| Ledger and events | `ledger.ts`, `events.ts` | `LedgerEntry`, `SimEvent`, `TICK_SOURCE` (0) |
-| The tick | `tick.ts` | `tickWorld(world, content)` |
+| Commands | `commands/` | `applyCommand(world, content, command, { sequence })`: claim-island, check-in, place-building, place-road, hire-commuters, set-priority, set-auto-sell, sell, buy-materials, collect |
+| Ledger (money and goods) and events | `ledger.ts`, `events.ts` | `LedgerEntry`, `GoodsEntry`, `SimEvent`, `TICK_SOURCE` (0) |
+| The tick | `tick.ts` | `tickWorld(world, content)`; one file per pass in `passes/`, order in `references/slice1-rules.md` |
+| Game clock | `clock.ts` | `minuteOfDay`, `dayOf`, `isDayShift` |
+| Road distances, cached per roads string | `roads.ts` | `roadsFrom(island, content, building).to(other)`, `accessTiles` |
+| Building helpers and the condition order | `buildings.ts` | `newBuilding`, `isBuilt`, `shownStatus`, `CONDITION_ORDER` |
+| Stock and goods held | `stock.ts` | `stockOf`, `stockTotal`, `goodsHeld` |
+| Residents | `people.ts` | `residentsOf`, `childrenOf`, `workersOf` |
+| Mainland trade | `mainland.ts` | `mainlandPaysEnough`, `buyPriceCents`, `storedForSale` |
+| Change sets for the server | `changes.ts` | `captureEntities`, `diffEntities`, `applyChanges`, `worldEntities` |
 | Invariants (runs `validateWorld`; tick moves by 0 or 1) | `invariants.ts` | `checkInvariants(before, after, ledger, content)` |
 | Snapshots, versions and the world shape | `snapshot.ts`, `version.ts`, `validate.ts` | `serializeWorld`, `loadWorld(json, content)`, `validateWorld`, `MIGRATIONS`, `SIM_VERSION` |
 | Content data | `packages/content/src/` | `content`, `Content`, `BuildingDef`, `WorldRules` |
@@ -168,13 +175,12 @@ Spec section 12 settled most details. These are still open. When you meet one, c
 plan, record the answer in the matching reference file, and remove it here.
 
 - Every balancing number (population targets, costs, rates, wages, prices, floor prices, reach distances, the share
-  of children): set with the pacing harness against the pace targets in spec 2.1 (`island-testing`).
+  of children) is a first guess in `packages/content/src/data.ts`; `pnpm pacing` checks it against the pace targets
+  in spec 2.1 (`island-testing`). Change numbers there, never in the sim, and rerun it.
 - The grid tile size in metres and asset conventions (slice 1 step 1, with `island-blender`). The sim works in whole
   tiles and does not need metres.
-- The exact pass order inside a tick, the exact labor and transport interval ("about every 10 ticks"), and the
-  cadence of passes the spec does not mention (needs, migration, economy, automation rules).
-- Ferry timetable times, seat counts, the day shift hours, and when wages, rent and taxes are charged.
-- Which building is paid first when money runs short; how supply and demand are matched; road capacities.
+- The known gaps at the end of `references/slice1-rules.md` (an island with no coins and no income; the landmark
+  lock in the placement preview).
 
 Each reference file ends with its own list of open points.
 
@@ -234,6 +240,9 @@ number changes alike.
 
 ## Reference files
 
+- `references/slice1-rules.md`: every slice 1 rule as built, with its file: clock, pass order, ferry, labor,
+  storage, transport, the Mainland, auto-sell and safety rules, running costs, residents, goals, the Island Hall,
+  change sets, known gaps. Read it first for any Outpost or Settlement rule.
 - `references/determinism.md`: the determinism rules, state hash, versions and migrations, JavaScript traps,
   debugging a divergence.
 - `references/time-and-commands.md`: tick and clock, workday, world tick order, pass cadence, commands, reason codes,

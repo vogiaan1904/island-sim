@@ -179,10 +179,14 @@ water (residents arrive when there are cottages, jobs, food and water).
 The spec names these buildings but not the list of goods, recipes or amounts. Define them in slice 1 (for example
 what the farm produces), mark the numbers as placeholders, and record the list here.
 
+## Decided in slice 1, plan 2
+
+- Goods (wood, fish, vegetables), needs (food, water), recipes and every amount: `packages/content/src/data.ts`.
+- Staffing and productivity combine into one rate (`ratePermille`, the sum of each worker's productivity over the
+  jobs); a lower rate makes a longer cycle. Storage is one total per building. Rotations are quarter turns.
+  Details: `slice1-rules.md`.
+
 ## Open points
 
-- Goods list, recipes and all amounts for slice 1.
-- How staffing, the workers' average productivity, key staff bonuses and level combine in a recipe.
-- Rotation steps; storage per good or total.
-- Which building is paid first when money is short.
+- How key staff bonuses and building levels enter a recipe's rate (slices 2 and 3).
 - How power is distributed (Town slice).

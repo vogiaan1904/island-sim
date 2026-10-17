@@ -8,21 +8,30 @@ description: How to test every layer of Island Sim and what must be true before 
 How to test each layer of Island Sim, and what must be true before work is called done. This skill covers *how to
 test*. The rules under test belong to the domain skills listed at the end.
 
-> **Status (slice 1, plan 1 done):** the workspace and the sim kernel tests are real. Commands from the repo root:
-> `pnpm test` (all Vitest projects), `pnpm typecheck`, `pnpm lint`, `pnpm check` (all three). One file:
-> `pnpm vitest run <path>` (end a folder path with `/`, or Vitest's filter also matches other files). Server,
-> client, pacing harness and asset checks are still planned (plans 2-6).
+> **Status (slice 1, plan 2 done):** the sim's tests and the pacing harness are real. Commands from the repo
+> root: `pnpm test` (all Vitest projects), `pnpm typecheck`, `pnpm lint`, `pnpm check` (all three), `pnpm pacing`
+> (the pacing report; `--seeds 42,1` and `--fast` for no invariants). One file: `pnpm vitest run <path>` (end a
+> folder path with `/`, or Vitest's filter also matches other files). Server, client and asset checks are still
+> planned (plans 3-6).
 
-## Implemented so far (slice 1, plan 1)
+## Implemented so far (slice 1, plans 1 and 2)
 
 - Unit tests sit next to the code as `*.test.ts`. Shared helpers and whole-run tests live in `packages/sim/test/`.
-- `packages/sim/test/fixtures.ts`: hand-painted 8 x 8 maps (`SMALL`, `DEFAULT_MAP`, `paint`, `smallWorld`,
-  `islandOf`) for exact placement and command tests.
+- `packages/sim/test/fixtures.ts`: hand-painted 8 x 8 maps (`SMALL`, `DEFAULT_MAP`, `HALL_MAP`, `paint`,
+  `smallWorld`, `islandOf`) for exact placement and command tests; `building(type, id, x, y)` makes a built
+  building; `nextTickAt(world, minute)` sets the time of day of the next tick; `village`, `town` and `hallSite`
+  are ready islands for pass tests; `buildingOf(world, id)` finds a building.
 - `packages/sim/test/harness.ts`: `runScript(seed, steps, totalTicks, { snapshotAtTick, checkInvariants })` runs
   commands between ticks like the server (accepted commands logged with the tick they followed and a sequence;
   snapshots record their last sequence) and `replay(snapshot, log, untilTick)` rebuilds a world from them.
 - Determinism and replay: `packages/sim/test/determinism.test.ts`. Golden scenarios: `packages/sim/test/golden.test.ts`
-  with scripts in `scenarios.ts` (first golden: "first buildings", seed 42, 600 ticks).
+  with scripts in `scenarios.ts`: "first buildings" (seed 42, 600 ticks) and "Outpost to Settlement" (seed 42,
+  the pacing bot's 25 commands, Settlement at tick 14,465).
+- `packages/sim/test/away.test.ts`: a real day away (34,560 ticks, no commands) leaves a new Settlement no worse,
+  with every invariant checked every tick (the chill rule).
+- Change sets: `packages/sim/src/changes.test.ts` keeps a mirror equal to the world through commands and ticks.
+- The pacing harness: `tools/pacing/` (`bot.ts`, `patterns.ts`, `pacing.ts`, `run.ts`); see
+  `references/pacing-harness.md`.
 - `packages/sim/test/lint-guard.test.ts` proves the determinism lint rules fire.
 
 ## Three rules

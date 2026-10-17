@@ -94,11 +94,14 @@ Placement on screen is deterministic from island state plus game time, so a visi
 scene. Keep these flows readable in state; if a refactor moves them inside a pass's local variables, the client loses
 its source of motion. Check with `island-3d-client` when you change flow shapes.
 
+## Decided in slice 1, plan 2
+
+- Capacity is per source building per transport pass (5 units); travel takes 1 tick per road tile; demand order is
+  landmark sites, market shelves, then stores; space is reserved while goods travel, so arrivals never overfill and
+  are processed every tick; exports are sold from the stores; bought goods come in the ferry's cargo hold and are
+  carried from the dock. The path cache is a module memo keyed by the roads string, never saved:
+  `slice1-rules.md`.
+
 ## Open points
 
-- Capacity units and numbers; road travel speed before trucks.
-- The supply and demand matching method and its priorities (including landmark sites).
-- What happens when goods arrive at a full destination; when arrivals are processed.
-- How exports physically leave the island (for example through the dock), and how other imports arrive (bought
-  landmark materials come on the next ferry).
-- Path cache in snapshots or rebuilt.
+- Capacity per road and vehicle speeds, when trucks arrive (Village).
