@@ -137,9 +137,12 @@ When two runs that should match do not (live versus replay, two machines, a gold
 
 The test patterns for this (determinism test, replay test, golden scenarios, mirror test) are in `island-testing`.
 
+## Decided in slice 1, plan 1
+
+- Random generator: mulberry32, one stream per world, its state in `world.rng`; new ids from `world.nextId`.
+- Whole-number scale: permille (1000 = 100%); one rounding rule: round down (`mulDivFloor`).
+- State hash: cyrb53 over canonical JSON (sorted keys), 14 hex digits (`stateHash`).
+
 ## Open points
 
-- The random generator algorithm, and one stream versus several.
-- The whole-number scale for percentages and the single rounding rule.
-- The state hash function.
-- Whether caches are saved in snapshots or rebuilt on load.
+- Whether caches are saved in snapshots or rebuilt on load (no caches exist yet).

@@ -5,10 +5,10 @@ description: Simulation rules and content data for Island Sim, the pure determin
 
 # Island Sim: game logic
 
-> **First draft (2026-10-16), written from the design spec before any product code existed, then updated for spec
-> section 12 ("Resolved details").** Every file, folder and function named here is **planned**, not real. When
-> slice 1 code lands, replace "planned" with real paths, APIs and examples (spec 8.1 step 10) and fill in each open
-> point.
+> **Status (slice 1, plan 1 done):** the kernel is real code: `packages/content` and `packages/sim` (world creation,
+> claiming, check-in, placing buildings and roads, construction ticks, ledger, events, snapshots). Gameplay passes
+> (commuters, production, residents, stages) arrive in plan 2; names this file still marks as planned are not built
+> yet. When you change a rule, keep this file in step with the code.
 
 - Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md`, sections 2 (game design), 3
   (architecture), 4 (simulation model) and 12.1 and 12.2 (resolved game rules and simulation details). Section 12
@@ -52,6 +52,28 @@ random generator's state), the content data, and the ordered list of accepted pl
 change a result. That single property is what makes crash recovery exact (snapshot plus command-log replay), lets
 anyone reproduce a bug locally from a log, lets tests fast-forward a game month in seconds, and lets the client run
 the same placement checks as the server.
+
+## Implemented so far (slice 1, plan 1)
+
+| What | Where | API |
+|---|---|---|
+| Whole-number math, round-down rule, permille | `packages/sim/src/int.ts` | `mulDivFloor`, `applyPermille`, `PERMILLE` |
+| Seeded random numbers (mulberry32, one stream per world, state in `world.rng`) | `rng.ts` | `draw(holder, bound)` |
+| Canonical JSON and the state hash (cyrb53, 14 hex digits) | `hash.ts` | `canonicalJson`, `stateHash` |
+| State shape | `state.ts` | `WorldState`, `IslandState`, `BuildingState`, `Rotation` |
+| World and island generation (integer-only) | `world.ts`, `terrain.ts` | `createWorld(seed, content)` |
+| Placement checks shared with the client preview | `placement.ts` | `checkPlacement`, `findDockSpot`, `footprintSize` |
+| Commands | `commands/` | `applyCommand(world, content, command, { sequence })` |
+| Ledger and events | `ledger.ts`, `events.ts` | `LedgerEntry`, `SimEvent`, `TICK_SOURCE` (0) |
+| The tick | `tick.ts` | `tickWorld(world, content)` |
+| Invariants | `invariants.ts` | `checkInvariants(before, after, ledger, content)` |
+| Snapshots and versions | `snapshot.ts`, `version.ts` | `serializeWorld`, `loadWorld`, `MIGRATIONS`, `SIM_VERSION` |
+| Content data | `packages/content/src/` | `content`, `Content`, `BuildingDef`, `WorldRules` |
+
+All paths except the last row are under `packages/sim/src/`. The sim mutates the world it is given; callers that
+need the old state clone it first (`structuredClone`). Relative imports carry `.ts`. ESLint blocks `Date`, timers,
+`Math.random` and float `Math` functions, `async`, and Node or server imports in `packages/sim/src` and
+`packages/content/src`.
 
 ## Rules that are not negotiable
 
@@ -151,8 +173,6 @@ plan, record the answer in the matching reference file, and remove it here.
   tiles and does not need metres.
 - The exact pass order inside a tick, the exact labor and transport interval ("about every 10 ticks"), and the
   cadence of passes the spec does not mention (needs, migration, economy, automation rules).
-- The random generator algorithm and whether there is one stream or several; the hash function for the state hash.
-- The whole-number scale for percentages, happiness and bonuses, and the one rounding rule used everywhere.
 - Ferry timetable times, seat counts, the day shift hours, and when wages, rent and taxes are charged.
 - Which building is paid first when money runs short; how supply and demand are matched; road capacities.
 

@@ -8,11 +8,22 @@ description: How to test every layer of Island Sim and what must be true before 
 How to test each layer of Island Sim, and what must be true before work is called done. This skill covers *how to
 test*. The rules under test belong to the domain skills listed at the end.
 
-> **Status: design phase, no product code yet.** Every path, script and command below is **planned** from the
-> design spec (`docs/superpowers/specs/2026-10-16-island-sim-design.md`, section 9) and marked as planned. Items
-> marked **"to be decided in slice 1"** get settled when the first test setup lands; update this skill in the same
-> change (the implementation plan has a task for it). If the repo already has real scripts or folders that differ
-> from this file, the repo wins: follow it, then fix this skill.
+> **Status (slice 1, plan 1 done):** the workspace and the sim kernel tests are real. Commands from the repo root:
+> `pnpm test` (all Vitest projects), `pnpm typecheck`, `pnpm lint`, `pnpm check` (all three). One file:
+> `pnpm vitest run <path>` (end a folder path with `/`, or Vitest's filter also matches other files). Server,
+> client, pacing harness and asset checks are still planned (plans 2-6).
+
+## Implemented so far (slice 1, plan 1)
+
+- Unit tests sit next to the code as `*.test.ts`. Shared helpers and whole-run tests live in `packages/sim/test/`.
+- `packages/sim/test/fixtures.ts`: hand-painted 8 x 8 maps (`SMALL`, `DEFAULT_MAP`, `paint`, `smallWorld`,
+  `islandOf`) for exact placement and command tests.
+- `packages/sim/test/harness.ts`: `runScript(seed, steps, totalTicks, { snapshotAtTick, checkInvariants })` runs
+  commands between ticks like the server (accepted commands logged with the tick they followed and a sequence;
+  snapshots record their last sequence) and `replay(snapshot, log, untilTick)` rebuilds a world from them.
+- Determinism and replay: `packages/sim/test/determinism.test.ts`. Golden scenarios: `packages/sim/test/golden.test.ts`
+  with scripts in `scenarios.ts` (first golden: "first buildings", seed 42, 600 ticks).
+- `packages/sim/test/lint-guard.test.ts` proves the determinism lint rules fire.
 
 ## Three rules
 
@@ -117,7 +128,7 @@ configurable for tests (spec 12.3).
 - Recommended: an ESLint rule in `packages/sim` that forbids `Math.random`, `Date`, `performance.now`, timers and
   I/O imports, so determinism leaks fail before any test runs (rule list in `island-game-logic`; setup to be decided
   in slice 1).
-- Test file placement (next to the code as `*.test.ts`, or a `test/` folder per package): to be decided in slice 1.
+- Test file placement: next to the code as `*.test.ts`; shared helpers and whole-run tests in `packages/<name>/test/`.
 - **CI** once the repo has a remote (it has none yet): typecheck, lint, all Vitest suites including goldens, asset
   checks and Playwright. Whether the pacing harness runs in CI (it is slow) is to be decided; the real-phone
   checklist always stays manual.

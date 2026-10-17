@@ -1,7 +1,7 @@
 # Island Sim
 
 3D web game: build a modern island (citizens, farms, factories, transport, hiring) in deep-management style,
-in always-running private multiplayer worlds. **Status: design phase, no product code yet.**
+in always-running private multiplayer worlds. **Status: slice 1 in progress; plan 1 (workspace and sim kernel) is done.**
 
 ## Resume here
 
@@ -9,9 +9,8 @@ in always-running private multiplayer worlds. **Status: design phase, no product
   the design progress checklist.
 - Process: superpowers brainstorming, architectural path. Design sections are approved one at a time → spec in
   `docs/superpowers/specs/` → the user reviews the spec → writing-plans. No product code before that.
-- **Next step:** the spec is approved. Slice 1 is split into six plans
-  (`docs/superpowers/plans/2026-10-17-slice1-index.md`); plan 1 (workspace and sim kernel,
-  `2026-10-17-slice1-plan1-sim-kernel.md`) is written and waits for the user's review and choice of execution method.
+- **Next step:** write slice 1 plan 2 (simulation: Outpost to Settlement gameplay) from
+  `docs/superpowers/plans/2026-10-17-slice1-index.md`, using superpowers:writing-plans.
 - Art direction (Q10) is decided by rendering real pack models in candidate styles through Blender MCP.
 
 ## Requirements that must not be dropped
