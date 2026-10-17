@@ -1,9 +1,10 @@
-import type { Content } from '@island/content';
+import type { Content, GoodId } from '@island/content';
 import { inBounds, isLand, isRoad, tileIndex } from './grid.ts';
 import type { LedgerEntry } from './ledger.ts';
 import { findBuildingDef } from './lookup.ts';
 import { footprintSize, footprintTiles } from './placement.ts';
-import type { WorldState } from './state.ts';
+import type { IslandState, WorldState } from './state.ts';
+import { stockOf } from './stock.ts';
 import { validateWorld } from './validate.ts';
 
 export interface InvariantViolation {
@@ -13,9 +14,10 @@ export interface InvariantViolation {
 }
 
 /**
- * What must hold after any tick or command (spec 12.2): a valid world shape (validateWorld), the tick moving by 0
- * (command) or 1 (tick), money never below zero and changed only through the ledger, buildings sorted by unique ids
- * below nextId, every footprint inside the map, on land, off roads and not overlapping.
+ * What must hold after any tick or command (spec 12.2): a valid world shape (validateWorld: no negative or
+ * fractional stock, nothing over its storage), the tick moving by 0 (command) or 1 (tick), money never below zero,
+ * money and every good changed only through the ledger (goods on the roads and in the ferry's cargo counted),
+ * buildings sorted by unique ids below nextId, every footprint inside the map, on land, off roads and not overlapping.
  */
 export function checkInvariants(
   before: WorldState,
@@ -35,11 +37,20 @@ export function checkInvariants(
     const previous = before.islands[slot];
     if (island.coinsCents < 0) violations.push({ slot, message: 'money below zero' });
     if (previous) {
-      const ledgerDelta = ledger
-        .filter((entry) => entry.kind === 'money' && entry.slot === slot)
-        .reduce((sum, entry) => sum + entry.deltaCents, 0);
-      if (island.coinsCents - previous.coinsCents !== ledgerDelta) {
+      let moneyDelta = 0;
+      const goodsDelta = new Map<GoodId, number>();
+      for (const entry of ledger) {
+        if (entry.slot !== slot) continue;
+        if (entry.kind === 'money') moneyDelta += entry.deltaCents;
+        else goodsDelta.set(entry.good, (goodsDelta.get(entry.good) ?? 0) + entry.delta);
+      }
+      if (island.coinsCents - previous.coinsCents !== moneyDelta) {
         violations.push({ slot, message: 'money changed outside the ledger' });
+      }
+      for (const good of content.goods) {
+        if (goodsHeld(island, good.id) - goodsHeld(previous, good.id) !== (goodsDelta.get(good.id) ?? 0)) {
+          violations.push({ slot, message: `${good.id} changed outside the ledger` });
+        }
       }
     }
 
@@ -66,4 +77,13 @@ export function checkInvariants(
     }
   }
   return violations;
+}
+
+/** Every unit of a good the island holds: in buildings, on the roads and waiting in the ferry's cargo. */
+export function goodsHeld(island: IslandState, good: GoodId): number {
+  let total = 0;
+  for (const building of island.buildings) total += stockOf(building.stock, good);
+  for (const shipment of island.transit) if (shipment.good === good) total += shipment.amount;
+  for (const item of island.cargo) if (item.good === good) total += item.amount;
+  return total;
 }

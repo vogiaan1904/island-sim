@@ -1,8 +1,23 @@
-import type { IslandState } from './state.ts';
+import type { GoodId } from '@island/content';
+import type { IslandState, Stock } from './state.ts';
+import { addStock, takeStock } from './stock.ts';
 
-// Every money movement goes through the ledger (spec 12.2). Goods entries arrive with production in plan 2.
+// Every money movement and every change to an island's goods goes through the ledger (spec 12.2). Goods moving
+// inside an island (into transit, onto a site) change no total, so they have no entry; the invariant counts goods in
+// every building, on the roads and in the ferry's cargo.
 
-export type LedgerReason = 'starting-coins' | 'building-purchase' | 'road-purchase';
+export type LedgerReason =
+  | 'starting-coins'
+  | 'building-purchase'
+  | 'road-purchase'
+  | 'wages'
+  | 'upkeep'
+  | 'rent'
+  | 'sale'
+  | 'materials-purchase'
+  | 'reward';
+
+export type GoodsReason = 'produced' | 'eaten' | 'sold' | 'bought' | 'used-in-construction';
 
 export interface MoneyEntry {
   kind: 'money';
@@ -11,7 +26,15 @@ export interface MoneyEntry {
   reason: LedgerReason;
 }
 
-export type LedgerEntry = MoneyEntry;
+export interface GoodsEntry {
+  kind: 'goods';
+  slot: number;
+  good: GoodId;
+  delta: number;
+  reason: GoodsReason;
+}
+
+export type LedgerEntry = MoneyEntry | GoodsEntry;
 
 export function credit(island: IslandState, amountCents: number, reason: LedgerReason, ledger: LedgerEntry[]): void {
   assertAmount(amountCents);
@@ -27,6 +50,32 @@ export function pay(island: IslandState, amountCents: number, reason: LedgerReas
   }
   island.coinsCents -= amountCents;
   ledger.push({ kind: 'money', slot: island.slot, deltaCents: -amountCents, reason });
+}
+
+/** Goods that enter the island (made, bought) into a stock. */
+export function gainGoods(
+  island: IslandState,
+  stock: Stock,
+  good: GoodId,
+  amount: number,
+  reason: GoodsReason,
+  ledger: LedgerEntry[],
+): void {
+  addStock(stock, good, amount);
+  ledger.push({ kind: 'goods', slot: island.slot, good, delta: amount, reason });
+}
+
+/** Goods that leave the island (eaten, sold, built into a landmark) from a stock; callers check the amount first. */
+export function loseGoods(
+  island: IslandState,
+  stock: Stock,
+  good: GoodId,
+  amount: number,
+  reason: GoodsReason,
+  ledger: LedgerEntry[],
+): void {
+  takeStock(stock, good, amount);
+  ledger.push({ kind: 'goods', slot: island.slot, good, delta: -amount, reason });
 }
 
 function assertAmount(amountCents: number): void {
