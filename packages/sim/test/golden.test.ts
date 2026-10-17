@@ -12,7 +12,7 @@ describe('golden scenario: first buildings', () => {
     const { world, log } = runScript(42, FIRST_BUILDINGS, 600);
     expect(log).toHaveLength(12);
     const palmCove = islandOf(world, 0);
-    expect(palmCove.coinsCents).toBe(258_000);
+    expect(palmCove.coinsCents).toBe(257_350);
     expect(palmCove.buildings.map((b) => b.type)).toEqual([
       'dock',
       'cottage',
@@ -26,6 +26,6 @@ describe('golden scenario: first buildings', () => {
     ]);
     expect(palmCove.buildings.every((b) => b.constructionLeft === 0)).toBe(true);
     expect(islandOf(world, 1).owner).toBe('bob');
-    expect(stateHash(world)).toBe('1f2f9598bceb3e');
+    expect(stateHash(world)).toBe('0199cd7277b0da');
   });
 });

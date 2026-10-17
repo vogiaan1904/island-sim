@@ -1,10 +1,13 @@
 import type { Content } from '@island/content';
-import { minuteOfDay } from './clock.ts';
+import { isHourStart, isSlowPass, minuteOfDay } from './clock.ts';
 import { TICK_SOURCE, type SimEvent } from './events.ts';
 import type { LedgerEntry } from './ledger.ts';
+import { refreshConditions } from './passes/conditions.ts';
 import { advanceConstruction } from './passes/construction.ts';
 import type { TickContext } from './passes/context.ts';
 import { runFerry } from './passes/ferry.ts';
+import { runLabor } from './passes/labor.ts';
+import { chargeUpkeep } from './passes/upkeep.ts';
 import type { IslandState, WorldState } from './state.ts';
 
 export interface TickResult {
@@ -37,6 +40,11 @@ export function tickWorld(world: WorldState, content: Content): TickResult {
 
 /** The island passes, in their fixed order. */
 function runIsland(ctx: TickContext, island: IslandState): void {
+  const hour = isHourStart(ctx.minute);
+  const slow = isSlowPass(ctx.minute, ctx.content.rules);
   runFerry(ctx, island);
   advanceConstruction(ctx, island);
+  if (hour) chargeUpkeep(ctx, island);
+  if (slow) runLabor(ctx, island);
+  refreshConditions(ctx, island);
 }

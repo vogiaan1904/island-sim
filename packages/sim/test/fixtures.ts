@@ -55,3 +55,31 @@ export function building(
   const left = options.constructionLeft ?? 0;
   return { ...made, constructionLeft: left, conditions: left > 0 ? ['under-construction'] : [] };
 }
+
+/** Sets the world's tick so that its next tick runs at this minute of the day. */
+export function nextTickAt(world: WorldState, minute: number, content: Content = SMALL): WorldState {
+  let tick = minute - content.rules.startMinute - 1;
+  while (tick < (world.islands[0]?.lastCheckInTick ?? 0)) tick += content.rules.ticksPerDay;
+  world.tick = tick;
+  return world;
+}
+
+/**
+ * A built village on DEFAULT_MAP for pass tests, next tick at the given minute: a cottage (id 1) with 4 residents,
+ * a farm (2) and a lumber camp (3) on the road, and the dock (4), whose access tile joins the road.
+ */
+export function village(minute: number, coinsCents = 500_000): WorldState {
+  const world = nextTickAt(smallWorld(DEFAULT_MAP, coinsCents), minute);
+  const island = islandOf(world, 0);
+  const home = building('cottage', 1, 2, 2);
+  if (home.home) home.home.residents = 4;
+  island.buildings.push(home, building('farm', 2, 2, 4), building('lumber-camp', 3, 5, 4), building('dock', 4, 5, 1));
+  world.nextId = 5;
+  return world;
+}
+
+export function buildingOf(world: WorldState, id: number, slot = 0): BuildingState {
+  const found = islandOf(world, slot).buildings.find((b) => b.id === id);
+  if (!found) throw new Error(`no building ${id} in slot ${slot}`);
+  return found;
+}

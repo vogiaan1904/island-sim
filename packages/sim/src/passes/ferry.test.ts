@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { SMALL, islandOf, smallWorld } from '../../test/fixtures.ts';
+import { SMALL, islandOf, nextTickAt, smallWorld } from '../../test/fixtures.ts';
 import { applyCommand } from '../commands/apply.ts';
 import type { WorldState } from '../state.ts';
 import { tickWorld } from '../tick.ts';
 
-/** A world whose next tick runs at the given minute of the day (SMALL starts at 06:00). */
 function worldBefore(minute: number, coinsCents = 500_000): WorldState {
-  const world = smallWorld(undefined, coinsCents);
-  world.tick = minute - SMALL.rules.startMinute - 1;
-  return world;
+  return nextTickAt(smallWorld(undefined, coinsCents), minute);
 }
 
 describe('the commuter ferry', () => {
