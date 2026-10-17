@@ -12,3 +12,7 @@ export { applyCommand } from './commands/apply.ts';
 export { isIslandActive } from './commands/checkIn.ts';
 export { isValidIslandName } from './commands/claimIsland.ts';
 export { TICK_SOURCE } from './events.ts';
+export type { TickResult } from './tick.ts';
+export type { InvariantViolation } from './invariants.ts';
+export { tickWorld } from './tick.ts';
+export { checkInvariants } from './invariants.ts';
