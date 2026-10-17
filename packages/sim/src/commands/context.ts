@@ -1,0 +1,37 @@
+import type { Content } from '@island/content';
+import type { EventSink } from '../events.ts';
+import type { LedgerEntry } from '../ledger.ts';
+import type { IslandState, Rotation, WorldState } from '../state.ts';
+import type { CommandResult, ReasonCode } from './types.ts';
+
+export interface CommandContext {
+  world: WorldState;
+  content: Content;
+  sink: EventSink;
+  ledger: LedgerEntry[];
+}
+
+export function accept(ctx: CommandContext, data: Record<string, number>): CommandResult {
+  return { ok: true, ledger: ctx.ledger, events: ctx.sink.events, data };
+}
+
+export function reject(reason: ReasonCode, shortfallCents = 0): CommandResult {
+  return { ok: false, reason, shortfallCents };
+}
+
+export function isWhole(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value);
+}
+
+export function isRotation(value: unknown): value is Rotation {
+  return value === 0 || value === 1 || value === 2 || value === 3;
+}
+
+/** The claimed island in a slot, or the reason code for why there is none. */
+export function claimedIsland(world: WorldState, slot: unknown): IslandState | ReasonCode {
+  if (!isWhole(slot)) return 'no-such-island';
+  const island = world.islands[slot];
+  if (!island) return 'no-such-island';
+  if (island.owner === null) return 'island-not-claimed';
+  return island;
+}
