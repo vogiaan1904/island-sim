@@ -16,7 +16,7 @@ export type {
 } from './state.ts';
 export { createWorld } from './world.ts';
 export { CONDITION_ORDER, HIGH_PRIORITY, LOW_PRIORITY, NORMAL_PRIORITY, isBuilt, newBuilding, shownStatus } from './buildings.ts';
-export { SIM_VERSION } from './version.ts';
+export { SIM_VERSION, contentHash } from './version.ts';
 export type { PlacementCheck, PlacementCheckId, PlacementReport } from './placement.ts';
 export { checkPlacement, findDockSpot, footprintSize, footprintTiles } from './placement.ts';
 export type { Command, CommandMeta, CommandResult, ReasonCode } from './commands/types.ts';

@@ -74,6 +74,13 @@ describe('change sets', () => {
     expect(sent?.value).toEqual(before);
   });
 
+  it('compare the terrain and road strings as they are, without serializing them again', () => {
+    const world = createWorld(42, content);
+    const island = world.islands[0];
+    expect(captureEntities(world).get('terrain/0')).toBe(island?.terrain);
+    expect(captureEntities(world).get('roads/0')).toBe(island?.roads);
+  });
+
   it('send nothing for a world with no claimed island between hours', () => {
     const world = createWorld(3, content);
     world.tick = 1;

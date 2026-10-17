@@ -20,8 +20,13 @@ export interface WorldChanges {
   removed: string[];
 }
 
-/** Each entity's canonical JSON, by key: what a later diff compares against. */
+/** Each entity's fingerprint, by key: what a later diff compares against. */
 export type EntityCapture = ReadonlyMap<string, string>;
+
+/** The terrain and road strings as they are, so the largest entities are never re-serialized; the rest as canonical JSON. */
+function fingerprint(value: unknown): string {
+  return typeof value === 'string' ? value : canonicalJson(value);
+}
 
 /** Every entity of the world in a fixed order: islands by slot, each island's buildings and shipments by id. */
 export function worldEntities(world: WorldState): Map<string, unknown> {
@@ -40,7 +45,7 @@ export function worldEntities(world: WorldState): Map<string, unknown> {
 
 export function captureEntities(world: WorldState): EntityCapture {
   const capture = new Map<string, string>();
-  for (const [key, value] of worldEntities(world)) capture.set(key, canonicalJson(value));
+  for (const [key, value] of worldEntities(world)) capture.set(key, fingerprint(value));
   return capture;
 }
 
@@ -52,9 +57,9 @@ export function diffEntities(before: EntityCapture, world: WorldState): { change
   const capture = new Map<string, string>();
   const changed: EntityChange[] = [];
   for (const [key, value] of worldEntities(world)) {
-    const json = canonicalJson(value);
-    capture.set(key, json);
-    if (before.get(key) !== json) changed.push({ key, value: structuredClone(value) });
+    const print = fingerprint(value);
+    capture.set(key, print);
+    if (before.get(key) !== print) changed.push({ key, value: structuredClone(value) });
   }
   const removed = [...before.keys()].filter((key) => !capture.has(key));
   return { changes: { changed, removed }, capture };

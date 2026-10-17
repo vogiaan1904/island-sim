@@ -1,4 +1,5 @@
 import { content } from '@island/content';
+import { SIM_VERSION, contentHash } from '@island/sim';
 import { BOT_VERSION } from './bot.ts';
 import { MILESTONES, runPacing, type PacingRun } from './pacing.ts';
 import { PATTERNS } from './patterns.ts';
@@ -20,7 +21,10 @@ function realTime(ticks: number): string {
 }
 
 function report(run: PacingRun): boolean {
-  console.log(`Pacing report  seed ${run.seed}  bot ${BOT_VERSION}  pattern ${run.pattern}  invariants ${run.invariants ? 'on' : 'off'}`);
+  console.log(
+    `Pacing report  seed ${run.seed}  bot ${BOT_VERSION}  pattern ${run.pattern}  invariants ${run.invariants ? 'on' : 'off'}` +
+      `  sim ${SIM_VERSION}  content ${contentHash(content)}`,
+  );
   console.log('milestone          tick      game days   real time     since previous   target                  verdict');
   let ok = true;
   let previous = 0;
