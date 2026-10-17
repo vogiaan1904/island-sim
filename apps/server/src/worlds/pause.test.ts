@@ -1,5 +1,5 @@
 import { stateHash, type Command } from '@island/sim';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { aliceWorld, runTicks } from '../../test/support.ts';
 import { Worlds } from './registry.ts';
 import type { RuntimeEvent, WorldRuntime } from './runtime.ts';
@@ -72,6 +72,45 @@ describe('a world whose tick throws', () => {
   });
 });
 
+describe('a world whose store fails', () => {
+  it('pauses on a tick whose events cannot be stored, without throwing out of runDue', () => {
+    const { runtime, clock, deps } = aliceWorld();
+    runTicks(runtime, clock, 3);
+    vi.spyOn(deps.store, 'insertEvents').mockImplementationOnce(() => {
+      throw new Error('disk full');
+    });
+    clock.advance(2_500);
+    expect(() => runtime.runDue()).not.toThrow();
+    expect([runtime.status, runtime.world.tick]).toEqual(['paused', 4]);
+    expect(deps.store.world(runtime.id)).toMatchObject({ pausedReason: 'tick after tick 4 threw: disk full', pausedTick: 4 });
+  });
+
+  it('stays paused when the rebuild fails too, because the store still fails', () => {
+    const { runtime, clock, deps, log } = aliceWorld();
+    runTicks(runtime, clock, 3);
+    vi.spyOn(deps.store, 'insertEvents').mockImplementation(() => {
+      throw new Error('disk full');
+    });
+    clock.advance(2_500);
+    expect(() => runtime.runDue()).not.toThrow();
+    expect(runtime.status).toBe('paused');
+    expect(log.entries.map((entry) => entry.message)).toContain('world not rebuilt');
+    expect(deps.store.world(runtime.id)).toMatchObject({ pausedReason: 'tick after tick 4 threw: disk full', pausedTick: 4 });
+  });
+
+  it('stays paused in memory when the pause cannot be stored, without throwing', () => {
+    const { runtime, clock, deps, log } = aliceWorld();
+    vi.spyOn(deps.store, 'setPaused').mockImplementation(() => {
+      throw new Error('I/O error');
+    });
+    breakNextTick(runtime);
+    expect(() => runTicks(runtime, clock, 1)).not.toThrow();
+    expect(runtime.status).toBe('paused');
+    expect(runtime.record).toMatchObject({ pausedTick: 0, pausedReason: expect.stringMatching(/^tick after tick 0 threw/) });
+    expect(log.entries.map((entry) => entry.message)).toContain('pause not stored');
+  });
+});
+
 describe('a world whose command throws', () => {
   it('pauses, answers with a server error and leaves the command out of the log', () => {
     const { runtime, worlds, deps } = aliceWorld();
@@ -83,5 +122,27 @@ describe('a world whose command throws', () => {
     expect([runtime.status, stateHash(runtime.world)]).toEqual(['paused', before]);
     expect(deps.store.commandsAfter(runtime.id, 0).map((c) => c.sequence)).toEqual([1]);
     expect(deps.store.world(runtime.id)?.pausedReason).toMatch(/^command after tick 0 threw: claimIsland: slot 1 has no dock spot/);
+  });
+
+  it('pauses, rebuilt from its log, when the claim fails after the sim accepted it, and rethrows', () => {
+    const { runtime, worlds, deps } = aliceWorld();
+    const before = stateHash(runtime.world);
+    vi.spyOn(runtime, 'slotOf').mockReturnValue(null);
+    expect(() => worlds.claim(runtime, 'id-bob', 'Coral Bay')).toThrow(/left id-bob without an island/);
+    expect([runtime.status, stateHash(runtime.world)]).toEqual(['paused', before]);
+    expect(runtime.world.islands.some((island) => island.owner === 'id-bob')).toBe(false);
+    expect(deps.store.commandsAfter(runtime.id, 0).map((c) => c.sequence)).toEqual([1]);
+    expect(deps.store.world(runtime.id)?.pausedReason).toMatch(/^command after tick 0 threw: world .* left id-bob without an island/);
+  });
+});
+
+describe('a world the server stopped', () => {
+  it('is not resumed', async () => {
+    const { runtime, clock } = aliceWorld();
+    breakNextTick(runtime);
+    runTicks(runtime, clock, 1);
+    runtime.stop();
+    expect(await runtime.resume()).toBe(false);
+    expect(runtime.status).toBe('paused');
   });
 });

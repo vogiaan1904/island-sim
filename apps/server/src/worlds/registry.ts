@@ -107,9 +107,9 @@ export class Worlds {
         return { ok: true as const, runtime, slot };
       });
     } catch (error) {
-      // A throw inside the claim paused the world, and the rollback undid that write too: make it again.
-      const { pausedReason, pausedTick } = runtime.record;
-      if (runtime.status === 'paused') this.deps.store.setPaused(runtime.id, pausedReason, pausedTick);
+      // A throw inside the claim paused the world, and the rollback undid that write too: store it again. Any other
+      // failure came after the sim accepted the claim, which the rollback took out of the log: pause and rebuild.
+      if (!(error instanceof ClaimRefused) || runtime.status === 'paused') runtime.pauseAfterRollback(error);
       if (error instanceof ClaimRefused) return { ok: false, reason: error.reason };
       throw error;
     }

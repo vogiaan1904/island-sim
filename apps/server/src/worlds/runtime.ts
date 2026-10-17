@@ -52,6 +52,8 @@ export type Refusal = Extract<ApplyResult, { ok: false }>;
 const LIVE_TICKS = 8;
 /** Ticks per catch-up batch; between batches the event loop serves the other worlds and the connections. */
 const CATCH_UP_BATCH = 500;
+/** setTimeout fires at once for a longer delay; a due time further away than this is waited for in steps. */
+const MAX_TIMER_MS = 2_147_483_647;
 
 export class WorldRuntime {
   readonly id: string;
@@ -151,10 +153,18 @@ export class WorldRuntime {
    * Runs the missed ticks, the very same sim ticks as live play, capped at 24 real hours (spec 12.3): missed time beyond
    * the cap is skipped. Meanwhile the world accepts no commands and sends no updates; its events go to the log as
    * usual (the "while you were away" news). When it is done, a snapshot is written and every open island gets its full
-   * state again.
+   * state again. Never rejects: a throw (the store failing, say) pauses the world like a throwing tick.
    */
   async catchUp(): Promise<void> {
     if (!this.running || this.status !== 'running') return;
+    try {
+      await this.catchUpTicks();
+    } catch (error) {
+      this.fail('tick', error);
+    }
+  }
+
+  private async catchUpTicks(): Promise<void> {
     const { clock, config, log } = this.deps;
     this.setStatus('catching-up');
     this.capture = null;
@@ -169,15 +179,11 @@ export class WorldRuntime {
       await new Promise<void>((resolve) => setImmediate(resolve));
       if (!this.running) return;
     }
-    try {
-      this.snapshot();
-    } catch (error) {
-      this.fail('tick', error);
-      return;
-    }
+    this.snapshot();
     this.setStatus('running');
     if (this.listeners.size > 0) this.capture = captureEntities(this.world);
     this.emit({ kind: 'resync' });
+    this.schedule();
   }
 
   /**
@@ -185,13 +191,12 @@ export class WorldRuntime {
    * then catches up the paused time with the same cap and ticks on. False when it was not paused or did not rebuild.
    */
   async resume(): Promise<boolean> {
-    if (this.status !== 'paused' || !this.rebuild(this.recordValue.pausedTick ?? this.world.tick)) return false;
+    if (!this.running || this.status !== 'paused' || !this.rebuild(this.recordValue.pausedTick ?? this.world.tick)) return false;
     this.deps.store.setPaused(this.id, null, null);
     this.recordValue = { ...this.recordValue, pausedReason: null, pausedTick: null };
     this.status = 'running';
     this.deps.log.info('world resumed', { world: this.id, tick: this.world.tick });
     await this.catchUp();
-    this.schedule();
     return this.status === 'running';
   }
 
@@ -258,14 +263,18 @@ export class WorldRuntime {
     return { islands };
   }
 
+  /** Sets the timer for the next due tick. A catch-up sets it again when it is done, so this waits while one runs. */
   private schedule(): void {
-    if (!this.running || !this.ticking || this.status === 'paused' || this.timer !== null) return;
-    const delay = Math.max(0, this.nextDueMs() - this.deps.clock.now());
+    if (!this.running || !this.ticking || this.status !== 'running' || this.timer !== null) return;
+    const delay = Math.min(Math.max(0, this.nextDueMs() - this.deps.clock.now()), MAX_TIMER_MS);
     this.timer = setTimeout(() => {
       this.timer = null;
-      const catchingUp = this.runDue();
-      if (catchingUp) void catchingUp.then(() => this.schedule());
-      else this.schedule();
+      try {
+        if (this.runDue() === null) this.schedule();
+      } catch (error) {
+        this.deps.log.error('tick timer failed', { world: this.id, error: error instanceof Error ? error.stack : String(error) });
+        if (this.status === 'running') this.fail('tick', error);
+      }
     }, delay);
   }
 
@@ -306,34 +315,59 @@ export class WorldRuntime {
   }
 
   /**
+   * For the registry, when the transaction around a command rolled back: a command the sim accepted is gone from the
+   * log, and a pause written inside the transaction is gone with it. Pauses the world like a throwing command and
+   * rebuilds it from the log, or stores the pause again when the world already paused.
+   */
+  pauseAfterRollback(error: unknown): void {
+    if (this.status === 'paused') this.storePause();
+    else this.fail('command', error);
+  }
+
+  /**
    * A throwing tick or command pauses only this world (spec 5.1, 12.3). The state the throw left behind is never used
    * again: the world is rebuilt from its snapshot and log to its last good tick (a throwing tick never completed, a
-   * throwing command was never logged), and waits for the host to resume it.
+   * throwing command was never logged), and waits for the host to resume it. Never throws, whatever the store does:
+   * the world is paused first, so a store that fails here leaves it paused, not running on a state it should not use.
    */
   private fail(kind: 'tick' | 'command', error: unknown): void {
     const tick = this.world.tick;
     const message = error instanceof Error ? error.message : String(error);
-    this.deps.log.error('world paused', { world: this.id, kind, tick, error: error instanceof Error ? error.stack : message });
     const reason = `${kind} after tick ${tick} threw: ${message}`;
-    this.rebuild(tick);
-    this.deps.store.setPaused(this.id, reason, tick);
     this.recordValue = { ...this.recordValue, pausedReason: reason, pausedTick: tick };
     this.setStatus('paused');
+    this.deps.log.error('world paused', { world: this.id, kind, tick, error: error instanceof Error ? error.stack : message });
+    this.rebuild(tick);
+    this.storePause();
   }
 
-  /** Replaces the world in memory with the one its snapshot and log rebuild at the tick. */
+  private storePause(): void {
+    const { pausedReason, pausedTick } = this.recordValue;
+    try {
+      this.deps.store.setPaused(this.id, pausedReason, pausedTick);
+    } catch (error) {
+      this.deps.log.error('pause not stored', { world: this.id, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  /** Replaces the world in memory with the one its snapshot and log rebuild at the tick. False, never a throw, when it cannot. */
   private rebuild(tick: number): boolean {
-    const recovered = recoverWorld(this.deps.store, this.id, tick);
-    if (!recovered.ok) {
-      this.deps.log.error('world not rebuilt', { world: this.id, reason: recovered.reason });
+    try {
+      const recovered = recoverWorld(this.deps.store, this.id, tick);
+      if (!recovered.ok) {
+        this.deps.log.error('world not rebuilt', { world: this.id, reason: recovered.reason });
+        return false;
+      }
+      this.world = recovered.world;
+      this.nextSequence = recovered.lastSequence + 1;
+      this.capture = null;
+      this.membersJson = '';
+      this.syncMembers();
+      return true;
+    } catch (error) {
+      this.deps.log.error('world not rebuilt', { world: this.id, reason: error instanceof Error ? error.message : String(error) });
       return false;
     }
-    this.world = recovered.world;
-    this.nextSequence = recovered.lastSequence + 1;
-    this.capture = null;
-    this.membersJson = '';
-    this.syncMembers();
-    return true;
   }
 
   private setAnchor(tick: number, ms: number): void {

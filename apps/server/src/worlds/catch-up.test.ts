@@ -56,6 +56,21 @@ describe('catching up', () => {
   });
 });
 
+describe('a catch-up whose store fails', () => {
+  it('resolves and leaves the world paused when the anchor cannot be written', async () => {
+    const setup = worldDeps();
+    setup.config.catchUpCapTicks = 100;
+    const { runtime, clock, deps } = aliceWorld(setup);
+    vi.spyOn(deps.store, 'setAnchor').mockImplementation(() => {
+      throw new Error('disk full');
+    });
+    clock.advance(2_500 * 500);
+    await expect(runtime.runDue()).resolves.toBeUndefined();
+    expect([runtime.status, runtime.world.tick]).toEqual(['paused', 0]);
+    expect(deps.store.world(runtime.id)?.pausedReason).toBe('tick after tick 0 threw: disk full');
+  });
+});
+
 describe('a clock that jumps', () => {
   it('runs nothing while it is behind, and catches up when it is far ahead', async () => {
     const { runtime, clock } = aliceWorld();
@@ -98,5 +113,29 @@ describe('the tick timer', () => {
     clock.advance(2_500);
     vi.advanceTimersByTime(2_500);
     expect([runtime.status, vi.getTimerCount()]).toEqual(['paused', 0]);
+  });
+
+  it('catches whatever a due run throws instead of throwing out of the timer', () => {
+    vi.useFakeTimers();
+    const { runtime, clock, log } = aliceWorld();
+    vi.spyOn(runtime, 'runDue').mockImplementation(() => {
+      throw new Error('boom');
+    });
+    runtime.start();
+    clock.advance(2_500);
+    expect(() => vi.advanceTimersByTime(2_500)).not.toThrow();
+    expect(log.entries.map((entry) => entry.message)).toContain('tick timer failed');
+    expect(runtime.status).toBe('paused');
+  });
+
+  it('does not spin when started during a catch-up, and ticks on after it', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const { runtime, clock } = aliceWorld();
+    clock.advance(2_500 * 2_000);
+    const catchingUp = runtime.runDue();
+    runtime.start();
+    expect(vi.getTimerCount()).toBe(0);
+    await catchingUp;
+    expect([runtime.status, vi.getTimerCount()]).toEqual(['running', 1]);
   });
 });
