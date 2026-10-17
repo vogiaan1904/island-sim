@@ -9,7 +9,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p packages/content && tsc -p packages/sim && tsc -p packages/protocol && tsc -p tools/pacing",
+    "typecheck": "tsc -p packages/content && tsc -p packages/sim && tsc -p packages/protocol && tsc -p apps/server && tsc -p tools/pacing",
     "lint": "eslint .",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "pacing": "node --disable-warning=ExperimentalWarning tools/pacing/src/run.ts"

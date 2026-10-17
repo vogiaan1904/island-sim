@@ -1,0 +1,19 @@
+{
+  "name": "@island/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@island/content": "workspace:*",
+    "@island/protocol": "workspace:*",
+    "@island/sim": "workspace:*",
+    "@node-rs/argon2": "^2.2.1",
+    "better-sqlite3": "^13.0.3",
+    "valibot": "^1.5.0",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/ws": "^8.18.2"
+  }
+}

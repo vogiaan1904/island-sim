@@ -2,3 +2,7 @@ packages:
   - "packages/*"
   - "apps/*"
   - "tools/*"
+
+# better-sqlite3 ships prebuilt binaries and loads them itself; its binding.gyp would only rebuild from source.
+ignoredBuiltDependencies:
+  - better-sqlite3
