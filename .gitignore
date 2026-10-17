@@ -6,3 +6,9 @@
 # Original asset packs and their extracted contents: re-downloadable, see assets/SOURCES.md
 assets/packs/
 assets/raw/
+
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
