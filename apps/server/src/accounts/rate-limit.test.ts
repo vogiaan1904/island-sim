@@ -13,4 +13,14 @@ describe('RateLimiter', () => {
     clock.advance(1);
     expect(limiter.take('alice')).toBe(true);
   });
+
+  it('forgets old keys at most once a window, however many keys arrive', () => {
+    const clock = new ManualClock();
+    const limiter = new RateLimiter(3, 60_000, clock);
+    for (let i = 0; i <= 10_000; i += 1) limiter.take(`k${i}`);
+    expect(limiter.size).toBe(10_001);
+    clock.advance(60_000);
+    expect(limiter.take('late')).toBe(true);
+    expect(limiter.size).toBe(1);
+  });
 });
