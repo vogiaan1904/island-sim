@@ -3,6 +3,7 @@ import type { WorldState } from '../state.ts';
 import { checkIn } from './checkIn.ts';
 import { claimIsland } from './claimIsland.ts';
 import { reject, type CommandContext } from './context.ts';
+import { placeBuilding } from './placeBuilding.ts';
 import type { Command, CommandMeta, CommandResult } from './types.ts';
 
 /**
@@ -26,6 +27,8 @@ export function applyCommand(world: WorldState, content: Content, command: Comma
       return claimIsland(ctx, command);
     case 'check-in':
       return checkIn(ctx, command);
+    case 'place-building':
+      return placeBuilding(ctx, command);
     default:
       return reject('bad-input');
   }

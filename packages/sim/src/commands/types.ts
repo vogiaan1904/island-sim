@@ -1,5 +1,7 @@
 import type { SimEvent } from '../events.ts';
 import type { LedgerEntry } from '../ledger.ts';
+import type { BuildingId } from '@island/content';
+import type { Rotation } from '../state.ts';
 
 // Command types live in the sim; packages/protocol wraps them in messages (spec 12.2).
 // Commands arrive from the network, so every handler re-checks every field and answers with a reason code.
@@ -16,7 +18,16 @@ export interface CheckInCommand {
   slot: number;
 }
 
-export type Command = ClaimIslandCommand | CheckInCommand;
+export interface PlaceBuildingCommand {
+  type: 'place-building';
+  slot: number;
+  building: BuildingId;
+  x: number;
+  y: number;
+  rotation: Rotation;
+}
+
+export type Command = ClaimIslandCommand | CheckInCommand | PlaceBuildingCommand;
 
 /** Stable ids; the client turns them into words and icons (island-ui). */
 export type ReasonCode =
