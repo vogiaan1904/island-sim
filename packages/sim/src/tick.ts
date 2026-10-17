@@ -7,6 +7,8 @@ import { advanceConstruction } from './passes/construction.ts';
 import type { TickContext } from './passes/context.ts';
 import { runFerry } from './passes/ferry.ts';
 import { runLabor } from './passes/labor.ts';
+import { runProduction } from './passes/production.ts';
+import { deliverShipments, dispatchGoods } from './passes/transport.ts';
 import { chargeUpkeep } from './passes/upkeep.ts';
 import type { IslandState, WorldState } from './state.ts';
 
@@ -46,5 +48,8 @@ function runIsland(ctx: TickContext, island: IslandState): void {
   advanceConstruction(ctx, island);
   if (hour) chargeUpkeep(ctx, island);
   if (slow) runLabor(ctx, island);
+  runProduction(ctx, island);
+  deliverShipments(ctx, island);
+  if (slow) dispatchGoods(ctx, island);
   refreshConditions(ctx, island);
 }

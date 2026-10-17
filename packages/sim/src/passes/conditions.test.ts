@@ -26,6 +26,7 @@ describe('building conditions', () => {
   it('show output full when another cycle would not fit, and under construction above everything', () => {
     const world = village(1100);
     buildingOf(world, 2).stock = { vegetables: 10 };
+    buildingOf(world, 4).stock = { fish: 30 };
     buildingOf(world, 3).constructionLeft = 50;
     buildingOf(world, 3).upkeepDue = true;
     tickWorld(world, SMALL);
