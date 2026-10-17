@@ -52,6 +52,11 @@ describe('place-building', () => {
     expect(place(smallWorld(), 'farm', 5, 4, 1)).toMatchObject({ ok: true });
   });
 
+  it('answers huge coordinates with out-of-bounds instead of hanging', () => {
+    expect(place(smallWorld(), 'farm', Number.MAX_SAFE_INTEGER, 2, 0)).toMatchObject({ ok: false, reason: 'out-of-bounds' });
+    expect(place(smallWorld(), 'farm', 2, Number.MAX_SAFE_INTEGER, 1)).toMatchObject({ ok: false, reason: 'out-of-bounds' });
+  });
+
   it('refuses a spot another building already took', () => {
     const world = smallWorld();
     expect(place(world, 'cottage', 2, 2).ok).toBe(true);

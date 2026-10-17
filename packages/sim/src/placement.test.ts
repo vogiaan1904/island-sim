@@ -52,6 +52,17 @@ describe('checkPlacement', () => {
     expect(report.checks.find((check) => check.id === 'affordable')?.ok).toBe(false);
   });
 
+  it('rejects huge coordinates as out of bounds without building the footprint', () => {
+    const cases: Array<[number, number, Rotation]> = [
+      [Number.MAX_SAFE_INTEGER, 2, 0],
+      [2, Number.MAX_SAFE_INTEGER, 1],
+      [-Number.MAX_SAFE_INTEGER, 2, 0],
+    ];
+    for (const [x, y, rotation] of cases) {
+      expect(failed(island(), 'farm', x, y, rotation)).toEqual(['in-bounds', 'terrain', 'free', 'road-access']);
+    }
+  });
+
   it('refuses tiles taken by another building', () => {
     const i = island();
     i.buildings.push({ id: 7, type: 'farm', x: 2, y: 4, rotation: 0, constructionLeft: 0 });

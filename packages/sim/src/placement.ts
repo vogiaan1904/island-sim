@@ -57,11 +57,14 @@ export function checkPlacement(
 ): PlacementReport {
   const size = content.rules.islandSize;
   const { w, h } = footprintSize(def, rotation);
-  const tiles = footprintTiles(x, y, w, h);
   const shortfallCents = Math.max(0, def.priceCents - island.coinsCents);
   const affordable = shortfallCents === 0;
 
-  if (!tiles.every(([tx, ty]) => inBounds(size, tx, ty))) {
+  // Check the anchor before building any tile list: a huge coordinate must never reach a loop.
+  // Written as x > size - w (not x + w > size) so no sum can overflow the safe-integer range.
+  const anchorInside =
+    Number.isSafeInteger(x) && Number.isSafeInteger(y) && x >= 0 && y >= 0 && x <= size - w && y <= size - h;
+  if (!anchorInside) {
     return report([
       ['in-bounds', false],
       ['terrain', false],
@@ -71,6 +74,7 @@ export function checkPlacement(
     ], shortfallCents);
   }
 
+  const tiles = footprintTiles(x, y, w, h);
   const inFootprint = (tx: number, ty: number) => tx >= x && ty >= y && tx < x + w && ty < y + h;
   const allLand = tiles.every(([tx, ty]) => isLand(island, size, tx, ty));
   const touchesWater = tiles.some(([tx, ty]) =>
