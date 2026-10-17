@@ -19,7 +19,7 @@ import {
 import type { Clock } from '../clock.ts';
 import type { ServerConfig } from '../config.ts';
 import type { Log } from '../log.ts';
-import { CONTENT_HASH } from './recovery.ts';
+import { CONTENT_HASH, recoverWorld } from './recovery.ts';
 import type { Member, WorldRecord, WorldStore } from './store.ts';
 
 // One running world (spec 5.1): its state, its clock anchor, its command log position, and the connections that
@@ -48,6 +48,11 @@ export type ApplyResult =
 
 export type Refusal = Extract<ApplyResult, { ok: false }>;
 
+/** At most this many due ticks run live, with updates; more than this is catching up (downtime, a pause, a stall). */
+const LIVE_TICKS = 8;
+/** Ticks per catch-up batch; between batches the event loop serves the other worlds and the connections. */
+const CATCH_UP_BATCH = 500;
+
 export class WorldRuntime {
   readonly id: string;
   world: WorldState;
@@ -61,6 +66,11 @@ export class WorldRuntime {
   private membersJson = '';
   private lastSnapshotMs: number;
   private readonly listeners = new Set<(event: RuntimeEvent) => void>();
+  /** False once the server stops running the world (shutdown): no more ticks, timers or catch-up batches. */
+  private running = true;
+  /** True while the world ticks on its own timer. */
+  private ticking = false;
+  private timer: ReturnType<typeof setTimeout> | null = null;
 
   /** Takes over a world loaded or created by the registry, and rebuilds the membership mirror from its state. */
   constructor(deps: RuntimeDeps, record: WorldRecord, world: WorldState, lastSequence: number) {
@@ -97,27 +107,106 @@ export class WorldRuntime {
       return { ok: false, reason: this.status === 'paused' ? 'world-paused' : 'world-catching-up', shortfallCents: 0 };
     }
     const sequence = this.nextSequence;
-    const result = applyCommand(this.world, content, command, { sequence });
-    if (!result.ok) return result;
     const { store, clock } = this.deps;
-    store.transaction(() => {
-      store.insertCommand(
-        this.id,
-        { sequence, tick: this.world.tick, accountId, simVersion: SIM_VERSION, contentHash: CONTENT_HASH, command: JSON.stringify(command) },
-        clock.now(),
-      );
-      store.insertEvents(this.id, result.events);
-      this.syncMembers();
-    });
+    let result: CommandResult;
+    try {
+      result = applyCommand(this.world, content, command, { sequence });
+      if (!result.ok) return result;
+      const { events } = result;
+      store.transaction(() => {
+        store.insertCommand(
+          this.id,
+          { sequence, tick: this.world.tick, accountId, simVersion: SIM_VERSION, contentHash: CONTENT_HASH, command: JSON.stringify(command) },
+          clock.now(),
+        );
+        store.insertEvents(this.id, events);
+        this.syncMembers();
+      });
+    } catch (error) {
+      this.fail('command', error);
+      return { ok: false, reason: 'server-error', shortfallCents: 0 };
+    }
     this.nextSequence += 1;
-    this.publish(sequence, result.events);
+    try {
+      this.publish(sequence, result.events);
+    } catch (error) {
+      this.fail('command', error);
+    }
     return result;
   }
 
-  /** Runs every tick due by now. Tick T is due at anchorMs + (T - anchorTick) * tickMs, so the clock never drifts. */
-  runDue(): void {
+  /**
+   * Runs every tick due by now. Tick T is due at anchorMs + (T - anchorTick) * tickMs, so the clock never drifts. A few
+   * due ticks run live; more are caught up in batches, and the catch-up is returned for callers that wait for it.
+   */
+  runDue(): Promise<void> | null {
+    if (!this.running || this.status !== 'running') return null;
     const due = this.dueTicks();
+    if (due > LIVE_TICKS) return this.catchUp();
     for (let i = 0; i < due && this.status === 'running'; i += 1) this.runTick();
+    return null;
+  }
+
+  /**
+   * Runs the missed ticks, the very same sim ticks as live play, capped at 24 real hours (spec 12.3): missed time beyond
+   * the cap is skipped. Meanwhile the world accepts no commands and sends no updates; its events go to the log as
+   * usual (the "while you were away" news). When it is done, a snapshot is written and every open island gets its full
+   * state again.
+   */
+  async catchUp(): Promise<void> {
+    if (!this.running || this.status !== 'running') return;
+    const { clock, config, log } = this.deps;
+    this.setStatus('catching-up');
+    this.capture = null;
+    const due = this.dueTicks();
+    if (due > config.catchUpCapTicks) {
+      this.setAnchor(this.world.tick, clock.now() - config.catchUpCapTicks * config.tickMs);
+      log.warn('catch-up capped', { world: this.id, skippedTicks: due - config.catchUpCapTicks });
+    }
+    log.info('catching up', { world: this.id, fromTick: this.world.tick, ticks: this.dueTicks() });
+    for (let left = this.dueTicks(); left > 0; left = this.dueTicks()) {
+      if (!this.runQuietly(Math.min(left, CATCH_UP_BATCH))) return;
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      if (!this.running) return;
+    }
+    try {
+      this.snapshot();
+    } catch (error) {
+      this.fail('tick', error);
+      return;
+    }
+    this.setStatus('running');
+    if (this.listeners.size > 0) this.capture = captureEntities(this.world);
+    this.emit({ kind: 'resync' });
+  }
+
+  /**
+   * Resumes a paused world, from the host's admin interface (spec 12.3): it is rebuilt from its snapshot and log again,
+   * then catches up the paused time with the same cap and ticks on. False when it was not paused or did not rebuild.
+   */
+  async resume(): Promise<boolean> {
+    if (this.status !== 'paused' || !this.rebuild(this.recordValue.pausedTick ?? this.world.tick)) return false;
+    this.deps.store.setPaused(this.id, null, null);
+    this.recordValue = { ...this.recordValue, pausedReason: null, pausedTick: null };
+    this.status = 'running';
+    this.deps.log.info('world resumed', { world: this.id, tick: this.world.tick });
+    await this.catchUp();
+    this.schedule();
+    return this.status === 'running';
+  }
+
+  /** Starts the world's own tick timer (spec 5.1); it first catches up whatever is due. */
+  start(): void {
+    this.ticking = true;
+    this.schedule();
+  }
+
+  /** Stops the timer and any catch-up between its batches; the state stays as of its last tick. */
+  stop(): void {
+    this.running = false;
+    this.ticking = false;
+    if (this.timer !== null) clearTimeout(this.timer);
+    this.timer = null;
   }
 
   /** When the next tick is due, in clock time. */
@@ -169,6 +258,17 @@ export class WorldRuntime {
     return { islands };
   }
 
+  private schedule(): void {
+    if (!this.running || !this.ticking || this.status === 'paused' || this.timer !== null) return;
+    const delay = Math.max(0, this.nextDueMs() - this.deps.clock.now());
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      const catchingUp = this.runDue();
+      if (catchingUp) void catchingUp.then(() => this.schedule());
+      else this.schedule();
+    }, delay);
+  }
+
   private dueTicks(): number {
     const { anchorTick, anchorMs } = this.recordValue;
     const dueTick = anchorTick + Math.floor((this.deps.clock.now() - anchorMs) / this.deps.config.tickMs);
@@ -177,10 +277,73 @@ export class WorldRuntime {
 
   /** One live tick: the sim's world tick, its events into the log, a snapshot when one is due, changes to listeners. */
   private runTick(): void {
-    const { events } = tickWorld(this.world, content);
-    this.deps.store.insertEvents(this.id, events);
+    try {
+      const { events } = tickWorld(this.world, content);
+      this.deps.store.insertEvents(this.id, events);
+      this.snapshotIfDue();
+      this.publish(TICK_SOURCE, events);
+    } catch (error) {
+      this.fail('tick', error);
+    }
+  }
+
+  /** Ticks without updates, their events written in one transaction. False when one threw and paused the world. */
+  private runQuietly(count: number): boolean {
+    try {
+      this.deps.store.transaction(() => {
+        for (let i = 0; i < count; i += 1) this.deps.store.insertEvents(this.id, tickWorld(this.world, content).events);
+      });
+      this.snapshotIfDue();
+      return true;
+    } catch (error) {
+      this.fail('tick', error);
+      return false;
+    }
+  }
+
+  private snapshotIfDue(): void {
     if (this.deps.clock.now() - this.lastSnapshotMs >= this.deps.config.snapshotMs) this.snapshot();
-    this.publish(TICK_SOURCE, events);
+  }
+
+  /**
+   * A throwing tick or command pauses only this world (spec 5.1, 12.3). The state the throw left behind is never used
+   * again: the world is rebuilt from its snapshot and log to its last good tick (a throwing tick never completed, a
+   * throwing command was never logged), and waits for the host to resume it.
+   */
+  private fail(kind: 'tick' | 'command', error: unknown): void {
+    const tick = this.world.tick;
+    const message = error instanceof Error ? error.message : String(error);
+    this.deps.log.error('world paused', { world: this.id, kind, tick, error: error instanceof Error ? error.stack : message });
+    const reason = `${kind} after tick ${tick} threw: ${message}`;
+    this.rebuild(tick);
+    this.deps.store.setPaused(this.id, reason, tick);
+    this.recordValue = { ...this.recordValue, pausedReason: reason, pausedTick: tick };
+    this.setStatus('paused');
+  }
+
+  /** Replaces the world in memory with the one its snapshot and log rebuild at the tick. */
+  private rebuild(tick: number): boolean {
+    const recovered = recoverWorld(this.deps.store, this.id, tick);
+    if (!recovered.ok) {
+      this.deps.log.error('world not rebuilt', { world: this.id, reason: recovered.reason });
+      return false;
+    }
+    this.world = recovered.world;
+    this.nextSequence = recovered.lastSequence + 1;
+    this.capture = null;
+    this.membersJson = '';
+    this.syncMembers();
+    return true;
+  }
+
+  private setAnchor(tick: number, ms: number): void {
+    this.deps.store.setAnchor(this.id, tick, ms);
+    this.recordValue = { ...this.recordValue, anchorTick: tick, anchorMs: ms };
+  }
+
+  private setStatus(status: WorldStatus): void {
+    this.status = status;
+    this.emit({ kind: 'status', status });
   }
 
   private publish(source: number, events: SimEvent[]): void {

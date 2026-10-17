@@ -42,6 +42,20 @@ export class Worlds {
     }
   }
 
+  /** Runs every world's due ticks; resolves when the catch-ups this started are done. */
+  async runDue(): Promise<void> {
+    await Promise.all(this.all().map((runtime) => runtime.runDue()));
+  }
+
+  /** Starts every world's tick timer; each first catches up the time it missed (spec 5.2). */
+  start(): void {
+    for (const runtime of this.all()) runtime.start();
+  }
+
+  stop(): void {
+    for (const runtime of this.all()) runtime.stop();
+  }
+
   get(id: string): WorldRuntime | undefined {
     return this.runtimes.get(id);
   }
@@ -93,6 +107,9 @@ export class Worlds {
         return { ok: true as const, runtime, slot };
       });
     } catch (error) {
+      // A throw inside the claim paused the world, and the rollback undid that write too: make it again.
+      const { pausedReason, pausedTick } = runtime.record;
+      if (runtime.status === 'paused') this.deps.store.setPaused(runtime.id, pausedReason, pausedTick);
       if (error instanceof ClaimRefused) return { ok: false, reason: error.reason };
       throw error;
     }
