@@ -15,7 +15,8 @@
     "pacing": "node --disable-warning=ExperimentalWarning tools/pacing/src/run.ts",
     "server": "node --disable-warning=ExperimentalWarning apps/server/src/main.ts",
     "admin": "node --disable-warning=ExperimentalWarning apps/server/src/admin/cli.ts",
-    "assets": "node --disable-warning=ExperimentalWarning tools/assets/src/cli.ts"
+    "assets": "node --disable-warning=ExperimentalWarning tools/assets/src/cli.ts",
+    "blender": "node --disable-warning=ExperimentalWarning tools/assets/src/blender.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -3,6 +3,6 @@
  * that adds it, and the shipped-files test requires the folders to hold exactly this list.
  */
 export const catalog: { models: readonly string[]; icons: readonly string[] } = {
-  models: [],
+  models: ['palette.png'],
   icons: [],
 };
