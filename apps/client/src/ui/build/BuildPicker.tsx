@@ -21,7 +21,7 @@ export function BuildPicker() {
   const pick = (option: BuildingOption) => {
     const camera = store.getState().view.camera;
     const pose = cameraPose(camera, ISLAND_LIMITS);
-    store.getState().setView({ placement: startDraft(option.id, tileAtWorld(pose.x, pose.z, content), content), openPanel: null });
+    store.getState().setView({ placement: startDraft(option.id, tileAtWorld(pose.x, pose.z, content), content), openPanel: null, tappedBuilding: null });
   };
   return (
     <ul className="build-list" aria-label="Buildings">

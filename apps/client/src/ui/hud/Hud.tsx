@@ -1,7 +1,10 @@
 import { content } from '@island/content';
 import { useMemo } from 'react';
+import { NewsCard } from '../../news/NewsCard.tsx';
+import { StageCelebration } from '../../news/StageCelebration.tsx';
 import { useGame, useGameState } from '../../session/game.tsx';
 import type { PanelId } from '../../store/view.ts';
+import { CardHost } from '../cards/CardHost.tsx';
 import { Compass } from '../Compass.tsx';
 import { Icon, type IconName } from '../icons.tsx';
 import { STAGE_NAMES } from '../names.ts';
@@ -18,7 +21,8 @@ import './Hud.css';
  */
 export function Hud() {
   const island = useGameState((state) => state.island);
-  const panelOpen = useGameState((state) => state.view.openPanel !== null);
+  // A panel or a building card on the island: the wide layout leaves room on the right for either.
+  const panelOpen = useGameState((state) => state.view.openPanel !== null || state.view.tappedBuilding !== null);
   // The placement panel takes the bottom bar's place while the player places something (ticket 12).
   const placing = useGameState((state) => state.view.placement !== null);
   const model = useMemo(() => (island === null ? null : hudModel(island.state, content)), [island?.state]);
@@ -34,8 +38,11 @@ export function Hud() {
         </div>
         {island.own && <Goals tiles={model.goals} />}
         {island.own && !placing && <BottomBar />}
+        <NewsCard />
       </div>
+      <StageCelebration />
       <PanelHost bodies={PANEL_BODIES} />
+      <CardHost />
     </>
   );
 }

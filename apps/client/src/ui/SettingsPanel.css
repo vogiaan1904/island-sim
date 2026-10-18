@@ -1,0 +1,104 @@
+/* The Settings panel body (style A): big toggles and choices, one column, scrolls inside the panel card. */
+.settings {
+  display: grid;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+.settings-block {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.settings-heading {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.settings-line {
+  margin: 0;
+  font-weight: 500;
+}
+
+.settings-toggle,
+.settings-choice {
+  min-height: 48px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 0.75rem;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.875rem;
+}
+
+.settings-toggle[aria-checked='true'] {
+  background: var(--green);
+}
+
+.settings-knob {
+  width: 1.5rem;
+  height: 1.5rem;
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+}
+
+.settings-choices {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.settings-choice[aria-checked='true'] {
+  background: linear-gradient(180deg, var(--build-top), var(--build-bottom));
+}
+
+.settings-toggle:focus-visible,
+.settings-choice:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.settings-toggle:active,
+.settings-choice:active {
+  transform: translateY(2px);
+}
+
+.settings-password {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.settings-done {
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  font-weight: 600;
+  background: var(--picture-tile);
+  border: 2px solid var(--teal);
+  border-radius: 0.75rem;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-toggle:active,
+  .settings-choice:active {
+    transform: none;
+  }
+}

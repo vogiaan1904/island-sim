@@ -78,6 +78,27 @@ describe('the session', () => {
     await vi.waitFor(() => expect(store.getState().session.phase).toBe('update-required'));
   });
 
+  it('tells the server which news was seen, so the next visit brings only what is newer', async () => {
+    const { store, session, runtime } = await page();
+    await session.start();
+    await session.logIn('alice', 'password-1');
+    await vi.waitFor(() => expect(store.getState().session.phase).toBe('playing'));
+    const news = store.getState().island?.news ?? [];
+    expect(news.length).toBeGreaterThan(0);
+    const last = news[news.length - 1];
+    session.markSeen({ tick: last?.tick ?? 0, source: last?.source ?? 0, index: last?.index ?? 0 });
+
+    await session.showWorlds();
+    session.openWorld(runtime.id);
+    await vi.waitFor(() => expect(store.getState().island).not.toBeNull());
+    expect(store.getState().island?.news).toEqual([]);
+  });
+
+  it('marks nothing seen before the island is open', async () => {
+    const { session } = await page();
+    expect(() => session.markSeen({ tick: 1, source: 0, index: 0 })).not.toThrow();
+  });
+
   it('sends no command before the island is open', async () => {
     const { session } = await page();
     expect(session.command({ type: 'hire-commuters', count: 1 })).toBeNull();
@@ -171,6 +192,20 @@ describe('the session: sign-up, worlds and invite codes', () => {
     expect(after).toBe(runtime.record.inviteCode);
 
     expect(await session.regenerateInvite('no-such-world')).toBe('no-such-world');
+  });
+
+  it('changes the password of the signed-in player and stays signed in; a wrong current password changes nothing', async () => {
+    const { store, session, jar } = await page();
+    await jar.login('alice');
+    await session.start();
+    await vi.waitFor(() => expect(store.getState().session.phase).toBe('playing'));
+
+    expect(await session.changePassword('not-my-password', 'brand-new-pass')).toBe('bad-credentials');
+    expect(await session.changePassword('password-1', 'brand-new-pass')).toBeNull();
+    expect(store.getState().session.phase).toBe('playing');
+    expect(await session.logOut()).toBeNull();
+    expect(await session.logIn('alice', 'password-1')).toBe('bad-credentials');
+    expect(await session.logIn('alice', 'brand-new-pass')).toBeNull();
   });
 
   it('logs out this device: back to the log-in screen with nothing of the island left', async () => {

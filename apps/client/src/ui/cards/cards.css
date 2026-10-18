@@ -1,0 +1,242 @@
+/* The building and landmark cards: the panel card of PanelHost.css (bottom on narrow, right on wide) with style A contents
+   (island-ui, screens.md section 5). Colors come from styles/tokens.css. */
+.card {
+  font-family: var(--font);
+}
+
+.card-head {
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.card-portrait {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 4.25rem;
+  height: 4.25rem;
+  background: var(--picture-tile);
+  border: 2.5px solid var(--ink);
+  border-radius: 13px;
+}
+
+.card-portrait img {
+  object-fit: contain;
+}
+
+.card-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: var(--track);
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+}
+
+/* A problem is a waiting chip: warm, with an icon and words, never color alone. */
+.card-status[data-problem='true'] {
+  background: var(--waiting-bg);
+  border-color: var(--waiting-border);
+  color: var(--waiting-ink);
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-top: 0.7rem;
+}
+
+.card-body:empty {
+  display: none;
+}
+
+.card-goods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-good,
+.card-material {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 3.25rem;
+  height: 3.25rem;
+  background: var(--goods-tile);
+  border: 2.5px solid var(--ink);
+  border-radius: 11px;
+}
+
+.card-material {
+  height: auto;
+  min-height: 4.5rem;
+  padding: 0.25rem 0.4rem;
+  gap: 2px;
+}
+
+.card-badge {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  min-width: 1.4rem;
+  padding: 0 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.3rem;
+  text-align: center;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+}
+
+.card-material-count {
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-material-way {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--teal);
+}
+
+.card-heads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* A head: filled for a worker, dashed for an open place. */
+.card-heads i {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+}
+
+.card-heads i[data-filled='true'] {
+  background: var(--teal);
+}
+
+.card-heads i[data-filled='false'] {
+  border-style: dashed;
+  border-color: var(--muted);
+}
+
+.card-note {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.card-materials {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card-problem {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem;
+  background: var(--problem-bg);
+  border: 2.5px solid var(--problem-border);
+  border-radius: 13px;
+}
+
+.card-picture {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  background: var(--picture-tile);
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+}
+
+.card-problem-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-problem-text p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.card-problem-says {
+  color: var(--muted);
+}
+
+.card-said {
+  margin-top: 0.2rem;
+  font-weight: 600;
+}
+
+.card-said:empty {
+  display: none;
+}
+
+.card-fix,
+.card-buy {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.4rem 1rem;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: linear-gradient(var(--build-top), var(--build-bottom));
+  border: 2.5px solid var(--ink);
+  border-radius: 11px;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.card-buy {
+  align-self: flex-start;
+}
+
+.card-fix:active:not(:disabled),
+.card-buy:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+
+.card-fix:disabled,
+.card-buy:disabled {
+  color: var(--muted);
+  background: var(--track);
+  box-shadow: none;
+  cursor: default;
+}
+
+.card-fix:focus-visible,
+.card-buy:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}

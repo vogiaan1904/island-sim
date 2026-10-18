@@ -22,6 +22,10 @@ export interface ViewState {
    * (ticket 18); null until picked. A tier the player sets is never overridden by the check.
    */
   quality: Quality | null;
+  /** True once the player set the tier (Settings or a saved choice): the start check then never changes it. */
+  qualityChosen: boolean;
+  /** True when the player muted all sound in Settings (ticket 18); the ambience and the button sounds follow it. Kept on the device. */
+  muted: boolean;
   /**
    * The camera: where it is asked to be (the real camera glides toward it). Anything may change it through the store's
    * `cameraGesture`: the input binding, the compass, "Show me" and Fix flights. Only the pure controller computes it.
@@ -50,6 +54,8 @@ export function initialView(): ViewState {
   return {
     cameraMode: 'free',
     quality: null,
+    qualityChosen: false,
+    muted: false,
     camera: createCamera(ISLAND_LIMITS),
     controlsChoice: 'auto',
     controlsDetected: 'mouse',

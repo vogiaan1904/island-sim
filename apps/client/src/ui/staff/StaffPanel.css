@@ -1,0 +1,223 @@
+/* The Staff panel body: two picture cards, one under the other (island-ui, style A). Colors come from tokens.css. */
+.staff {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  font-family: var(--font);
+  color: var(--ink);
+}
+
+.staff-note {
+  margin: 0.75rem 0 0;
+  font-family: var(--font);
+  color: var(--muted);
+}
+
+.staff-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 0 3px 0 var(--shadow);
+}
+
+.staff-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.staff-picture {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  background: var(--picture-tile);
+  border: 2.5px solid var(--ink);
+  border-radius: 16px;
+}
+
+.staff-portrait {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  background: var(--picture-tile);
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px var(--surface);
+}
+
+.staff-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.staff-tag {
+  display: inline-block;
+  margin: 0 0 0.2rem;
+  padding: 0.15rem 0.6rem;
+  color: #fff;
+  font-weight: 700;
+  background: var(--teal);
+  border-radius: 999px;
+}
+
+.staff-line {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.staff-seats {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--picture-tile);
+  border-radius: 12px;
+}
+
+.staff-seats svg {
+  flex: none;
+  margin-top: 0.1rem;
+}
+
+.staff-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.staff-go {
+  min-width: 6rem;
+  min-height: 44px;
+  padding: 0 1.1rem;
+  font: inherit;
+  font-weight: 700;
+  color: #fff;
+  background: var(--green);
+  border: 2.5px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.staff-go:disabled {
+  color: var(--muted);
+  background: var(--track);
+  border-color: var(--muted);
+  box-shadow: none;
+  cursor: default;
+}
+
+.staff-go:focus-visible,
+.staff-switch:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.staff-refusal {
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+  font-weight: 600;
+  background: var(--problem-bg);
+  border: 2px solid var(--problem-border);
+  border-radius: 12px;
+}
+
+.staff-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.staff-rule {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--card);
+  border: 2px solid var(--track);
+  border-radius: 14px;
+}
+
+.staff-rule-main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.staff-good {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  background: #fff3d1;
+  border-radius: 12px;
+}
+
+.staff-rule-name {
+  flex: 1;
+  font-weight: 700;
+}
+
+.staff-rule-keep {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+/* The big toggle: 44 px tall, a knob that slides. */
+.staff-switch {
+  flex: none;
+  position: relative;
+  width: 64px;
+  height: 44px;
+  padding: 0;
+  background: var(--track);
+  border: 2.5px solid var(--ink);
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.staff-switch[aria-checked='true'] {
+  background: var(--green);
+}
+
+.staff-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 32px;
+  height: 32px;
+  background: #fff;
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  transition: transform 150ms ease-out;
+}
+
+.staff-switch[aria-checked='true'] .staff-switch-knob {
+  transform: translateX(20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .staff-switch-knob {
+    transition: none;
+  }
+}
