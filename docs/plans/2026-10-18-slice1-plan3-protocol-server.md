@@ -1,6 +1,6 @@
 # Slice 1 Plan 3: Protocol and Server Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Done.** Written for and executed with the superpowers plugin, which this repo no longer uses. Kept as the record of what was built and why; do not execute it again.
 
 **Goal:** Run every world of the game around the clock in one Node server: accounts and invite codes over HTTPS,
 islands synced over WebSocket, everything saved in SQLite and rebuilt exactly after a crash.
@@ -14,8 +14,8 @@ serves the host. The server decides when and who; the sim decides what.
 **Tech Stack:** TypeScript 6 on Node 24 (type stripping), Valibot 1.5, ws 8.22, better-sqlite3 13 (prebuilt
 binaries), @node-rs/argon2 2.2, Vitest 5.
 
-**Spec:** `docs/superpowers/specs/2026-10-16-island-sim-design.md`: sections 5 (server), 9 (testing), 12.2 and 12.3
-(resolved details); slice 1 is section 8.1. Plan index: `docs/superpowers/plans/2026-10-17-slice1-index.md`.
+**Spec:** `docs/design/2026-10-16-island-sim-design.md`: sections 5 (server), 9 (testing), 12.2 and 12.3
+(resolved details); slice 1 is section 8.1. Plan index: `docs/plans/2026-10-17-slice1-index.md`.
 Domain rules: `.claude/skills/island-server/` (read SKILL.md before any task in `apps/server`).
 
 ## Global Constraints
@@ -6597,7 +6597,7 @@ the official skill-creator (`anthropic-skills:skill-creator`); its validator che
   `persistence.md`, `sync-protocol.md`, `accounts-and-security.md`, `operations.md`;
   `.claude/skills/island-testing/references/server-tests.md`, `pacing-harness.md`;
   `.claude/skills/island-game-logic/references/determinism.md`, `slice1-rules.md`;
-  `.claude/skills/island-content/SKILL.md`; `CLAUDE.md`; `docs/superpowers/plans/2026-10-17-slice1-index.md`
+  `.claude/skills/island-content/SKILL.md`; `CLAUDE.md`; `docs/plans/2026-10-17-slice1-index.md`
 
 **Interfaces:** none; documentation only.
 
@@ -6615,10 +6615,10 @@ description: Rules, workflows and checklists for the Island Sim authoritative wo
 
 # Island Sim: world server and protocol
 
-Built in slice 1, plan 3 (`docs/superpowers/plans/2026-10-18-slice1-plan3-protocol-server.md`). Paths and APIs below
+Built in slice 1, plan 3 (`docs/plans/2026-10-18-slice1-plan3-protocol-server.md`). Paths and APIs below
 are real; "Still open" lists what plans 5 and 6 settle.
 
-- Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md`, sections 3 (architecture), 4.1 (time),
+- Source of truth: `docs/design/2026-10-16-island-sim-design.md`, sections 3 (architecture), 4.1 (time),
   4.6 (events), 5 (server) and **12 (resolved details: 12.2 sim and determinism, 12.3 server)**. If this skill and
   the spec disagree, the spec wins: follow it and fix this skill.
 - Reasoning and rejected options: `docs/brainstorm/2026-10-15-island-sim-brainstorm.md`, Section 3 and decisions
@@ -7374,24 +7374,24 @@ index 98f9d45..fbecb59 100644
 @@ -9,8 +9,9 @@ in always-running private multiplayer worlds. **Status: slice 1 in progress; pla
    the design progress checklist.
  - Process: superpowers brainstorming, architectural path. Design sections are approved one at a time → spec in
-   `docs/superpowers/specs/` → the user reviews the spec → writing-plans. No product code before that.
--- **Next step:** write slice 1 plan 3 (protocol and server) from `docs/superpowers/plans/2026-10-17-slice1-index.md`,
+   `docs/design/` → the user reviews the spec → writing-plans. No product code before that.
+-- **Next step:** write slice 1 plan 3 (protocol and server) from `docs/plans/2026-10-17-slice1-index.md`,
 -  using superpowers:writing-plans. Plan 4 (art direction, needs the user and Blender) can run beside it.
 +- **Next step:** plan 4 (art direction and assets, needs the user and Blender open) or plan 5 (the client) from
-+  `docs/superpowers/plans/2026-10-17-slice1-index.md`, using superpowers:writing-plans. Plan 5 must also fix the soft
++  `docs/plans/2026-10-17-slice1-index.md`, using superpowers:writing-plans. Plan 5 must also fix the soft
 +  lock before the first playtest. `pnpm server` runs the server; `pnpm admin` creates the first account.
  - Art direction (Q10) is decided by rendering real pack models in candidate styles through Blender MCP.
  
  ## Requirements that must not be dropped
 ```
 
-Patch for `docs/superpowers/plans/2026-10-17-slice1-index.md`:
+Patch for `docs/plans/2026-10-17-slice1-index.md`:
 
 ```diff
-diff --git a/docs/superpowers/plans/2026-10-17-slice1-index.md b/docs/superpowers/plans/2026-10-17-slice1-index.md
+diff --git a/docs/plans/2026-10-17-slice1-index.md b/docs/plans/2026-10-17-slice1-index.md
 index 5de667d..1f770b5 100644
---- a/docs/superpowers/plans/2026-10-17-slice1-index.md
-+++ b/docs/superpowers/plans/2026-10-17-slice1-index.md
+--- a/docs/plans/2026-10-17-slice1-index.md
++++ b/docs/plans/2026-10-17-slice1-index.md
 @@ -14,7 +14,7 @@ the islands keep running while you're away, and you can watch each other's islan
  |---|---|---|---|---|
  | 1 | Workspace and simulation kernel | pnpm monorepo, `packages/content`, `packages/sim`: seeded worlds, claiming, check-in, buildings and roads paid up front, construction, ledger, events, snapshots, determinism, replay and golden tests | nothing | done: `2026-10-17-slice1-plan1-sim-kernel.md` |
@@ -7444,6 +7444,6 @@ Expected: exit 0, every milestone on target for each seed, the header naming `si
 - [ ] **Step 7: Commit**
 
 ```bash
-git add .claude/skills CLAUDE.md docs/superpowers/plans/2026-10-17-slice1-index.md
+git add .claude/skills CLAUDE.md docs/plans/2026-10-17-slice1-index.md
 git commit -m "docs(skills): record the built server and protocol, the server test harness, the retune load policy and the stricter goods checks, and mark plan 3 done"
 ```

@@ -7,11 +7,14 @@ in always-running private multiplayer worlds. **Status: slice 1 in progress; pla
 
 - Read `docs/brainstorm/2026-10-15-island-sim-brainstorm.md` first. It holds every decision, open question and
   the design progress checklist.
-- Process: superpowers brainstorming, architectural path. Design sections are approved one at a time → spec in
-  `docs/superpowers/specs/` → the user reviews the spec → writing-plans. No product code before that.
-- **Next step:** plan 5 (the client) from `docs/superpowers/plans/2026-10-17-slice1-index.md`, using
-  superpowers:writing-plans. Plan 5 must also fix the soft lock before the first playtest. `pnpm server` runs the
-  server; `pnpm admin` creates the first account. The models, icons and their contract are ready (`island-3d-client`).
+- Process: the mattpocock skills' main flow (`HARNESS.md`, "Workflow"). The game design spec is
+  `docs/design/`; each remaining slice 1 plan becomes a feature in `.scratch/<feature>/` (a spec and tickets).
+  No product code before the user approves the tickets.
+- **Next step:** plan 5 (the client), as `.scratch/slice1-client/`. In one session: `/grill-with-docs` on the open
+  questions listed under "Plan 5, client" in `docs/plans/2026-10-17-slice1-index.md` (the soft lock way out comes
+  first), then `/to-spec`, then `/to-tickets`. Build with `/implement-spec`, or `/implement` per ticket with
+  `/clear` between. `pnpm server` runs the server; `pnpm admin` creates the first account. The models, icons and
+  their contract are ready (`island-3d-client`).
 - Art direction (Q10) is decided: the "golden" look, 4-unit tiles (spec 11, 12.6). Assets are rebuilt with
   `pnpm blender` and checked with `pnpm assets check` (`island-blender`).
 
@@ -21,8 +24,8 @@ in always-running private multiplayer worlds. **Status: slice 1 in progress; pla
   off ships, vehicles driving. Free zoom in/out and rotation of the view is a core feature, not a detail.
 
 - Ship project skills per domain in `.claude/skills/` (game logic, frontend, Blender, server, content, testing).
-  Write them after spec approval, as explicit tasks in the implementation plan, using the official skill-creator
-  skill (`anthropic-skills:skill-creator`, `/skill-creator`), not superpowers:writing-skills.
+  Write them after spec approval, as explicit tickets in each feature, using the official skill-creator
+  skill (`anthropic-skills:skill-creator`, `/skill-creator`).
 - A world with one player must be fully playable; multiplayer only adds to it.
 - Phones are the main device (mobile browser, touch-first); desktop is also supported.
 - No emoji anywhere in the UI, mockups included: use real icons (an SVG icon set, or icons rendered from the 3D
@@ -52,5 +55,22 @@ in always-running private multiplayer worlds. **Status: slice 1 in progress; pla
 
 ## Git
 
-- Commits are allowed without asking: commit as work completes (one commit per plan task), on a feature branch.
+- Commits are allowed without asking: commit as work completes (one commit per ticket), on a feature branch.
   Ask before merging into `main`, pushing, or rewriting published history. Never commit `.claude/settings.local.json`.
+
+## Agent skills
+
+### Issue tracker
+
+Local markdown: one committed folder per feature under `.scratch/<feature>/` (`spec.md`, `issues/NN-slug.md`).
+See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`) as each
+ticket's `Status:` line. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context; the brainstorm decisions and design spec section 12 stand in for older ADRs. See
+`docs/agents/domain.md`.

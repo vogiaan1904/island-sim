@@ -13,15 +13,15 @@ yet. Slice 1 settles the open points listed at the end; update this skill then (
 
 ## Sources of truth
 
-1. `docs/superpowers/specs/2026-10-16-island-sim-design.md`: section 6.1 (screens and controls) and **section 12
+1. `docs/design/2026-10-16-island-sim-design.md`: section 6.1 (screens and controls) and **section 12
    "Resolved details"** (12.4 client and UI is this skill's; also 12.1 game rules, 12.3 server, 12.5 input and
    sound), plus 1 (non-goals), 2.4 (key staff) and 6.2 (state, PWA). **Where anything here disagrees with the spec,
    the spec wins.** Fix this skill when you notice.
 2. `docs/brainstorm/2026-10-15-island-sim-brainstorm.md`, Section 4a and decisions 22-25: why things are the way
    they are, and what was rejected.
-3. Optional: `.superpowers/brainstorm/*/content/a-merged.html`, `game-feel-v2.html` (style A column) and
-   `camera.html` are the approved HTML mockups. They are git-ignored and may be missing. Never depend on them. They
-   predate section 12, so where they differ the spec wins: no "Mayor" greeting, no level number in the stage badge,
+3. `docs/mockups/a-merged.html`, `game-feel-v2.html` (style A column) and `camera.html` are the approved HTML
+   mockups; open them in a browser to see the look. They predate section 12, so where they differ the spec wins: no
+   "Mayor" greeting, no level number in the stage badge,
    and the "following a person" screen in `camera.html` was **rejected**.
 
 ## What this skill owns, and what it hands off

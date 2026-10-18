@@ -11,7 +11,7 @@ description: Simulation rules and content data for Island Sim, the pure determin
 > rule as built is in `references/slice1-rules.md`. When you change a rule, keep this file and that one in step with
 > the code.
 
-- Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md`, sections 2 (game design), 3
+- Source of truth: `docs/design/2026-10-16-island-sim-design.md`, sections 2 (game design), 3
   (architecture), 4 (simulation model) and 12.1 and 12.2 (resolved game rules and simulation details). Section 12
   settles details as defaults the user may still change in spec review; if the spec changes, the spec wins: fix
   this skill.

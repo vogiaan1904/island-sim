@@ -6,7 +6,7 @@ description: How to build, change and review the 3D side of the Island Sim clien
 # Island Sim: 3D client
 
 > **Status (2026-10-16): first draft, design phase. No client code exists yet.** Everything here comes from the
-> design spec `docs/superpowers/specs/2026-10-16-island-sim-design.md` (sections 1, 4, 6.1, 6.2, 7, 8, and the
+> design spec `docs/design/2026-10-16-island-sim-design.md` (sections 1, 4, 6.1, 6.2, 7, 8, and the
 > defaults in section 12 "Resolved details", which this skill follows; the user may still change them during spec
 > review). It is a plan, not a description of code. Paths and modules marked *planned* do not exist yet. Library
 > names (React Three Fiber, drei, camera-controls, @use-gesture/react, Zustand, three.js) are fixed by the spec; their

@@ -11,7 +11,7 @@ description: End-to-end recipe and checklist for adding or changing game content
 > `tools/blender`, `tools/assets`, `apps/client/public/models`, `.../icons`). The client (`apps/client` code) is still
 > PLANNED (plans 5 and 6). Update this
 > skill during slice 1 (spec 8.1 step 10) with real APIs and a real example as they land.
-> Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md`. Section 12 "Resolved details" holds
+> Source of truth: `docs/design/2026-10-16-island-sim-design.md`. Section 12 "Resolved details" holds
 > the current defaults; the user may still change them in spec review. Where this skill and the spec differ, the
 > spec wins; fix the skill.
 

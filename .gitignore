@@ -1,8 +1,5 @@
 .DS_Store
 
-# Brainstorm visual companion sessions (local mockups)
-.superpowers/
-
 # Original asset packs and their extracted contents: re-downloadable, see assets/SOURCES.md
 assets/packs/
 assets/raw/

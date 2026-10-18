@@ -7,10 +7,10 @@ description: Island Sim asset pipeline in Blender. Turns the Kenney packs in ass
 
 > **Status (2026-10-18): built in slice 1 plan 4.** Every slice 1 model, icon, portrait and character animation is
 > rebuilt from the packs by `pnpm blender` and checked by `pnpm assets check`. Plan:
-> `docs/superpowers/plans/2026-10-18-slice1-plan4-art-assets.md` (its "Decisions" section is the why behind the
+> `docs/plans/2026-10-18-slice1-plan4-art-assets.md` (its "Decisions" section is the why behind the
 > rules below).
 
-Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md` (6.2, 7, 8.1 step 1, 11, 12.4 to 12.6).
+Source of truth: `docs/design/2026-10-16-island-sim-design.md` (6.2, 7, 8.1 step 1, 11, 12.4 to 12.6).
 Project rules: `CLAUDE.md`. If this skill and the spec disagree, the spec wins; tell the user.
 
 ## What this skill owns

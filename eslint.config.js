@@ -41,7 +41,7 @@ const deterministicRules = {
 };
 
 export default defineConfig([
-  { ignores: ['**/node_modules/**', '**/dist/**', 'assets/**', '.superpowers/**'] },
+  { ignores: ['**/node_modules/**', '**/dist/**', 'assets/**'] },
   js.configs.recommended,
   tseslint.configs.recommended,
   {

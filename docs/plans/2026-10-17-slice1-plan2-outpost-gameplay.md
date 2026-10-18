@@ -1,6 +1,6 @@
 # Slice 1, Plan 2: Simulation, Outpost to Settlement — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Done.** Written for and executed with the superpowers plugin, which this repo no longer uses. Kept as the record of what was built and why; do not execute it again.
 
 **Goal:** Build the gameplay of the first stage in `packages/sim`, headless and tested: the game clock and the commuter ferry, hiring, the labor pass, production, storage and goods on the roads, the Mainland market with the port master's auto-sell and the safety rules, running costs, residents with needs, happiness and migration, goals and rewards, the Island Hall that starts Settlement, per-tick change sets for the server, the "Outpost to Settlement" golden scenario and the pacing harness.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Node 24, pnpm 10.14, TypeScript 6.0 (strict), Vitest 5, ESLint 10 with typescript-eslint 8. No new dependencies. Node runs the pacing harness's TypeScript directly (type stripping).
 
-**Spec:** `docs/superpowers/specs/2026-10-16-island-sim-design.md`, sections 2 (game design), 4 (simulation model), 9 (pacing harness), 12.1 and 12.2. Plan index: `docs/superpowers/plans/2026-10-17-slice1-index.md`. Built on plan 1: `docs/superpowers/plans/2026-10-17-slice1-plan1-sim-kernel.md`. Project skills to follow: `island-game-logic` (read `references/determinism.md` before any sim code), `island-testing`, `island-content`.
+**Spec:** `docs/design/2026-10-16-island-sim-design.md`, sections 2 (game design), 4 (simulation model), 9 (pacing harness), 12.1 and 12.2. Plan index: `docs/plans/2026-10-17-slice1-index.md`. Built on plan 1: `docs/plans/2026-10-17-slice1-plan1-sim-kernel.md`. Project skills to follow: `island-game-logic` (read `references/determinism.md` before any sim code), `island-testing`, `island-content`.
 
 **Verified:** every task was built in a scratch clone of this repository, one commit per task, and `pnpm check` passed at the end of each task on its own. The test counts, golden hashes and pacing results below are real outputs of this code. If a hash or count in your run differs, your code differs from the plan: find the difference, do not change the expected value.
 
@@ -7696,7 +7696,7 @@ EOF
 - Modify: `.claude/skills/island-testing/SKILL.md`
 - Modify: `.claude/skills/island-testing/references/pacing-harness.md`
 - Modify: `CLAUDE.md`
-- Modify: `docs/superpowers/plans/2026-10-17-slice1-index.md`
+- Modify: `docs/plans/2026-10-17-slice1-index.md`
 
 **Interfaces:**
 - Consumes: the finished plan (Tasks 1 to 14).
@@ -7876,7 +7876,7 @@ index 9841e2e..b94fbec 100644
 +> goals, and the Island Hall that starts Settlement. Every rule as built is in `references/slice1-rules.md`. When
 +> you change a rule, keep this file and that one in step with the code.
  
- - Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md`, sections 2 (game design), 3
+ - Source of truth: `docs/design/2026-10-16-island-sim-design.md`, sections 2 (game design), 3
    (architecture), 4 (simulation model) and 12.1 and 12.2 (resolved game rules and simulation details). Section 12
 @@ -53,7 +53,7 @@ change a result. That single property is what makes crash recovery exact (snapsh
  anyone reproduce a bug locally from a log, lets tests fast-forward a game month in seconds, and lets the client run
@@ -8222,23 +8222,23 @@ index a624a5d..0f37984 100644
 @@ -9,8 +9,8 @@ in always-running private multiplayer worlds. **Status: slice 1 in progress; pla
    the design progress checklist.
  - Process: superpowers brainstorming, architectural path. Design sections are approved one at a time → spec in
-   `docs/superpowers/specs/` → the user reviews the spec → writing-plans. No product code before that.
+   `docs/design/` → the user reviews the spec → writing-plans. No product code before that.
 -- **Next step:** write slice 1 plan 2 (simulation: Outpost to Settlement gameplay) from
--  `docs/superpowers/plans/2026-10-17-slice1-index.md`, using superpowers:writing-plans.
-+- **Next step:** write slice 1 plan 3 (protocol and server) from `docs/superpowers/plans/2026-10-17-slice1-index.md`,
+-  `docs/plans/2026-10-17-slice1-index.md`, using superpowers:writing-plans.
++- **Next step:** write slice 1 plan 3 (protocol and server) from `docs/plans/2026-10-17-slice1-index.md`,
 +  using superpowers:writing-plans. Plan 4 (art direction, needs the user and Blender) can run beside it.
  - Art direction (Q10) is decided by rendering real pack models in candidate styles through Blender MCP.
  
  ## Requirements that must not be dropped
 ```
 
-Patch for `docs/superpowers/plans/2026-10-17-slice1-index.md`:
+Patch for `docs/plans/2026-10-17-slice1-index.md`:
 
 ```diff
-diff --git a/docs/superpowers/plans/2026-10-17-slice1-index.md b/docs/superpowers/plans/2026-10-17-slice1-index.md
+diff --git a/docs/plans/2026-10-17-slice1-index.md b/docs/plans/2026-10-17-slice1-index.md
 index c8531fa..f4a4080 100644
---- a/docs/superpowers/plans/2026-10-17-slice1-index.md
-+++ b/docs/superpowers/plans/2026-10-17-slice1-index.md
+--- a/docs/plans/2026-10-17-slice1-index.md
++++ b/docs/plans/2026-10-17-slice1-index.md
 @@ -12,8 +12,8 @@ the islands keep running while you're away, and you can watch each other's islan
  
  | # | Plan | Delivers | Needs | Status |
@@ -8271,7 +8271,7 @@ git add .claude/skills/island-game-logic/SKILL.md \
   .claude/skills/island-testing/SKILL.md \
   .claude/skills/island-testing/references/pacing-harness.md \
   CLAUDE.md \
-  docs/superpowers/plans/2026-10-17-slice1-index.md
+  docs/plans/2026-10-17-slice1-index.md
 git commit -F - <<'EOF'
 docs(skills): record the slice 1 gameplay rules, the pacing harness and the change sets
 EOF

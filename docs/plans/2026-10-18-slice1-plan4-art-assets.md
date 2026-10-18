@@ -1,6 +1,6 @@
 # Slice 1 Plan 4: Art Direction and Asset Pipeline Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Done.** Written for and executed with the superpowers plugin, which this repo no longer uses. Kept as the record of what was built and why; do not execute it again.
 
 **Goal:** Give the island its look and ship every slice 1 model, icon, portrait and character animation, each rebuilt
 from the Kenney packs by a script and checked automatically.
@@ -18,8 +18,8 @@ extra packs, budgets) are gates inside the plan, decided on real renders.
 `@gltf-transform/core`, `/extensions` and `/functions` 4.5.1, `meshoptimizer` 1.3.0, `gltf-validator`
 2.0.0-dev.3.10 (Khronos), Vitest 5.
 
-**Spec:** `docs/superpowers/specs/2026-10-16-island-sim-design.md`: sections 6.2 (3D on phones), 7 (assets), 8.1
-step 1, 11 (Q10, Q12) and 12.4 to 12.6. Plan index: `docs/superpowers/plans/2026-10-17-slice1-index.md`. Domain
+**Spec:** `docs/design/2026-10-16-island-sim-design.md`: sections 6.2 (3D on phones), 7 (assets), 8.1
+step 1, 11 (Q10, Q12) and 12.4 to 12.6. Plan index: `docs/plans/2026-10-17-slice1-index.md`. Domain
 rules: `.claude/skills/island-blender/` (read SKILL.md and the reference the task names before any task) and
 `.claude/skills/island-testing/references/asset-checks.md`.
 
@@ -2581,7 +2581,7 @@ git commit -m "feat(tools): record the chosen look, tile size, pack scales and t
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-(Add `docs/superpowers/specs/2026-10-16-island-sim-design.md` and the brainstorm if Step 8 was approved.)
+(Add `docs/design/2026-10-16-island-sim-design.md` and the brainstorm if Step 8 was approved.)
 
 ---
 
@@ -2857,7 +2857,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `.claude/skills/island-blender/` (SKILL.md and every reference), `.claude/skills/island-testing/references/asset-checks.md`,
   `.claude/skills/island-3d-client/` (SKILL.md, `references/scene-and-rendering.md`,
   `references/people-vehicles-ships.md`), `.claude/skills/island-ui/references/icons.md`,
-  `.claude/skills/island-content/SKILL.md` (the model step), `docs/superpowers/plans/2026-10-17-slice1-index.md`,
+  `.claude/skills/island-content/SKILL.md` (the model step), `docs/plans/2026-10-17-slice1-index.md`,
   `CLAUDE.md`
 
 - [ ] **Step 1: The content cross-check (test first)**
@@ -2901,7 +2901,7 @@ Run: `pnpm check`, `pnpm blender test`, `pnpm assets check`
 Expected: PASS; `OK`; `assets: no problems`.
 
 ```bash
-git add tools/assets/src/content.test.ts .claude/skills docs/superpowers/plans/2026-10-17-slice1-index.md CLAUDE.md
+git add tools/assets/src/content.test.ts .claude/skills docs/plans/2026-10-17-slice1-index.md CLAUDE.md
 git commit -m "docs(skills): record the asset pipeline, the chosen look and conventions, and the client contract for models, palette and animation; mark plan 4 done
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"

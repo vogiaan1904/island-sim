@@ -5,10 +5,10 @@ description: Rules, workflows and checklists for the Island Sim authoritative wo
 
 # Island Sim: world server and protocol
 
-Built in slice 1, plan 3 (`docs/superpowers/plans/2026-10-18-slice1-plan3-protocol-server.md`). Paths and APIs below
+Built in slice 1, plan 3 (`docs/plans/2026-10-18-slice1-plan3-protocol-server.md`). Paths and APIs below
 are real; "Still open" lists what plans 5 and 6 settle.
 
-- Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md`, sections 3 (architecture), 4.1 (time),
+- Source of truth: `docs/design/2026-10-16-island-sim-design.md`, sections 3 (architecture), 4.1 (time),
   4.6 (events), 5 (server) and **12 (resolved details: 12.2 sim and determinism, 12.3 server)**. If this skill and
   the spec disagree, the spec wins: follow it and fix this skill.
 - Reasoning and rejected options: `docs/brainstorm/2026-10-15-island-sim-brainstorm.md`, Section 3 and decisions

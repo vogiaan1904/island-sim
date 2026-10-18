@@ -1,6 +1,6 @@
 # Slice 1, Plan 1: Workspace and Simulation Kernel — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Done.** Written for and executed with the superpowers plugin, which this repo no longer uses. Kept as the record of what was built and why; do not execute it again.
 
 **Goal:** Set up the TypeScript monorepo and build the deterministic simulation kernel: seeded worlds with generated islands, claiming an island, checking in, placing buildings and roads paid up front, construction over ticks, the ledger, events, versioned snapshots, and the determinism, replay and golden tests that guard all of it.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Node 24, pnpm 10.14, TypeScript 6.0 (strict), Vitest 5, ESLint 10 with typescript-eslint 8.
 
-**Spec:** `docs/superpowers/specs/2026-10-16-island-sim-design.md`, sections 3, 4.1, 4.2, 9, 12.1, 12.2 and 12.3. Plan index: `docs/superpowers/plans/2026-10-17-slice1-index.md`. Project skills to follow: `island-game-logic` and `island-testing`.
+**Spec:** `docs/design/2026-10-16-island-sim-design.md`, sections 3, 4.1, 4.2, 9, 12.1, 12.2 and 12.3. Plan index: `docs/plans/2026-10-17-slice1-index.md`. Project skills to follow: `island-game-logic` and `island-testing`.
 
 **Verified:** every file in this plan was built and run in a scratch copy before the plan was written: `pnpm check` passed with 17 test files and 80 tests. The golden hashes below are real outputs of this code. If a hash in your run differs, your code differs from the plan: find the difference, do not change the hash.
 
@@ -3554,7 +3554,7 @@ Replace the `- **Next step:**` bullet with:
 
 ```markdown
 - **Next step:** write slice 1 plan 2 (simulation: Outpost to Settlement gameplay) from
-  `docs/superpowers/plans/2026-10-17-slice1-index.md`, using superpowers:writing-plans.
+  `docs/plans/2026-10-17-slice1-index.md`, using superpowers:writing-plans.
 ```
 
 - [ ] **Step 7: Commit**

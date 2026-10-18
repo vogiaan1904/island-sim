@@ -44,15 +44,14 @@ test*. The rules under test belong to the domain skills listed at the end.
 1. **The test comes first.** This project follows test-driven development: write the failing test, run it and
    watch it fail for the reason you expect, then write the smallest code that makes it pass, run it again, then
    tidy up. A test you never saw fail may not test anything. The general discipline is in
-   `superpowers:test-driven-development`; this skill says where the first test goes in this codebase.
+   `mattpocock-skills:tdd`; this skill says where the first test goes in this codebase.
 2. **Evidence before claims.** Never say "tests pass", "fixed" or "done" without running the relevant tests in this
    session, after your last edit, and showing their output. If something could not be run (the real-phone check
-   needs the user; a planned script may not exist yet), say so plainly instead of implying it passed. See
-   `superpowers:verification-before-completion`.
+   needs the user; a planned script may not exist yet), say so plainly instead of implying it passed.
 3. **Game rules are tested in `sim`.** `packages/sim` is pure and deterministic (no I/O, no clock, seeded random,
    whole numbers), so its tests are exact, fast and cannot be flaky. Server tests check the plumbing around the sim
    (accounts, persistence, sync); client tests check what a player sees and touches. A flaky sim test is a
-   determinism bug: debug it with `superpowers:systematic-debugging` instead of rerunning it until it passes.
+   determinism bug: debug it with `mattpocock-skills:diagnosing-bugs` instead of rerunning it until it passes.
 
 ## Test layers at a glance
 
@@ -191,5 +190,4 @@ Read the one for the layer you are working on.
 - `island-ui`: UI rules, including the exact list of forbidden emoji and symbols.
 - `island-blender`: asset conventions and how to fix a model that fails the checks.
 - `island-content`: the end-to-end content recipe, which ends with these tests.
-- `superpowers:test-driven-development`, `superpowers:verification-before-completion`,
-  `superpowers:systematic-debugging`: the general disciplines this skill applies.
+- `mattpocock-skills:tdd`, `mattpocock-skills:diagnosing-bugs`: the general disciplines this skill applies.
