@@ -51,6 +51,36 @@ def import_piece(pack: str, name: str, mapping: dict, scale: float):
     return piece
 
 
+def swatch_uv(pack: str, name: str) -> tuple[float, float]:
+    """The palette UV of the middle of the swatch most of a pack model's faces use, to color pieces made in Blender
+    like that model (for example wood from the Fantasy Town `planks`)."""
+    piece = import_piece(pack, name, mapping(), 1.0)
+    counts: dict = {}
+    for _, col, row, _ in palette._faces_by_cell(piece, palette.COLS, palette.ROWS):
+        counts[row * palette.COLS + col] = counts.get(row * palette.COLS + col, 0) + 1
+    mesh = piece.data
+    bpy.data.objects.remove(piece, do_unlink=True)
+    bpy.data.meshes.remove(mesh)
+    return palette.slot_uv(max(sorted(counts), key=counts.get), 0.5, 0.5)
+
+
+def box(name: str, size, location, uv):
+    """A box made in Blender, size (x, y, z) in world units, standing on location (its bottom center), every corner
+    on one palette UV."""
+    sx, sy, sz = size
+    corners = [(x * sx / 2, y * sy / 2, z * sz) for x in (-1, 1) for y in (-1, 1) for z in (0, 1)]
+    faces = [(0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)]
+    mesh = bpy.data.meshes.new(name)
+    mesh.from_pydata(corners, [], faces)
+    layer = mesh.uv_layers.new()
+    for loop in layer.data:
+        loop.uv = uv
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.scene.collection.objects.link(obj)
+    obj.location = location
+    return obj
+
+
 def join(objects: list, name: str):
     """Joins meshes into the first one, keeping world positions; returns it renamed."""
     bpy.ops.object.select_all(action="DESELECT")

@@ -36,3 +36,14 @@ class KitTest(unittest.TestCase):
         model = kit.finish([obj], "prop_slab_a")
         self.assertEqual(len(model.data.polygons), 2)  # the quad, triangulated
         self.assertTrue(all(len(p.vertices) == 3 and p.area > 1e-8 for p in model.data.polygons))
+
+    def test_a_box_is_one_swatch_of_the_palette(self):
+        uv = kit.swatch_uv("kenney_fantasy-town-kit", "planks")
+        box = kit.box("beam", (0.2, 3.0, 0.4), (1.0, 2.0, 0.0), uv)
+        self.assertEqual(len(box.data.polygons), 6)
+        self.assertEqual(extent(box), (0.2, 3.0))
+        corners = [box.matrix_world @ Vector(c) for c in box.bound_box]
+        self.assertAlmostEqual(min(c.z for c in corners), 0.0)  # stands on its location
+        self.assertAlmostEqual(max(c.z for c in corners), 0.4)
+        self.assertEqual({tuple(round(c, 6) for c in loop.uv) for loop in box.data.uv_layers.active.data},
+                         {tuple(round(c, 6) for c in uv)})
