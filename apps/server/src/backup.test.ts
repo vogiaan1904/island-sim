@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { backupDatabase } from './backup.ts';
+import { backupDatabase, newestBackupMs } from './backup.ts';
 import { type Db, openDatabase } from './db.ts';
 
 describe('backupDatabase', () => {
@@ -58,5 +58,22 @@ describe('backupDatabase', () => {
     const names = readdirSync(dir);
     expect(names).toHaveLength(7);
     expect(names).toContain(early.slice(dir.length + 1));
+  });
+});
+
+describe('newestBackupMs', () => {
+  it('reads the newest copy from the names, ignoring part files and other files, and is null for none', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'island-backup-'));
+    expect(newestBackupMs(dir)).toBeNull();
+    expect(newestBackupMs(join(dir, 'missing'))).toBeNull();
+    for (const name of [
+      'island-2026-10-01T00-00-00-000Z.sqlite',
+      'island-2026-10-03T06-30-15-250Z.sqlite',
+      'island-2026-10-09T00-00-00-000Z.sqlite.part',
+      'notes.txt',
+    ]) {
+      writeFileSync(join(dir, name), 'x');
+    }
+    expect(newestBackupMs(dir)).toBe(Date.UTC(2026, 9, 3, 6, 30, 15, 250));
   });
 });

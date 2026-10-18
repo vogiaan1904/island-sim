@@ -33,6 +33,8 @@ export interface ApiDeps {
   log: Log;
   accounts: Accounts;
   worlds: Worlds;
+  /** True once the server is shutting down: every request is answered 503 shutting-down. */
+  closing: () => boolean;
 }
 
 const MINUTE = 60_000;
@@ -55,6 +57,7 @@ const STATUS: Record<ApiReason, number> = {
   'too-many-attempts': 429,
   'server-error': 500,
   'world-resting': 503,
+  'shutting-down': 503,
 };
 
 class Failure extends Error {
@@ -243,6 +246,7 @@ export function createApi(deps: ApiDeps): (req: IncomingMessage, res: ServerResp
 
   return async (req, res) => {
     try {
+      if (deps.closing()) throw new Failure('shutting-down');
       const route = routes[`${req.method ?? ''} ${new URL(req.url ?? '/', 'http://host').pathname}`];
       if (!route) throw new Failure('not-found');
       if (req.method !== 'GET' && !fromOrigin(req, config.origin)) throw new Failure('bad-origin');

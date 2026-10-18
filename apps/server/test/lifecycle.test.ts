@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { ServerConfig } from '../src/config.ts';
 import type { IslandServer } from '../src/server.ts';
 import { CONTENT_HASH } from '../src/worlds/recovery.ts';
+import { openDatabase } from '../src/db.ts';
 import { Browser, addAccount, startTestServer, tempDatabase } from './server.ts';
 import { ManualClock, TICK_MS } from './support.ts';
 
@@ -111,5 +112,51 @@ describe('after a deploy', () => {
       [runtime.id, 'paused'],
       [other.runtime.id, 'running'],
     ]);
+  });
+});
+
+describe('a paused world across a deploy', () => {
+  /** A world with play in it, paused by a tick that throws, and the server shut down gracefully. */
+  async function pausedAndStopped(databasePath: string, clock: ManualClock) {
+    const { server, runtime } = await playedWorld(databasePath, clock);
+    const { world } = runtime;
+    world.islands[0]?.transit.push({ id: world.nextId, good: 'wood', amount: 1, from: 1, to: 999, arriveTick: world.tick + 1 });
+    world.nextId += 1;
+    await tick(server, clock, 1);
+    expect([runtime.status, runtime.record.pausedTick]).toEqual(['paused', 65]);
+    const hash = stateHash(runtime.world);
+    await server.close();
+    return { id: runtime.id, hash };
+  }
+
+  it('leaves no logged command after its newest snapshot, stays paused after a restart and resumes', async () => {
+    const databasePath = tempDatabase();
+    const clock = new ManualClock();
+    const { id, hash } = await pausedAndStopped(databasePath, clock);
+
+    const { server } = await serverOn(databasePath, clock);
+    const snapshot = server.store.latestSnapshot(id);
+    expect(snapshot?.tick).toBe(65);
+    expect(server.store.commandsAfter(id, snapshot?.lastSequence ?? 0)).toEqual([]);
+    const loaded = server.worlds.get(id);
+    expect([loaded?.status, loaded && stateHash(loaded.world)]).toEqual(['paused', hash]);
+    expect(await loaded?.resume()).toBe(true);
+    expect(loaded?.status).toBe('running');
+  });
+
+  it('still loads after a deploy that changed the content, which the log alone would refuse', async () => {
+    const databasePath = tempDatabase();
+    const clock = new ManualClock();
+    const { id, hash } = await pausedAndStopped(databasePath, clock);
+    // What a retune does: every command the old version logged now carries another content hash than this one.
+    const db = openDatabase(databasePath);
+    db.prepare("UPDATE commands SET content_hash = 'retuned'").run();
+    db.close();
+
+    const { server } = await serverOn(databasePath, clock);
+    expect(server.worlds.failed.size).toBe(0);
+    const loaded = server.worlds.get(id);
+    expect([loaded?.status, loaded && stateHash(loaded.world)]).toEqual(['paused', hash]);
+    expect(await loaded?.resume()).toBe(true);
   });
 });

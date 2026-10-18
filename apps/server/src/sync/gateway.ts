@@ -15,6 +15,9 @@ export interface GatewayDeps extends ConnectionDeps {
 /** Client messages are commands and subscription changes; a long road is the largest. */
 const MAX_MESSAGE_BYTES = 16 * 1_024;
 
+/** At shutdown a client gets this long to answer the close frame; one that vanished is cut off after it. */
+const CLOSE_GRACE_MS = 2_000;
+
 /**
  * Accepts WebSocket upgrades on /ws (spec 5.3): only from the game's own Origin (spec 12.3: the cookie alone is not
  * enough) and with a valid session cookie, whose account every message then acts as.
@@ -25,6 +28,9 @@ export class Gateway {
   private readonly connections = new Set<Connection>();
   private readonly heartbeat: ReturnType<typeof setInterval>;
   private readonly stopListening: () => void;
+  private closing = false;
+  /** Set while close() waits for the connections to go; called when the last one has. */
+  private drained: (() => void) | null = null;
 
   constructor(deps: GatewayDeps) {
     this.deps = deps;
@@ -46,6 +52,7 @@ export class Gateway {
     // Once upgraded, Node leaves the raw socket without an 'error' listener: a client that resets would crash the process.
     socket.on('error', () => {});
     try {
+      if (this.closing) return refuse(socket, 503);
       // Not URL parsing: Node accepts request targets such as "//" that `new URL` throws on.
       if ((req.url ?? '/').split('?')[0] !== '/ws') return refuse(socket, 404);
       if (!fromOrigin(req, this.deps.config.origin)) return refuse(socket, 403);
@@ -55,7 +62,10 @@ export class Gateway {
       this.server.handleUpgrade(req, socket, head, (ws) => {
         const connection = new Connection(ws, session, this.deps);
         this.connections.add(connection);
-        ws.on('close', () => this.connections.delete(connection));
+        ws.on('close', () => {
+          this.connections.delete(connection);
+          if (this.connections.size === 0) this.drained?.();
+        });
       });
     } catch (error) {
       this.deps.log.error('upgrade failed', { error: error instanceof Error ? error.stack : String(error) });
@@ -63,12 +73,27 @@ export class Gateway {
     }
   }
 
-  /** Closes every connection; clients reconnect with backoff to the next server. */
-  close(): void {
+  /**
+   * Closes every connection; clients reconnect with backoff to the next server. Resolves when they are all gone: the
+   * ones that did not answer the close frame within the grace are cut off, so a phone that vanished cannot hold the
+   * shutdown up (a socket otherwise waits 30 s for the closing handshake).
+   */
+  close(): Promise<void> {
+    this.closing = true;
     clearInterval(this.heartbeat);
     this.stopListening();
-    for (const connection of this.connections) connection.close(CLOSE_CODES.shuttingDown);
+    for (const connection of [...this.connections]) connection.close(CLOSE_CODES.shuttingDown);
     this.server.close();
+    if (this.connections.size === 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      const cutOff = setTimeout(() => {
+        for (const connection of [...this.connections]) connection.terminate();
+      }, CLOSE_GRACE_MS);
+      this.drained = () => {
+        clearTimeout(cutOff);
+        resolve();
+      };
+    });
   }
 }
 

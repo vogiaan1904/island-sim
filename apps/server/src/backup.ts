@@ -9,6 +9,27 @@ const KEEP_BACKUPS = 7;
 const STALE_PART_MS = 60 * 60_000;
 
 /**
+ * The time of the newest copy in the folder, from the timestamp in its name (the server's clock when it was written), or
+ * null when there is none. Names are read, not file times, so a copied or restored folder still counts.
+ */
+export function newestBackupMs(dir: string): number | null {
+  let newest: number | null = null;
+  let names: string[];
+  try {
+    names = readdirSync(dir);
+  } catch {
+    return null;
+  }
+  for (const name of names) {
+    const match = /^island-(\d{4}-\d\d-\d\d)T(\d\d)-(\d\d)-(\d\d)-(\d{3})Z\.sqlite$/.exec(name);
+    if (!match) continue;
+    const ms = Date.parse(`${match[1]}T${match[2]}:${match[3]}:${match[4]}.${match[5]}Z`);
+    if (!Number.isNaN(ms) && (newest === null || ms > newest)) newest = ms;
+  }
+  return newest;
+}
+
+/**
  * Copies the database into the backup folder with SQLite's online backup, which is safe while the server runs
  * (spec 12.3), then deletes all but the newest few copies. Returns the new copy's path. The copy is written under a
  * `.part` name and renamed when complete, so a failed or killed backup never leaves a truncated copy that counts as the

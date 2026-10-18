@@ -108,6 +108,7 @@ export type ApiReason =
   | 'too-many-attempts'
   | 'world-full'
   | 'world-resting'
+  | 'shutting-down'
   | 'already-has-island'
   | 'bad-island-name'
   | 'not-the-creator'
