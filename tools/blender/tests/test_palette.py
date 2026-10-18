@@ -125,3 +125,15 @@ class PaletteTest(unittest.TestCase):
         self.assertGreater(len(seen), 1)
         for obj in created:
             bpy.data.objects.remove(obj, do_unlink=True)
+
+    def test_a_face_spanning_colormap_cells_takes_one_swatch(self):
+        created = kit.import_glb(paths.pack_glb("kenney_fantasy-town-kit", "roof-high"))  # its gable faces span cells
+        for obj in [o for o in created if o.type == "MESH"]:
+            palette.remap_uvs(obj, "kenney_fantasy-town-kit", self.mapping)
+            slots = {}
+            for poly, _, (u, v) in face_points(obj):
+                col, row = palette.cell_of(u, v, palette.COLS, palette.ROWS)
+                slots.setdefault(poly.index, set()).add(row * palette.COLS + col)
+            self.assertEqual({p: s for p, s in slots.items() if len(s) > 1}, {})
+        for obj in created:
+            bpy.data.objects.remove(obj, do_unlink=True)

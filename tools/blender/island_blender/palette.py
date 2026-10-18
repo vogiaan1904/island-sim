@@ -208,12 +208,28 @@ def remap_uvs(obj, pack: str, mapping: dict) -> None:
         material = materials[poly.material_index] if len(materials) else None
         if not _has_image(material):
             continue
+        col, row = _one_cell(layer, loops, col, row)
         key = f"{col},{row}"
         if key not in cells:
             raise ValueError(f"{obj.name}: face {poly.index} lies in the black swatch {key} of {pack}")
         for i in loops:
             u, v = layer[i].uv
-            layer[i].uv = slot_uv(cells[key], u * SRC_COLS - col, v * SRC_ROWS - (SRC_ROWS - 1 - row))
+            du = min(max(u * SRC_COLS - col, 0.0), 1.0)
+            dv = min(max(v * SRC_ROWS - (SRC_ROWS - 1 - row), 0.0), 1.0)
+            layer[i].uv = slot_uv(cells[key], du, dv)
+
+
+def _one_cell(layer, loops, col: int, row: int) -> tuple[int, int]:
+    """The colormap cell a face takes: its UV middle's cell, unless a corner lies outside that cell, as in the few
+    pack faces stretched across the colormap; then the cell most of its corners lie in (the first on a tie)."""
+    def inside(i):
+        u, v = layer[i].uv
+        return -1e-4 <= u * SRC_COLS - col <= 1 + 1e-4 and -1e-4 <= v * SRC_ROWS - (SRC_ROWS - 1 - row) <= 1 + 1e-4
+
+    if all(inside(i) for i in loops):
+        return col, row
+    corners = [cell_of(*layer[i].uv, SRC_COLS, SRC_ROWS) for i in loops]
+    return max(corners, key=corners.count)
 
 
 def remap_flat(obj, pack: str, mapping: dict) -> None:
