@@ -1,0 +1,156 @@
+{
+ "format": "rgba32f",
+ "width": 21,
+ "height": 524,
+ "fps": 30,
+ "joints": [
+  "root",
+  "leg-left",
+  "leg-right",
+  "torso",
+  "arm-left",
+  "arm-right",
+  "head"
+ ],
+ "layers": {
+  "legs": [
+   "root",
+   "leg-left",
+   "leg-right",
+   "torso",
+   "head"
+  ],
+  "arms": [
+   "arm-left",
+   "arm-right"
+  ]
+ },
+ "variants": [
+  {
+   "characters": [
+    "female-a",
+    "female-b",
+    "female-e",
+    "female-f",
+    "male-a",
+    "male-b",
+    "male-c",
+    "male-e",
+    "male-f"
+   ],
+   "firstRow": 0
+  },
+  {
+   "characters": [
+    "female-c",
+    "female-d",
+    "male-d"
+   ],
+   "firstRow": 262
+  }
+ ],
+ "clips": [
+  {
+   "name": "idle",
+   "layer": "legs",
+   "firstRow": 0,
+   "frames": 41
+  },
+  {
+   "name": "walk",
+   "layer": "legs",
+   "firstRow": 41,
+   "frames": 21
+  },
+  {
+   "name": "holding-both",
+   "layer": "arms",
+   "firstRow": 62,
+   "frames": 6
+  },
+  {
+   "name": "sprint",
+   "layer": "full",
+   "firstRow": 68,
+   "frames": 16
+  },
+  {
+   "name": "sit",
+   "layer": "full",
+   "firstRow": 84,
+   "frames": 6
+  },
+  {
+   "name": "drive",
+   "layer": "full",
+   "firstRow": 90,
+   "frames": 6
+  },
+  {
+   "name": "pick-up",
+   "layer": "full",
+   "firstRow": 96,
+   "frames": 11
+  },
+  {
+   "name": "interact-left",
+   "layer": "full",
+   "firstRow": 107,
+   "frames": 21
+  },
+  {
+   "name": "interact-right",
+   "layer": "full",
+   "firstRow": 128,
+   "frames": 21
+  },
+  {
+   "name": "emote-yes",
+   "layer": "full",
+   "firstRow": 149,
+   "frames": 21
+  },
+  {
+   "name": "wheelchair-sit",
+   "layer": "full",
+   "firstRow": 170,
+   "frames": 6
+  },
+  {
+   "name": "wheelchair-look-left",
+   "layer": "full",
+   "firstRow": 176,
+   "frames": 11
+  },
+  {
+   "name": "wheelchair-look-right",
+   "layer": "full",
+   "firstRow": 187,
+   "frames": 11
+  },
+  {
+   "name": "wheelchair-move-forward",
+   "layer": "full",
+   "firstRow": 198,
+   "frames": 16
+  },
+  {
+   "name": "wheelchair-move-back",
+   "layer": "full",
+   "firstRow": 214,
+   "frames": 16
+  },
+  {
+   "name": "wheelchair-move-left",
+   "layer": "full",
+   "firstRow": 230,
+   "frames": 16
+  },
+  {
+   "name": "wheelchair-move-right",
+   "layer": "full",
+   "firstRow": 246,
+   "frames": 16
+  }
+ ]
+}
