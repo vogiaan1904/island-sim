@@ -98,3 +98,10 @@ export function applyMessage(state: ClientState, message: ServerMessage): Client
 export function commandSent(state: ClientState, requestId: number, command: PlayerCommand): ClientState {
   return { ...state, commands: { ...state.commands, [requestId]: { requestId, command, status: 'pending' } } };
 }
+
+/** Forgets the commands still pending, whose results can no longer come (the connection they were sent on is gone). */
+export function commandsLost(state: ClientState): ClientState {
+  const settled = Object.entries(state.commands).filter(([, command]) => command.status !== 'pending');
+  if (settled.length === Object.keys(state.commands).length) return state;
+  return { ...state, commands: Object.fromEntries(settled) };
+}

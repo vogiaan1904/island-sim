@@ -34,6 +34,16 @@ describe('the game store', () => {
   it('keeps the session phase and account apart from the island', () => {
     const store = createGameStore();
     store.getState().setSession({ phase: 'signed-out' });
-    expect(store.getState().session).toEqual({ phase: 'signed-out', account: null, worlds: [] });
+    expect(store.getState().session).toEqual({ phase: 'signed-out', account: null, worlds: [], reconnecting: false });
+  });
+
+  it('forgets pending commands when the connection drops but keeps the settled ones', () => {
+    const store = createGameStore();
+    store.getState().commandSent(1, { type: 'hire-commuters', count: 1 });
+    store.getState().commandSent(2, { type: 'hire-commuters', count: 2 });
+    store.getState().receive({ type: 'result', requestId: 1, ok: true, data: {} });
+    store.getState().commandsLost();
+    expect(store.getState().commands[2]).toBeUndefined();
+    expect(store.getState().commands[1]?.status).toBe('ok');
   });
 });

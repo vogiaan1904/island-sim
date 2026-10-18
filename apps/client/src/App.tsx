@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
 import { GameProvider, useGame, useGameState, type Game } from './session/game.tsx';
+import { CalmStatus, RESTING_LINE } from './ui/CalmStates.tsx';
 import { LoadingScreen } from './ui/LoadingScreen.tsx';
 import { LoginScreen } from './ui/LoginScreen.tsx';
 import { NoticeScreen } from './ui/NoticeScreen.tsx';
@@ -8,7 +9,16 @@ import { NoticeScreen } from './ui/NoticeScreen.tsx';
 const IslandCanvas = lazy(() => import('./scene/IslandCanvas.tsx'));
 
 /** The app: one screen per session phase. Screens read the store and call the session; later tickets add theirs here. */
-export function App({ game }: { game: Game }) {
+export function App({ game, webgl2 = true }: { game: Game; webgl2?: boolean }) {
+  if (!webgl2) {
+    return (
+      <NoticeScreen
+        title="Island Sim"
+        line="This device can't show the island yet. A newer phone or browser will."
+        picture="/icons/building_island-hall_a.png"
+      />
+    );
+  }
   return (
     <GameProvider game={game}>
       <Screens />
@@ -38,6 +48,8 @@ function Screens() {
           </button>
         </NoticeScreen>
       );
+    case 'resting':
+      return <NoticeScreen title={RESTING_LINE} line="Your island is safe and will be here when it wakes." picture="/icons/building_dock_a.png" />;
     case 'playing':
       return <IslandScreen />;
     default:
@@ -53,6 +65,7 @@ function IslandScreen() {
       <Suspense fallback={null}>
         <IslandCanvas onReady={() => setReady(true)} />
       </Suspense>
+      <CalmStatus />
       {!ready && (
         <div className="screen-overlay">
           <LoadingScreen />

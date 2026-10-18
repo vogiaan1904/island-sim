@@ -5,7 +5,7 @@ import { createApi } from '../connection/api.ts';
 import { createGameClock } from '../glide/clock.ts';
 import { createGameStore } from '../store/store.ts';
 import { aliceServer, browserFetch, browserSockets, closeServers, wsUrl } from '../test/server.ts';
-import { createSession, type Session } from './session.ts';
+import { createSession, reconnectDelayMs, type Session } from './session.ts';
 
 let sessions: Session[] = [];
 afterEach(async () => {
@@ -80,5 +80,14 @@ describe('the session', () => {
   it('sends no command before the island is open', async () => {
     const { session } = await page();
     expect(session.command({ type: 'hire-commuters', count: 1 })).toBeNull();
+  });
+});
+
+describe('the reconnect delay', () => {
+  it('doubles from half a second up to fifteen seconds, with a quarter of random spread either way', () => {
+    const middle = () => 0.5;
+    expect([0, 1, 2, 3, 4, 5, 6, 9].map((attempt) => reconnectDelayMs(attempt, middle))).toEqual([500, 1000, 2000, 4000, 8000, 15000, 15000, 15000]);
+    expect(reconnectDelayMs(2, () => 0)).toBe(1500);
+    expect(reconnectDelayMs(2, () => 1)).toBe(2500);
   });
 });
