@@ -1,5 +1,5 @@
 import type { BuildingDef, BuildingId, Content, GoodId } from '@island/content';
-import type { PlayerCommand, Reason } from '@island/protocol';
+import type { PlayerCommand } from '@island/protocol';
 import {
   applyPermille,
   footprintSize,
@@ -304,22 +304,4 @@ export function landmarkMaterials(building: BuildingState, ctx: CardContext): La
   const costCents =
     market === null ? 0 : lines.reduce((sum, line) => sum + line.missing * applyPermille(market.prices[line.good], content.rules.buyMarkupPermille), 0);
   return { lines, costCents, shortfallCents: Math.max(0, costCents - island.coinsCents) };
-}
-
-const REFUSALS: Partial<Record<Reason, string>> = {
-  'not-enough-seats': 'The ferry is full. More workers come when homes are built.',
-  'not-enough-coins': 'The coins are short for that right now.',
-  'nothing-missing': 'The materials are already bought and on their way.',
-  'not-a-landmark-site': 'That building is not waiting for materials.',
-  'no-such-building': 'That building is not there any more.',
-  'world-paused': 'This island is resting, back soon.',
-  'world-catching-up': 'The island is catching up. Try again in a moment.',
-  'rate-limited': 'That was a lot of taps. Try again in a moment.',
-  'not-your-island': "You are visiting. Only the island's owner can do that.",
-};
-
-/** Why the server refused a card command, in the player's words; coin shortfalls say how many coins are missing. */
-export function refusalWords(reason: Reason, shortfallCents: number): string {
-  if (reason === 'not-enough-coins' && shortfallCents > 0) return `Need ${coinsWords(shortfallCents)} more coins.`;
-  return REFUSALS[reason] ?? 'That did not work this time. Try again in a moment.';
 }

@@ -2,16 +2,16 @@ import { content } from '@island/content';
 import type { BuildingDef, GoodId } from '@island/content';
 import type { MarketState } from '@island/sim';
 import { isBuilt, type BuildingState } from '@island/sim';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGame, useGameState } from '../../session/game.tsx';
 import { Icon } from '../icons.tsx';
 import { BUILDING_NAMES, GOOD_NAMES } from '../names.ts';
+import { useCommand } from '../useCommand.ts';
 import {
   coinsWords,
   landmarkMaterials,
   dockSpot,
   problemOf,
-  refusalWords,
   statusOf,
   type CardContext,
   type Fix,
@@ -70,50 +70,44 @@ function PictureTile({ picture, size = 40 }: { picture: Picture; size?: number }
 }
 
 function BuildingCard({ building, state, own, onClose }: { building: BuildingState; state: CardContext; own: boolean; onClose: () => void }) {
-  const { store, session } = useGame();
+  const { store } = useGame();
   const def = state.content.buildings.find((d) => d.id === building.type) as BuildingDef;
   const name = BUILDING_NAMES[def.id];
   const status = statusOf(building, state);
   const problem = useMemo(() => problemOf(building, state), [building, state.island, state.market]);
   const materials = useMemo(() => landmarkMaterials(building, state), [building, state.island, state.market]);
 
-  const [said, setSaid] = useState<string | null>(null);
-  const [sent, setSent] = useState<{ id: number; fallback: Spot } | null>(null);
-  const result = useGameState((s) => (sent === null ? undefined : s.commands[sent.id]));
+  // The line under the cause: why a Fix that shows the cause moved the camera, or why a command was refused.
+  const { send, outcome } = useCommand();
+  const [shown, setShown] = useState<string | null>(null);
+  const [from, setFrom] = useState<'show' | 'command'>('command');
+  const fallback = useRef<Spot>({ x: 0, z: 0 });
 
   const flyTo = (at: Spot) => store.getState().cameraGesture({ kind: 'fly-to', x: at.x, z: at.z, distance: FLY_DISTANCE });
 
-  // The server's answer to the command a button sent: a refusal sends the camera to the cause and says why.
+  // The server refused the command: the camera goes to the cause and the line says why (the words come from useCommand).
   useEffect(() => {
-    if (sent === null || result === undefined || result.status === 'pending') return;
-    if (result.status === 'refused') {
-      setSaid(refusalWords(result.reason, result.shortfallCents));
-      flyTo(sent.fallback);
-    }
-    setSent(null);
-  }, [result?.status]);
+    if (outcome.status === 'refused') flyTo(fallback.current);
+  }, [outcome.status]);
 
-  const send = (command: Parameters<typeof session.command>[0], fallback: Spot) => {
-    const id = session.command(command);
-    if (id === null) {
-      setSaid('The island is not ready for that right now. Try again in a moment.');
-      flyTo(fallback);
-      return;
-    }
-    setSaid(null);
-    setSent({ id, fallback });
+  const sendCommand = (command: Parameters<typeof send>[0], at: Spot) => {
+    fallback.current = at;
+    setFrom('command');
+    if (!send(command)) flyTo(at);
   };
 
   const fix = (plan: Fix) => {
     if (plan.kind === 'show') {
       flyTo(plan.at);
-      setSaid(plan.why);
+      setFrom('show');
+      setShown(plan.why);
       return;
     }
-    send(plan.command, plan.fallback);
+    sendCommand(plan.command, plan.fallback);
   };
 
-  const busy = sent !== null;
+  const said = from === 'show' ? shown : outcome.status === 'refused' ? outcome.words : null;
+  const busy = outcome.status === 'pending';
   return (
     <section className="panel card" role="region" aria-label={name} data-card={def.id}>
       <header className="panel-head card-head">
@@ -134,7 +128,7 @@ function BuildingCard({ building, state, own, onClose }: { building: BuildingSta
       <div className="panel-body card-body">
         <Makes building={building} def={def} />
         <Crew building={building} def={def} />
-        {materials !== null && <Materials materials={materials} own={own} busy={busy} onBuy={() => send({ type: 'buy-materials', buildingId: building.id }, dockSpot(building, state))} />}
+        {materials !== null && <Materials materials={materials} own={own} busy={busy} onBuy={() => sendCommand({ type: 'buy-materials', buildingId: building.id }, dockSpot(building, state))} />}
         {problem !== null && (
           <div className="card-problem">
             <PictureTile picture={problem.picture} />

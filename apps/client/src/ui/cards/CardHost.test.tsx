@@ -202,7 +202,7 @@ describe('Fix', () => {
       game.store.getState().commandSent(7, { type: 'hire-commuters', count: 6 });
       game.store.getState().receive({ type: 'result', requestId: 7, ok: false, reason: 'not-enough-seats', shortfallCents: 0 } as ServerMessage);
     });
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/ferry is full/i));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/seats/i));
     expect(camera(game)).not.toBe(before);
   });
 
