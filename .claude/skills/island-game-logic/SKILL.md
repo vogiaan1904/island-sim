@@ -5,10 +5,11 @@ description: Simulation rules and content data for Island Sim, the pure determin
 
 # Island Sim: game logic
 
-> **Status (slice 1, plan 2 done):** `packages/sim` runs the whole Outpost stage: the clock and the ferry,
+> **Status (slice 1, plans 1 to 3 done):** `packages/sim` runs the whole Outpost stage: the clock and the ferry,
 > commuters, labor, production, goods on the roads, the Mainland market with auto-sell, residents and their needs,
-> goals, and the Island Hall that starts Settlement. Every rule as built is in `references/slice1-rules.md`. When
-> you change a rule, keep this file and that one in step with the code.
+> goals, and the Island Hall that starts Settlement. The server and protocol (plan 3, `island-server`) wrap it. Every
+> rule as built is in `references/slice1-rules.md`. When you change a rule, keep this file and that one in step with
+> the code.
 
 - Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md`, sections 2 (game design), 3
   (architecture), 4 (simulation model) and 12.1 and 12.2 (resolved game rules and simulation details). Section 12

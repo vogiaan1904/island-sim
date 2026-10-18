@@ -9,19 +9,33 @@ Contents: as built - hosting - deploying a new version - backups - admin command
 ## As built (plan 3)
 
 - **Run:** `pnpm server` (`apps/server/src/main.ts`). SIGINT or SIGTERM shuts down gracefully with a snapshot of
-  every world; an exception that escapes every handler ends the process without one (Node's default), and the
-  supervisor restarts it.
+  every world whose state is trusted (the paused worlds that rebuilt included), then frees the listeners and the
+  database even when a snapshot failed; a shutdown not done in 20 s is cut off with exit code 1. An exception that
+  escapes every handler ends the process without one (Node's default), and the supervisor restarts it.
 - **Settings** (`configFromEnv`): `ISLAND_HOST` (127.0.0.1), `ISLAND_PORT` (8787), `ISLAND_ADMIN_PORT` (8788),
   `ISLAND_ORIGIN` (`http://localhost:8787`; set it to the public `https://` origin), `ISLAND_DB`
   (`data/island.sqlite`), `ISLAND_BACKUP_DIR` (`data/backups`; empty turns backups off), `ISLAND_SECURE_COOKIES=0`
   for plain-HTTP development, `ISLAND_TRUST_PROXY=1` behind your reverse proxy. Timings are fixed by the game.
-- **Admin:** the admin interface listens on 127.0.0.1 only and refuses any request with an Origin header (a web page
-  on the host's browser is not the host). `pnpm admin <command>`: `worlds`, `create-account <username>` (prints a
+  **Development:** the Vite dev server proxies `/api` and `/ws` to this server, but the browser sends the dev
+  server's Origin, which the Origin checks compare to `ISLAND_ORIGIN`. Start the server with
+  `ISLAND_ORIGIN=http://localhost:<vite port> ISLAND_SECURE_COOKIES=0`, or every POST and the socket upgrade are
+  refused (`bad-origin`, 403).
+- **Admin:** the admin interface listens on 127.0.0.1 only, serves only a loopback peer address, and refuses any
+  request with an Origin header (a web page on the host's browser is not the host) or a Host other than `127.0.0.1`,
+  `localhost` or `[::1]` (DNS rebinding: a page whose own name was rebound to loopback sends no Origin on a simple
+  request, but its Host is its name). `pnpm admin <command>`: `worlds`, `create-account <username>` (prints a
   made-up password once), `reset-code <username>`, `invite-code <world-id>`, `resume <world-id>`, `backup`.
-- **Backups:** daily into `ISLAND_BACKUP_DIR`, the newest 7 kept; point it at another disk on the host.
+  A bad `ISLAND_ADMIN_PORT`, an answer that is not JSON and extra arguments each print one clear line; a 400 also
+  prints the usage; a wrong argument count exits 2.
+- **Backups:** daily into `ISLAND_BACKUP_DIR`, the newest 7 kept; point it at another disk on the host. Each copy is
+  written to a `.part` file and renamed when complete (removed on failure), the copy just written is never pruned,
+  and `.part` files older than an hour are swept. The first backup after a start is due a day after the newest copy
+  in the folder (by the timestamp in its name), but not sooner than a minute after the start; with no copy it is
+  about a minute after the start. The log line `backup due` gives the time. So a server restarted several times a
+  day still gets its daily copy.
 - **Logs:** one JSON line per entry, info to stdout and warnings and errors to stderr (`src/log.ts`): server
   started and stopped, world created, account registered, world paused, world not loaded, world resumed, catching up,
-  catch-up capped, command refused, backup written or failed.
+  catch-up capped, command refused, backup due, written or failed, snapshot failed, shutdown failed.
 
 ## Hosting
 
@@ -33,42 +47,49 @@ Contents: as built - hosting - deploying a new version - backups - admin command
   depends on the provider.
 - Load is small: private friend worlds of up to 10 islands each (D7, spec 12.3), no matchmaking, no large-scale
   scaling. Cost grows with the total number of islands.
-- **The provider is still open: it is chosen during slice 1, when the server is first deployed, and does not change
-  the design.** Update this section then with: the provider, how TLS is set up, where the database file lives, how
+- **The provider is still open: it is chosen during slice 1, when the server is first deployed (plan 6), and does not
+  change the design.** Update this section then with: the provider, how TLS is set up, where the database file lives, how
   the process is started and restarted, the deploy steps, and where the daily backup goes.
 
 ## Deploying a new version
 
 Illustrative order:
 
-1. Stop the server gracefully, so every world gets a snapshot (`world-runtime.md`, shutdown). Spec 12.2: this makes
-   the replay window after a deploy empty, so no replay spans two sim versions.
+1. Stop the server gracefully, so every world gets a snapshot (`world-runtime.md`, shutdown); paused worlds that
+   rebuilt get one too. Spec 12.2: this makes the replay window after a deploy empty, so no replay spans two sim
+   versions. Check the log for `snapshot failed` before deploying a sim version or content change: a world without
+   its shutdown snapshot is refused at startup.
 2. Replace the code (server and built client together).
 3. Start: each world loads its snapshot (the sim migrates it if the snapshot's sim version is older, spec 12.2) and
-   catches up the minutes it missed. Paused worlds stay paused until resumed.
+   catches up the minutes it missed. Paused worlds stay paused until resumed, and load even after a sim version or
+   content change, as their snapshot holds their last good state.
 
 After a crash the replay window is not empty. If a new version is deployed before the old one wrote a clean
-snapshot, the server refuses to replay the affected worlds and tells the host (spec 12.2). Then: start the previous
-version once, let it recover and shut down gracefully (writing clean snapshots), and start the new version again.
+snapshot, the server refuses to replay the affected worlds and tells the host (spec 12.2; `pnpm admin worlds` lists
+them as not loaded, and `resume` answers `world-not-loaded`). Then: start the version that logged those commands
+once, let it recover and shut down gracefully (writing clean snapshots, the paused worlds included), and start the
+new version again.
 
 - Bump the protocol version for any message change an old client would misread; installed PWAs still running an old
   cached build see the mismatch and update (`sync-protocol.md`).
 - New world-state fields need a versioned snapshot migration in `sim` (spec 12.2, `island-game-logic`).
 - If sim rules or content numbers changed, results change from that point on; that is expected (`island-game-logic`).
-- Shipping a fix for a paused world: deploy, then resume that world through the local admin interface. It catches up
-  the paused time with the 24-hour cap.
+- Shipping a fix for a paused world: stop gracefully, deploy, then resume that world through the local admin
+  interface (`pnpm admin resume <world-id>`). It catches up the paused time with the 24-hour cap. The pause already
+  wrote the world's snapshot, so the deploy may change the sim version or the content.
 
 ## Backups
 
 - A daily copy of the SQLite file to a second location, made with SQLite's online backup while the server runs
-  (spec 12.3; `better-sqlite3` exposes it). The copy is consistent even while worlds keep ticking.
+  (spec 12.3; `better-sqlite3` exposes it). The copy is consistent even while worlds keep ticking. How the schedule
+  and the `.part` file work is under "As built".
 - The second location depends on the hosting provider (still open). It must not be the same disk as the database.
 - The backup holds password hashes and session token hashes: protect it like the database itself.
 - Test a restore once, so the backup is known to work.
 
 ## Admin commands
 
-Planned in `tools/` (spec 3). The host runs them on the server machine.
+Built in `apps/server/src/admin/cli.ts` (`pnpm admin`, spec 3). The host runs them on the server machine.
 
 | Command | Source |
 |---|---|
@@ -76,12 +97,13 @@ Planned in `tools/` (spec 3). The host runs them on the server machine.
 | Issue a one-time password reset code for a username | spec 5.4 |
 | Regenerate a world's invite code (the old one stops working) | spec 12.3 (the world's creator can also do it from the world screen) |
 | Resume a paused world after a fix (it then catches up the paused time, 24-hour cap) | spec 12.3, through the local admin interface |
-| Export one world for local replay, list worlds | Ideas, not in the spec. Add them when needed and list them here |
+| List worlds (`pnpm admin worlds`) | Built, not in the spec |
+| Export one world for local replay | Idea, not in the spec. Add it when needed and list it here |
 
 - Account commands work on account records in the database. Resuming a paused world changes what the running
-  server does, so it goes through the server's local admin interface, reachable from localhost only (spec 12.3). Its
-  form (for example a port bound to the loopback address, or a local socket) is still open; it must never be
-  reachable from the internet, and HTTPS in front must not forward to it.
+  server does, so it goes through the server's local admin interface, reachable from localhost only (spec 12.3). It
+  is HTTP on 127.0.0.1 (`ISLAND_ADMIN_PORT`); it must never be reachable from the internet, and HTTPS in front must
+  not forward to it.
 - Admin commands must never edit world state directly (core rule 2): world state changes only through the sim, as a
   tick or a logged command.
 - They print codes to the host's terminal only; codes never go into logs.

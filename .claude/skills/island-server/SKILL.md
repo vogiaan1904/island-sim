@@ -1,6 +1,6 @@
 ---
 name: island-server
-description: Rules, workflows and checklists for the Island Sim authoritative world server (apps/server) and its WebSocket protocol package (packages/protocol). Covers the per-world tick loop that runs every world 24/7, the command pipeline (Valibot schema check, rate limit, ownership check, apply via the pure sim, ok or reason code), sync (full island state, then per-tick changes, world summary and events), SQLite persistence (snapshots, append-only command log, event log, crash recovery by replay, catch-up after downtime, backups), paused worlds, worlds and invite codes, accounts and sessions, admin commands and hosting. Use it whenever work touches the server or the protocol package, adds a message type or a player command, or involves WebSockets, reconnects, saving or restoring a world, replay, a paused world, login, sessions, password reset, rate limits or deployment, even if nobody says "server". Game rules themselves belong to island-game-logic.
+description: Rules, workflows and checklists for the Island Sim authoritative world server (apps/server) and its WebSocket protocol package (packages/protocol). Covers the per-world tick loop that runs every world 24/7, the command pipeline (message schema check, access check, rate limit, command schema check, apply via the pure sim, ok or reason code), sync (full island state, then per-tick changes, world summary and events), SQLite persistence (snapshots, append-only command log, event log, crash recovery by replay, catch-up after downtime, backups), paused worlds, worlds and invite codes, accounts and sessions, admin commands and hosting. Use it whenever work touches the server or the protocol package, adds a message type or a player command, or involves WebSockets, reconnects, saving or restoring a world, replay, a paused world, login, sessions, password reset, rate limits or deployment, even if nobody says "server". Game rules themselves belong to island-game-logic.
 ---
 
 # Island Sim: world server and protocol
@@ -92,33 +92,38 @@ Summary; the tick cycle, pausing, catch-up, startup and shutdown are in `referen
 - Tick T is due at `anchorMs + (T - anchorTick) * tickMs` (2.5 s): `runDue()` runs what is due, so the clock never
   drifts. Up to 8 due ticks run live, each with an update to listeners; more is catching up, in batches of 500 with
   the event loop served between batches, capped at 24 real hours (34,560 ticks; missed time beyond the cap is
-  skipped by moving the anchor). Each world has its own timer (`start()`, `stop()`).
+  skipped by moving the anchor). Each world has its own timer (`start()`, `stop()`); `Worlds.create()` starts the
+  timer of a world created while the server runs, and after `Worlds.stop()` (shutdown) it refuses new worlds while a
+  stopped runtime refuses commands with `world-paused`, so nothing is logged after the shutdown snapshot.
 - Each tick calls the sim's `tickWorld` once (spec 5.1). The server never loops over islands.
 - Ticks and commands are synchronous; `better-sqlite3` is too, so a command never lands in the middle of a tick.
 - `Worlds.create(creatorId, islandName)` picks a seed and an invite code, snapshots the empty world and applies the
   creator's claim as command 1. `Worlds.claim(runtime, accountId, name, createFirst)` claims in one transaction with
   whatever must be created with it (the world, the account): when the sim refuses, nothing is created.
 - A throw pauses the world: rebuilt by `recoverWorld` to its last good tick, the paused reason stored, listeners
-  told. The host resumes it with `pnpm admin resume <world>`; it is rebuilt again and catches up the paused time.
+  told, and the rebuilt state snapshotted (also at shutdown), so a deploy that changes the sim version or the content
+  can still load it. The host resumes it with `pnpm admin resume <world>`; it is rebuilt again and catches up the
+  paused time.
 
 ## The command pipeline
 
 Every player command goes through the same steps (`sync/connection.ts` and `WorldRuntime.apply`). Adding a command
 needs no new server code beyond its schema in `packages/protocol/src/commands.ts`.
 
-1. **Parse:** the message envelope with `ClientMessage` (a bad one gets an `error` message, garbage that is not JSON
-   closes the connection with 4005), then the command with `PlayerCommand` (a bad one gets a result with
-   `bad-command`, matched by its request id).
+1. **Envelope:** the message with `ClientMessage` (a bad one gets an `error` message, garbage that is not JSON
+   closes the connection with 4005).
 2. **Access:** an island must be open (`no-island-open`) and be the sender's own (`not-your-island`; a visit is
-   read-only). The slot comes from the open island, never from the message.
+   read-only). The slot comes from the open island, never from the message. Access comes before the command schema,
+   so any payload gets a fixed answer here.
 3. **Rate limit:** 30 commands per 10 s per connection (`rate-limited`).
-4. **Apply:** `runtime.apply(toSimCommand(command, slot), accountId)`. A paused or catching-up world answers
+4. **Command schema:** `PlayerCommand` (a bad one gets a result with `bad-command`, matched by its request id).
+5. **Apply:** `runtime.apply(toSimCommand(command, slot), accountId)`. A paused or catching-up world answers
    `world-paused` or `world-catching-up` (the check-in waits for the next open). The sim checks the rules and
    changes nothing when it refuses.
-5. **Log:** an accepted command goes to the command log (tick it followed, sequence, account, sim version, content
+6. **Log:** an accepted command goes to the command log (tick it followed, sequence, account, sim version, content
    hash, the command as JSON) with its events and the membership mirror, in one transaction. If that throws, the
    world pauses and the answer is `server-error`. Refusals go to the server log only.
-6. **Send and reply:** the command's changes go at once to every connection with that island open (an `update` whose
+7. **Send and reply:** the command's changes go at once to every connection with that island open (an `update` whose
    source is the sequence), then the sender gets its `result` with the sim's data or reason code.
 
 ## Sync, in short
@@ -145,7 +150,10 @@ Full detail: `references/persistence.md`.
   `INSERT OR IGNORE`, so replay never duplicates them.
 - `recoverWorld(store, worldId, untilTick)` rebuilds from the newest snapshot plus the commands after it. It refuses
   commands logged by another sim version **or other content** (`contentHash` from the sim), and the world then stays
-  down (listed by `pnpm admin worlds`) until the host runs the previous version once.
+  down (listed by `pnpm admin worlds`; `pnpm admin resume` answers `world-not-loaded`) until the host runs the
+  version that logged them once and stops it gracefully, which writes a clean snapshot for every world, the paused
+  ones that rebuilt included. A graceful shutdown leaves no logged command after the newest snapshot of any such
+  world, so a deploy after one never strands a world.
 - A content retune that makes old snapshots invalid (`validateWorld` bounds) ships with a `SIM_VERSION` bump and a
   migration (`island-game-logic`, determinism.md): there is no clamping on load.
 
@@ -158,13 +166,16 @@ Full detail and the security checklist: `references/accounts-and-security.md`.
 - Login sets `island_session` (httpOnly, SameSite=Strict, Secure, 90 days); the session slides with use and is
   stored as a SHA-256 hash. Logout ends one device; a password change ends the others; a reset ends all, and their
   sockets close with 4003.
-- Registering needs a world's invite code and claims an island there in the same transaction. The host creates the
+- Registering needs a world's invite code (checked before the username) and claims an island there in the same
+  transaction. The host creates the
   first account and issues reset codes with `pnpm admin`.
 
 ## Hosting, in short
 
 `pnpm server` with `ISLAND_*` variables, one machine, HTTPS in front, the same origin for the page and `/ws`. The
-admin interface listens on 127.0.0.1 only. Daily online backups go to `ISLAND_BACKUP_DIR` (7 kept). **The provider,
+admin interface listens on 127.0.0.1 only. Daily online backups go to `ISLAND_BACKUP_DIR` (7 kept); the first comes a day after the newest copy, at least a
+minute after the start, so restarts do not skip a day. Shutdown order: the API answers 503, sockets get 2 s to answer
+the close frame, every trusted world is snapshotted, then the listeners and the database close. **The provider,
 TLS, process supervision and the backup's second location are chosen when slice 1 deploys (plan 6); update this skill
 and `references/operations.md` then.** Details: `references/operations.md`.
 

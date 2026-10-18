@@ -8,13 +8,17 @@ description: How to test every layer of Island Sim and what must be true before 
 How to test each layer of Island Sim, and what must be true before work is called done. This skill covers *how to
 test*. The rules under test belong to the domain skills listed at the end.
 
-> **Status (slice 1, plan 2 done):** the sim's tests and the pacing harness are real. Commands from the repo
+> **Status (slice 1, plans 1 to 3 done):** the sim's tests, the pacing harness, the protocol tests and the server
+> tests are real. Commands from the repo
 > root: `pnpm test` (all Vitest projects), `pnpm typecheck`, `pnpm lint`, `pnpm check` (all three), `pnpm pacing`
 > (the pacing report; `--seeds 42,1` and `--fast` for no invariants). One file: `pnpm vitest run <path>` (end a
-> folder path with `/`, or Vitest's filter also matches other files). Server, client and asset checks are still
-> planned (plans 3-6).
+> folder path with `/`, or Vitest's filter also matches other files); one server file: `pnpm --filter
+> @island/server exec vitest run <files>`. Client and asset checks are still planned (plans 4-6).
 
-## Implemented so far (slice 1, plans 1 and 2)
+## Implemented so far (slice 1, plans 1 to 3)
+
+- Server and protocol (plan 3): unit tests next to the code in `apps/server/src/` and `packages/protocol/src/`,
+  integration tests with real sockets and SQLite in `apps/server/test/`; see `references/server-tests.md`.
 
 - Unit tests sit next to the code as `*.test.ts`. Shared helpers and whole-run tests live in `packages/sim/test/`.
 - `packages/sim/test/fixtures.ts`: hand-painted 8 x 8 maps (`SMALL`, `DEFAULT_MAP`, `HALL_MAP`, `paint`,
@@ -51,14 +55,14 @@ test*. The rules under test belong to the domain skills listed at the end.
 
 ## Test layers at a glance
 
-| Layer | What it proves | Tools | Planned location | Details |
+| Layer | What it proves | Tools | Location (planned where not built yet) | Details |
 |---|---|---|---|---|
 | Sim unit | Each tick pass and each command does the right thing on a small hand-built state | Vitest | `packages/sim` | `references/sim-tests.md` |
 | Determinism | Same seed and commands give the same state hash | Vitest | `packages/sim` | `references/sim-tests.md` |
 | Replay | Snapshot plus command log gives the same state as the live run | Vitest | `packages/sim` | `references/sim-tests.md` |
 | Invariants | No negative stock; money and goods change only through the sim's ledger; checked every tick | Shared test helper | `packages/sim` | `references/sim-tests.md` |
 | Golden scenarios | Whole scripted runs (first: "Outpost to Settlement") end in the stored state hash, in seconds | Vitest | `packages/sim` | `references/sim-tests.md` |
-| Pacing harness | A scripted bot reaches each stage in about the target real time | Headless Node runner | `tools/` | `references/pacing-harness.md` |
+| Pacing harness | A scripted bot reaches each stage in about the target real time | Headless Node runner | `tools/pacing/` | `references/pacing-harness.md` |
 | Server integration | Accounts, worlds, commands, sync, reconnect, crash recovery, catch-up, events, paused worlds, rate limits | Vitest with real `ws` clients and a real server | `apps/server` | `references/server-tests.md` |
 | Client unit | HUD, cards, news and the Zustand store | Vitest and Testing Library | `apps/client` | `references/client-tests.md` |
 | Client end to end | Two players sign up, invite, build and visit; fixed screenshots; emulated touch gestures | Playwright | to be decided in slice 1 | `references/client-tests.md` |

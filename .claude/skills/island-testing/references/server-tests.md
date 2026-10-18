@@ -30,6 +30,12 @@ Unit tests sit next to the code (`apps/server/src/**/*.test.ts`); integration te
   start with `autoTick: false`, so no timer ticks: move the clock by `TICK_MS` and call `worlds.runDue()` (or
   `runtime.runDue()`), one tick at a time for live ticks with updates, or many at once to catch up (await the
   promise it returns). 90-day sessions and reset-code expiry use the same clock.
+- **The real timers need a test of their own.** `autoTick: false` hides everything about timers: a world created
+  while the server ran once never ticked until a restart, and no other test noticed. `test/timers.test.ts` starts a
+  server with the default timers, the system clock and `tickMs` 20, creates a world over HTTP and waits for an
+  `update` with `tick >= 3` on a real socket. `src/worlds/registry.test.ts` covers the same with fake timers. Keep at
+  least one test like this, and add one for any new timer (the backup timer is tested with fake timers in
+  `test/shutdown.test.ts`).
 - **Worlds without the network:** `worldDeps()` (an in-memory database with accounts `id-alice`, `id-bob`,
   `id-carol`) and `aliceWorld()` (alice's world on seed 42, her dock at 12,26) build a `Worlds` registry directly;
   `runTicks(runtime, clock, n)` runs live ticks.
@@ -134,7 +140,12 @@ sim and has its own sim test (`sim-tests.md`), so this test proves the server se
 ## Persistence, crash recovery and catch-up (spec 5.2, 12.2, 12.3)
 
 - **Graceful shutdown** always writes a snapshot; a restart continues from it with the same hash and an empty replay
-  window.
+  window. It survives a failing snapshot (spy on one world's `snapshot` to throw): the other worlds are still
+  snapshotted, the ports are free, the database is closed and `close()` resolves; a second `close()` returns the same
+  promise. While it closes, the API answers 503 `shutting-down`, upgrades are refused, and a socket that never
+  answers the close frame is cut off after 2 s (`test/shutdown.test.ts`). After `worlds.stop()`, commands and new
+  worlds are refused, so nothing is logged after the shutdown snapshot. A start that fails (a port taken) closes what
+  it opened.
 - **Deploy:** shut down gracefully, restart with a newer sim version: the old snapshot has nothing logged after it, so
   it is simply migrated and the world continues.
 - **Crash, then deploy:** kill the server so logged commands remain after the last snapshot (each logged command
@@ -176,12 +187,19 @@ Make one world's tick throw (and, in a second test, one command):
 - The host resumes it through the server's local admin interface: a request from anywhere but localhost is refused.
   The resumed world catches up the time it was paused, with the same 24-hour cap (34,560 ticks), then ticks on.
 - One bad client message never crashes the process either.
+- The pause writes a snapshot of the rebuilt state: pause a world, close gracefully, then no command is logged after
+  its newest snapshot, a restart (even with a changed content hash) loads it still paused, and resuming works
+  (`test/lifecycle.test.ts`). A pause caused by a command does the same, with the failed command left out.
+- A member opening a world that failed to load gets `world-paused`, not `not-a-member`.
 
 ## Backups (spec 12.3)
 
 The server copies the SQLite file daily with SQLite's online backup. Test that a backup taken while worlds are
 ticking opens cleanly, and that a server started from the copy rebuilds the same per-island hashes as the source had
-at the time of the backup.
+at the time of the backup. The schedule is tested with fake timers (`test/shutdown.test.ts`): with an empty folder the
+first copy appears about a minute after the start, and a recent copy already in the folder delays it to a day after
+that copy. Fake only `setTimeout` and `setInterval` (and their clears) so the sockets keep working, and restore real
+timers before `close()`, which waits on a real 2 s grace.
 
 ## An example from the suite
 

@@ -25,9 +25,15 @@ invite codes - password reset - rate limits - HTTPS - security checklist for eve
   `/api/password-reset`, `/api/worlds` (create), `/api/worlds/join`, `/api/worlds/invite` (creator only); `GET
   /api/me`. Every POST needs the game's Origin (`bad-origin`). Bodies are JSON up to 4 KiB (`too-large`). Errors are
   `{ error: ApiReason }` with an HTTP status.
-- **Registration** checks, hashes, then checks everything again (the world may have changed while hashing) and
-  creates the account inside the claim's transaction: a full or resting world creates nothing (`world-full`,
-  `world-resting`).
+- **Registration** checks the invite code first and the username after it (so usernames cannot be probed without a
+  code: a wrong code with a taken name answers `bad-invite-code`), hashes, then checks everything again in the same
+  order (the world may have changed while hashing) and creates the account inside the claim's transaction: a full or
+  resting world creates nothing (`world-full`, `world-resting`).
+- **Shutting down:** once the server starts closing, every `/api` request is answered `503` `{ "error":
+  "shutting-down" }`, and the world registry refuses new worlds and commands.
+- **Request targets** are compared as strings (`(req.url).split('?')[0]`), not parsed with `new URL`, which throws on
+  targets such as `//`; a client that drops the connection mid-body is answered `bad-request`, not logged as a server
+  error.
 - **The upgrade** (`sync/gateway.ts`): `/ws` only, the Origin must equal `ISLAND_ORIGIN`, the cookie must hold a live
   session; otherwise 403, 401 or 404 and no socket.
 
@@ -40,6 +46,9 @@ invite codes - password reset - rate limits - HTTPS - security checklist for eve
 | Creating worlds per account | 5 per hour |
 | Commands / other messages per connection | 30 / 60 per 10 seconds |
 
+The limiter keeps its counters in memory (one process; they reset on restart, fine for a private game). Above 10,000
+keys it forgets expired windows, at most once per window, so the map cannot grow without bound.
+
 The client address is the socket's, or the last `X-Forwarded-For` entry when `ISLAND_TRUST_PROXY=1` (only behind a
 reverse proxy you run).
 
@@ -47,11 +56,9 @@ reverse proxy you run).
 
 - **Username:** unique, made of ASCII letters, digits, "-" and "_" only (no emoji, no spaces), compared in lowercase
   but shown as typed (spec 12.3). Store the name as typed (for display) and its lowercased form with a unique index,
-  and always look up by the lowercased form. The schema rejects anything else before any lookup. Minimum and maximum
-  length are still open.
-- **Password:** at least 8 characters (spec). Also set a maximum length so nobody can submit megabytes to the hasher
-  (number still open).
-- **Hashing:** argon2id. The library and its cost parameters are still open. Always use the asynchronous API:
+  and always look up by the lowercased form. The schema rejects anything else before any lookup. Lengths: 3 to 24.
+- **Password:** at least 8 characters (spec) and at most 128, so nobody can submit megabytes to the hasher.
+- **Hashing:** argon2id, `@node-rs/argon2`, `m=19456,t=2,p=1` (see "As built"). Always use the asynchronous API:
   hashing deliberately takes time, and doing it on the main thread would stall every world's ticks.
 - Never log, store or send the plain password. Never send the hash to a client.
 - On a failed login, give one generic message that does not reveal whether the username exists.
@@ -59,13 +66,12 @@ reverse proxy you run).
 ## Sessions and cookies
 
 - Login creates a new session for that device; a player signed in on a phone and a laptop has two sessions.
-- The session token is a long random value from Node's `crypto` module. Suggested: store only a hash of the token,
-  so a leaked database file does not hand out live sessions.
-- Cookie: httpOnly (spec), Secure (HTTPS is required), a SameSite setting (Lax or Strict: still open), path `/`.
-- **90-day sliding expiry:** each use pushes the expiry 90 days ahead. Writing that on every connection is fine at
-  this scale, or limit it to once a day. Expired sessions are refused and can be deleted.
+- The session token is a long random value from Node's `crypto` module. Only its SHA-256 hash is stored, so a
+  leaked database file does not hand out live sessions.
+- Cookie: httpOnly (spec), Secure (HTTPS is required), `SameSite=Strict`, path `/`.
+- **90-day sliding expiry:** each use pushes the expiry 90 days ahead. It is written at most once an hour per session. Expired sessions are refused and can be deleted.
 - **Logout ends only that device's session:** delete that one session and clear its cookie. Other devices stay
-  signed in. Suggested: also close the WebSocket connections opened with that session.
+  signed in. The WebSocket connections opened with that session are closed (4003).
 
 ## The WebSocket upgrade
 
@@ -95,7 +101,7 @@ reverse proxy you run).
 - One account can be in several worlds, one island per world.
 - The very first account is created by the host with an admin command on the server machine. No web route creates
   an account without a valid invite code.
-- Rate-limit registration attempts per IP (suggested), so invite codes cannot be guessed by brute force.
+- Registration attempts are rate-limited per IP, so invite codes cannot be guessed by brute force.
 
 ## Changing a password
 
@@ -103,15 +109,14 @@ reverse proxy you run).
   session, not a WebSocket message.
 - It ends the account's sessions on every other device (spec 12.4); the current device stays signed in. Also close
   the WebSocket connections opened with those sessions.
-- Suggested: require the current password, apply the same rules as registration (at least 8 characters, the maximum
+- Requires the current password, apply the same rules as registration (at least 8 characters, the maximum
   length), hash asynchronously, and rate-limit attempts per account.
 
 ## Password reset
 
 - There is no email. The host runs an admin command that issues a one-time reset code for a username and passes it
   to the player out of band (for example in a chat).
-- The player enters username, code and a new password. The code works once, is stored hashed, expires (expiry still
-  open), and attempts are rate-limited.
+- The player enters username, code and a new password. The code works once, is stored hashed, expires after 24 hours, and attempts are rate-limited.
 - A reset ends all of the account's sessions (spec 12.4); a password change ends every session except the
   current device's.
 - Email recovery can be added later (brainstorm Section 3); nothing in the design depends on it.
@@ -122,19 +127,19 @@ reverse proxy you run).
 |---|---|---|
 | Login attempts | username and IP, separately | spec 5.4 |
 | Commands | connection | spec 5.3 |
-| Registration attempts | IP | suggested |
-| Reset code attempts | username and IP | suggested |
+| Registration attempts | IP | built |
+| Reset code attempts | username and IP | built |
 
-- Numbers, windows and back-off are still open. With one process, in-memory counters are enough (they reset on
-  restart, which is acceptable for a private game).
+- The numbers and windows are in the table under "As built". With one process, in-memory counters are enough (they
+  reset on restart, which is acceptable for a private game).
 - Behind a reverse proxy the client IP arrives in a forwarded header. Trust that header only when the request comes
   from the known proxy; otherwise anyone can fake their IP and dodge the limit.
 
 ## HTTPS
 
 Required (spec 5.4). TLS is terminated in front of the server (the setup depends on the hosting provider, still to be
-chosen in slice 1). Cookies are Secure, so they are never sent over plain HTTP. Suggested: an HSTS header. The local
-development setup is still open.
+chosen in slice 1). Cookies are Secure, so they are never sent over plain HTTP. Suggested: an HSTS header. Local
+development over plain HTTP sets `ISLAND_SECURE_COOKIES=0`; with the Vite dev server in front, see `operations.md`.
 
 ## Security checklist for every server change
 

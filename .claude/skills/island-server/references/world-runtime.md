@@ -15,21 +15,39 @@ worlds - catch-up after downtime - startup and shutdown - keeping one process he
 - **`runDue()`:** at most 8 due ticks run live (`LIVE_TICKS`), each with an update to listeners; more starts
   `catchUp()`, which returns a promise. Tests move a `ManualClock` and call `runDue()` themselves (`autoTick: false`).
 - **Timers:** `start()` schedules a `setTimeout` for the next due tick, then reschedules; a paused world's timer stops
-  and `resume()` restarts it. `stop()` ends timers and catch-up batches for shutdown.
+  and `resume()` restarts it. `stop()` ends timers and catch-up batches for shutdown. Timer callbacks and `catchUp()`
+  never throw or reject: a throw pauses the world. `Worlds.start()` starts every loaded world, and `Worlds.create()`
+  starts the timer of a world created afterwards (the first world on a fresh install included); `Worlds.stop()` then
+  refuses new worlds. A stopped runtime refuses `apply()` with `world-paused`, so nothing is logged after the shutdown
+  snapshot. Fake-clock tests do not start timers, so at least one test drives the real ones
+  (`apps/server/test/timers.test.ts`, island-testing).
 - **Catch-up:** batches of 500 ticks (`CATCH_UP_BATCH`) in one transaction each, `setImmediate` between batches, the
   cap from `catchUpCapTicks` (34,560); status `catching-up` meanwhile; then a snapshot, status `running`, and a
   `resync` so open islands get their full state.
-- **Failure:** `fail()` logs `world paused` (world, tick or command, tick, stack), rebuilds with
-  `recoverWorld(store, id, lastGoodTick)`, stores the reason and tick (`pausedReason`, `pausedTick`) and tells
-  listeners. A world that fails to rebuild stays paused. `resume()` rebuilds again, clears the pause, catches up.
+- **Failure:** `fail()` never throws. It pauses first (reason and tick in the record, status `paused`, listeners
+  told), so a store that fails while pausing still leaves the world paused in memory (`pause not stored` is logged).
+  Then it rebuilds with `recoverWorld(store, id, lastGoodTick)` and stores the pause. When the rebuild worked it also
+  writes a snapshot of the rebuilt state (inside a `try/catch`; a failure logs `snapshot failed`), so no logged command
+  follows the newest snapshot of a paused world and a deploy that changes the sim version or the content can still
+  load it. A world whose rebuild failed keeps the suspect state it had (`runtime.suspect`); visitors see that state
+  until `resume()` rebuilds it, and it is never snapshotted. `resume()` rebuilds again, clears the pause, catches up.
+  `pauseAfterRollback()` handles a claim whose transaction rolled back after the sim accepted it: the accepted command
+  is gone from the log and a pause written inside the transaction went with it, so the world is paused again,
+  rebuilt and the pause stored anew.
 - **Check-in:** applied when the owner opens their island, at most once per game hour (`CHECK_IN_EVERY_TICKS` in
   `sync/connection.ts`): a phone that reconnects often does not fill the log.
 - **Listeners:** a world nobody watches is never diffed (its capture is dropped); a listener that throws is logged
   (`listener failed`) and skipped.
 - **Startup:** `Worlds.loadAll()` recovers every world (a paused one to its paused tick); a world that cannot be
   recovered goes to `Worlds.failed` with the reason and is not run. `start()` then lets each world catch up on its
-  own timer. **Shutdown** (`close()` in `server.ts`): close the sockets (1001), stop the worlds, snapshot each that
-  is not paused, close the listeners and the database.
+  own timer. **Shutdown** (`close()` in `server.ts`, which never rejects and returns the same promise when called
+  twice): set the closing flag (the HTTP API then answers 503 `shutting-down` and new upgrades are refused), send the
+  close frames (1001), stop the worlds (no more commands or new worlds), snapshot every world whose state is trusted
+  (paused worlds that rebuilt included; only a suspect one is skipped), each in its own `try/catch` that logs
+  `snapshot failed`; then, whatever happened, clear the backup timer, wait for a running backup, wait for the sockets
+  (those still open after a 2 s grace are terminated, so a vanished phone cannot hold a deploy up), close both
+  listeners and the database. The listeners stay open until then, so a late request gets the 503, not a reset.
+  `startServer` closes whatever it opened, and the database, when a listen fails (a port already taken).
 
 ## Time from the server's side
 
@@ -72,8 +90,8 @@ worlds - catch-up after downtime - startup and shutdown - keeping one process he
 - **Check-in.** When the owner opens their own island, the server applies a logged "check-in" command; the sim uses
   the last check-in to decide whether the island is active (within 7 real days, 241,920 ticks), which scales world
   projects (spec 12.1). While the world is paused or catching up it accepts no commands, the check-in included; the
-  check-in simply happens the next time the owner opens the island (spec 12.3). Whether repeated check-ins within a
-  short time are all logged is still open.
+  check-in simply happens the next time the owner opens the island (spec 12.3). Opening
+  the island logs a check-in at most once per game hour, so a phone that reconnects often does not fill the log.
 - **Several worlds.** One account can be in several worlds, with one island per world (spec 12.3). Sessions belong to
   the account; each connection opens islands of one world at a time.
 - **Empty slots** have no island state to advance and cost nothing per tick.
@@ -114,8 +132,8 @@ them, so no server-side `Map` order or connection order can change results.
 - Commands apply right away, not queued for the next tick (D18). Their position is "the tick it followed" plus the
   per-world sequence number, which is exactly what the command log records (spec 12.3).
 - `applyCommand` returns its own changes, ledger entries and events, like the tick (spec 12.2). Write the events with
-  source = the command's sequence number. Whether the changes are sent to open connections at once or folded into the
-  next tick's changes is still open.
+  source = the command's sequence number. The changes go to the open connections at once, as an `update`
+  whose source is the command's sequence number.
 - Automation rules and safety rules are not commands; they run inside the tick from state (see `island-game-logic`),
   so the server neither schedules nor logs them.
 - The full pipeline is in SKILL.md, "The command pipeline".
@@ -136,7 +154,10 @@ it through the server's local admin interface (localhost only), and it catches u
 - Log the world id, the tick number, the error and its stack, and whether it was a tick or a command. Never log
   session tokens, passwords or codes.
 - Store the paused flag (and reason) with the world, so a restart keeps the world paused until an admin resumes it.
-  At startup a paused world is rebuilt but its timer is not started.
+  At startup a paused world is rebuilt but its timer is not started. The rebuilt state is also snapshotted (at the
+  pause and at shutdown), so the paused world survives a deploy that changes the sim version or the content: with the
+  log alone, `recoverWorld` would refuse the commands logged after its old snapshot and the world could not be loaded
+  or resumed.
 - While paused: no ticks run, the world accepts no commands (the automatic check-in included; spec 12.3), players'
   commands are refused with a reason code, and its connections get a notice that the client shows as "This island
   is resting, back soon" (words and look per `island-ui`).
@@ -145,7 +166,7 @@ it through the server's local admin interface (localhost only), and it catches u
   (`persistence.md`).
 - **Resuming** goes through the server's local admin interface, reachable from localhost only (spec 12.3,
   `operations.md`). The resumed world catches up the time it was paused, capped at 24 real hours (34,560 ticks),
-  exactly like downtime, then its timer starts. The form of that interface is still open.
+  exactly like downtime, then its timer starts. The interface is HTTP on 127.0.0.1 (`pnpm admin`, `operations.md`).
 - A failure in server code for one connection (sending, a malformed message) closes that connection only.
 
 ## Catch-up after downtime
@@ -159,8 +180,8 @@ it through the server's local admin interface (localhost only), and it catches u
 - Run catch-up in batches and yield to the event loop between batches, so other worlds keep ticking and connections
   stay alive. Batch size: decide in slice 1 after measuring tick cost.
 - Until a world has caught up it accepts no commands, the automatic check-in included (spec 12.3); players' commands
-  get a reason code. Suggested: send no per-tick changes meanwhile. Whether its islands can be opened meanwhile is
-  still open.
+  get a reason code. No per-tick changes are sent meanwhile. Its islands can be opened: the status is `catching-up`,
+  the player gets the full state, and again when the catch-up is done (a `resync`), then the updates resume.
 - Events produced during catch-up go to the event log as usual; they become the "while you were away" news.
 - Snapshots keep their real-time interval during catch-up; also take one when catch-up finishes, so a crash soon
   after does not repeat it.
@@ -170,13 +191,15 @@ it through the server's local admin interface (localhost only), and it catches u
 Startup, illustrative order: open the database and run migrations; for each world load the latest snapshot and
 replay the command log (sim versions: see `persistence.md`; a world whose replay was refused is not started and the
 host is told to run the previous version once); catch up every world that is not paused; start those worlds' timers;
-open the HTTP and WebSocket listeners. Whether listeners open before every world has caught up is still open (if so,
-the catch-up rules above apply).
+open the HTTP and WebSocket listeners. The listeners open before the worlds have caught up; each world catches up on
+its own timer, and the catch-up rules above apply meanwhile.
 
 Shutdown on a stop signal: stop accepting connections and commands; the current tick has already finished because
 ticks are synchronous; stop all world timers; snapshot every world (spec 5.2; this also makes the replay window after
-a deploy empty, spec 12.2); close sockets; close the database; exit. Keep the previous snapshot until the new one is
-committed, so an interrupted shutdown never leaves a world without a snapshot.
+a deploy empty, spec 12.2), the paused worlds that rebuilt included (they hold their last good state; skipping them
+stranded them after a deploy); close sockets; close the database; exit. Each snapshot is its own transaction and the
+newest two are kept, so an interrupted shutdown never leaves a world without a snapshot. The order and the guards are
+in "As built" above.
 
 ## Keeping one process healthy
 

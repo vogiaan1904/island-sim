@@ -37,15 +37,27 @@ per-tick changes - visiting - phones and reconnects - validation - versioning - 
 - **News:** only when opening your own island: that island's newest 100 events after the account's marker, oldest
   first. Visitors get `news: []` but the visited island's events in every update (watch mode).
 - **Catch-up:** open islands get `status` `catching-up`, no updates, then `status` `running` and a fresh `island`.
-  The same `island` resend follows a rebuild.
+  A pause is different: it sends only `status` `paused` (the world rebuilt in memory, nothing to resend); the fresh
+  `island` follows the catch-up of the host's `resume`.
+- **A world that failed to load** (`Worlds.failed`) shows to its members as `paused` in `/api/me`, and `open-island`
+  for it answers `error` / `world-paused`; `not-a-member` is for worlds the account has no island in.
 - **The client mirror** applies `island.entities`, then each update with the sim's `applyChanges`; the server test
   client (`apps/server/test/player.ts`) does exactly this, and plan 5's store should use the same function.
+- **Hello versions:** before the strict parse, a first message that is a `hello` with another `protocolVersion` is
+  answered `update-required` and closed with 4001, whatever other fields it carries, so a later `hello` with a new
+  field still tells an older cached client to update (not 4002).
+- **Failures stay on one socket:** every socket has an `error` listener, so an oversized frame, invalid UTF-8 or a
+  reset closes that socket only (a `socket error` log line). The server ignores messages from a connection it already
+  closed. The upgrade path is compared as a string, not parsed as a URL (`//` gets 404, `new URL` would throw), and
+  a refused upgrade is answered (401, 403, 404, or 503 while shutting down) and then destroyed.
+- **Shutdown:** `Gateway.close()` sends 1001 to every connection and resolves when they are gone; those that have
+  not answered after 2 s are terminated.
 - **Sizes:** client messages up to 16 KiB (`maxPayload`); a road command up to 1,024 tiles by schema (the sim's own
   limit answers `too-many-tiles`).
 
 ## The protocol package
 
-`packages/protocol` (planned) is the one shared definition of the wire format:
+`packages/protocol` is the one shared definition of the wire format:
 
 - the protocol version constant;
 - Valibot schemas for every client-to-server and server-to-client message, with TypeScript types inferred from them
@@ -59,7 +71,7 @@ Division of work (spec 12.2): `sim` defines the command types and produces the p
 commands and changes in messages with Valibot schemas. The sim's types are the source of truth, so check each
 schema's inferred type against the sim type it wraps at compile time; a drift then fails the build instead of a
 replay. Schemas for the HTTP account requests (login, register, reset) may live here too, since the client uses
-them; still open.
+them; they do (`http.ts`).
 
 ## Transport
 
@@ -79,8 +91,8 @@ Illustrative sequence:
 1. **Upgrade.** The browser opens the WebSocket with the session cookie. The server checks the session and the Origin
    header before accepting; otherwise it refuses the upgrade.
 2. **Version check.** The first client message carries the protocol version. Match: the server confirms. Mismatch: it
-   tells the client to update and closes. Any other first message: close. Suggested: close if no first message arrives
-   within a few seconds.
+   tells the client to update and closes. Any other first message: close. A connection with no first message within
+   5 s is closed too.
 3. **Open an island.** The client asks for one island of one of the account's worlds (an account can be in several,
    spec 12.3): its own, or a friend's for a read-only visit. The server checks membership and sends the island's
    full state, tagged with its tick number. When the owner opens their own island, the server also applies the
@@ -89,12 +101,13 @@ Illustrative sequence:
    island").
 4. **Each tick.** Connections with an island open receive that tick's changes, the world summary and new events,
    tagged with the tick number. Connections without an open island receive nothing.
-5. **Commands.** Command message in, ok or reason code out, matched by a request id (suggested).
+5. **Commands.** Command message in, ok or reason code out, matched by a request id.
 6. **Close the island or the socket.** Nothing more is sent.
 
 ## Message kinds
 
-Conceptual list; names, fields and grouping are still open.
+Conceptual list; the real messages are in the table under "As built". Invite codes are regenerated over HTTP
+(`POST /api/worlds/invite`), not as a WebSocket message.
 
 | Direction | Kind | Carries |
 |---|---|---|
@@ -106,7 +119,7 @@ Conceptual list; names, fields and grouping are still open.
 | server -> client | full island state | tick, island state, world summary, recent events (decide which) |
 | server -> client | tick changes | tick, changed entities, removed ids, world summary, new events |
 | server -> client | command result | request id, ok or reason code |
-| server -> client | notice | world paused (shown as "This island is resting, back soon", spec 12.3), catching up, session ended (exact set still open) |
+| server -> client | notice | `status`: paused (shown as "This island is resting, back soon", spec 12.3), catching up; a session that ended closes the socket with 4003 |
 
 ## Full state and per-tick changes
 
@@ -121,21 +134,19 @@ Conceptual list; names, fields and grouping are still open.
   `captureEntities(world)` result per world; after each tick or accepted command, `diffEntities(capture, world)`
   returns `{ changes: { changed, removed }, capture }`. Filter by the slot in the key to send one island.
 - **Changed entities and removed ids.** The natural reading of the spec: each changed entity is sent whole and
-  replaces the client's copy; removed entities are sent as ids. Island-wide values (money, tick, counts) need a place
-  in the changes too. The exact shape is still open.
+  replaces the client's copy; removed entities are sent as ids. Island-wide values (money, tick, counts) are in the `island/<slot>`
+  entity.
 - **Tick numbers on everything.** The full state and each change message carry their tick, so the client can drop
   changes older than its full state and spot a gap. On a gap the client asks for the full state again, or reconnects.
 - **Command effects:** `applyCommand` returns its own changes, ledger entries and events, like the tick (spec
-  12.2). The ok reply goes out at once (the client plays the landing bounce on accept, spec 12.4). Whether the
-  command's changes are sent to open connections at once or folded into the next tick's changes is still open;
-  either way they must keep the correctness rule above.
+  12.2). The ok reply goes out at once (the client plays the landing bounce on accept, spec 12.4). The
+  command's changes are sent to open connections at once, before the reply, and keep the correctness rule above.
 - **World summary:** small, sent with each tick: the other islands of the world and Mainland market prices. Keep it
   small; it goes to phones every 2.5 s.
 - **Events:** new events for the open island, plus world events, keyed by (tick, source, index). The "while you were
-  away" news uses each player's "last seen event" marker (`persistence.md`). Which events a visitor receives is still
-  open.
+  away" news uses each player's "last seen event" marker (`persistence.md`). A visitor receives the visited island's events in every update, and no news.
 - **Slow connections:** do not queue unbounded data for a connection that cannot keep up (`ws` reports how much is
-  still buffered). Suggested: close it; the client reconnects and gets a fresh full state.
+  still buffered). The server drops it (more than 1 MB waiting); the client reconnects and gets a fresh full state.
 
 ## Visiting
 
@@ -151,8 +162,8 @@ Conceptual list; names, fields and grouping are still open.
   jitter so many phones don't reconnect in lockstep after a restart, belongs to `island-3d-client`.
 - The server keeps nothing per connection that must survive a reconnect. A connection's subscription and rate-limit
   state are thrown away when it closes.
-- Phones often vanish without a close frame. Suggested: a ping and pong heartbeat (the pattern documented for `ws`)
-  that closes sockets which stop answering, so the server stops sending to them.
+- Phones often vanish without a close frame. A ping and pong heartbeat (the pattern documented for `ws`, every 30 s)
+  terminates sockets which stop answering, so the server stops sending to them.
 - Changes are only sent while an island is on screen, which keeps mobile data low.
 
 ## Validation
@@ -171,12 +182,12 @@ Conceptual list; names, fields and grouping are still open.
 - The server and the client are built and deployed together, but an installed PWA can keep running an old cached
   build. The version check in the first message is how it learns to update; the update flow itself belongs to
   `island-3d-client`.
-- Whether unknown message types are ignored (allowing additive changes without a bump) or rejected is still open;
-  write the rule here once chosen.
+- Unknown message types are rejected with `error` / `bad-message`, never ignored, so any new client message needs a
+  bump (SKILL.md, add a message type).
 
 ## Illustrative schema
 
-Illustrative only: the names, fields and structure are still open.
+Illustrative only; the real schemas are in `packages/protocol/src/messages.ts`.
 
 ```ts
 import * as v from 'valibot';

@@ -13,7 +13,9 @@ recovery and replay - the event log - sim versions and replay - reproducing a bu
 - **Access:** `WorldStore` (`worlds/store.ts`) and `AccountStore` (`accounts/store.ts`), prepared statements only.
 - **Snapshots:** `WorldRuntime.snapshot()` writes tick, last sequence, `SIM_VERSION`, `CONTENT_HASH` and the sim's
   `serializeWorld`; the newest two per world are kept. Written on world creation, every `snapshotMs`, after each
-  catch-up and on shutdown.
+  catch-up and on shutdown. A paused world is snapshotted too once its rebuild succeeded (right after the pause, and
+  at shutdown): its state is then the last good one, and the newest snapshot plus the commands after it rebuild
+  exactly what the paused runtime holds. Only a paused world whose rebuild failed is never snapshotted.
 - **Command log:** every accepted command with its tick, sequence, account (the claimant for claims), sim version,
   content hash and JSON, in the same transaction as its events and the membership mirror. Kept whole.
 - **Recovery:** `recoverWorld(store, worldId, untilTick)` in `worlds/recovery.ts`: newest snapshot, then each later
@@ -29,7 +31,11 @@ recovery and replay - the event log - sim versions and replay - reproducing a bu
 - **Membership:** `WorldRuntime` rewrites the world's `members` rows whenever the island owners in the state differ
   from the last rows it wrote, and on load: the mirror is always rebuilt from the state.
 - **Backups:** `backupDatabase` (`src/backup.ts`) uses `better-sqlite3`'s online backup into `ISLAND_BACKUP_DIR` daily
-  (and on `pnpm admin backup`), keeping the newest 7. A server starts from a backup file like from the database.
+  (and on `pnpm admin backup`), keeping the newest 7. A server starts from a backup file like from the database. The
+  copy is written to a `.part` file and renamed when complete (removed on failure), the copy just written is never
+  pruned, and `.part` files older than an hour are swept. The first backup after a start comes a day after the newest
+  copy's name timestamp, but at least a minute after the start (`backup due` is logged), so a server restarted several
+  times a day still gets its daily copy.
 
 ## Why it is built this way
 
@@ -42,10 +48,10 @@ recovery and replay - the event log - sim versions and replay - reproducing a bu
 
 - One SQLite file on the host's persistent disk, through `better-sqlite3`. Its API is synchronous, which matches the
   synchronous tick and command handling: a write has finished before the next message or tick runs.
-- Suggested: WAL journal mode, so admin commands in `tools/` can work on account records while the server runs.
+- WAL journal mode is on. The admin commands go through the server's admin interface (`pnpm admin`), not around it.
 - Prepared statements with bound parameters only. Never build SQL text from anything a client sent.
-- Schema changes go through ordered migrations applied at startup (mechanism: choose in slice 1). These are database
-  migrations; migrations of the serialized world state are the sim's (below).
+- Schema changes go through ordered migrations applied at startup, versioned by `PRAGMA user_version`. These are
+  database migrations; migrations of the serialized world state are the sim's (below).
 
 ## What is stored
 
@@ -89,11 +95,11 @@ log it.
 
 - Every 5 real minutes per world (configurable for tests), and for every world on shutdown (spec 12.3).
 - Only between ticks, and only from a known-good state: never from a world whose tick or command just threw before it
-  was rebuilt, and never after an exception escaped to the process level.
+  was rebuilt, and never after an exception escaped to the process level. A world that was rebuilt after a throw
+  holds its last good state and is snapshotted (`world-runtime.md`, Failure).
 - Each snapshot records its tick, the last command sequence it includes, and the sim version (spec 12.2, 12.3). The
   sim owns serialization (`island-game-logic`); the server stores the result.
-- Write each snapshot in a transaction, and keep at least the previous one until the new one is committed. How many
-  to keep is still open.
+- Each snapshot is written in a transaction, and the newest two per world are kept.
 - Serializing a world blocks the event loop while it runs. Measure it as worlds grow.
 
 ## Recovery and replay
@@ -127,7 +133,7 @@ canonical serialized state with sorted keys (spec 12.2). Any change to this proc
   the same keys, so insert them in a way that skips keys already stored; replay never duplicates them.
 - **Last seen event:** each player has a marker (per world, since an account can be in several) that decides what the
   news shows (spec 12.3). The client picks the top five by each event type's importance in content data, grouped
-  (spec 12.4, `island-ui`). When the marker moves (on sending the news, or when the player has seen it) is still open.
+  (spec 12.4, `island-ui`). The marker moves when the client sends `mark-seen`, and only forward.
 - Push notifications (later) read new rows from this table; see `operations.md`.
 
 ## Sim versions and replay
@@ -141,10 +147,11 @@ Replay is exact only with the sim and content code that produced the log. Spec 1
 - New state fields get their starting values from versioned snapshot migrations in `sim`. An old snapshot with
   nothing logged after it is simply migrated and loaded.
 - **Logged commands from another sim version still need replaying** (a crash, then a deploy): the server refuses to
-  replay that world and tells the host to run the previous version once to write a clean snapshot (spec 12.2). The
-  previous version replays its own log, shuts down gracefully (snapshot), and the new version then starts from that
-  snapshot with an empty replay window. Never replay old commands with new rules: the result could silently differ
-  from what players saw.
+  replay that world and tells the host to run the version that logged them once to write a clean snapshot (spec
+  12.2). That version replays its own log, shuts down gracefully (a snapshot for every world, the paused ones that
+  rebuilt included), and the new version then starts from that snapshot with an empty replay window. A world that
+  paused and was shut down gracefully has an empty window already, so a deploy never strands it. Never replay old commands with new rules: the result
+  could silently differ from what players saw.
 
 ## Reproducing a bug locally
 

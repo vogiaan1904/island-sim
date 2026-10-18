@@ -5,10 +5,11 @@ description: End-to-end recipe and checklist for adding or changing game content
 
 # Island Content
 
-> **Status: first draft, written from the design spec on 2026-10-16, before any product code exists.**
-> Every path, package and file name below is PLANNED (from spec sections 3, 7 and 12). Nothing here is an API yet.
-> Until the spec is approved and the slice 1 plan exists, use this skill to plan content (briefs, task lists), not
-> to write product code. Update it during slice 1 (spec 8.1 step 10) with real paths, real APIs and a real example.
+> **Status (slice 1, plans 1 to 3 done):** first written from the design spec on 2026-10-16. The workspace, the sim
+> (`packages/sim`, `packages/content`), the protocol (`packages/protocol`), the server (`apps/server`) and the pacing
+> harness (`tools/pacing`) exist, so those paths are real. The client (`apps/client`), the models and icons
+> (`apps/client/public/models`, `.../icons`) and the asset checks are still PLANNED (plans 4 to 6). Update this
+> skill during slice 1 (spec 8.1 step 10) with real APIs and a real example as they land.
 > Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md`. Section 12 "Resolved details" holds
 > the current defaults; the user may still change them in spec review. Where this skill and the spec differ, the
 > spec wins; fix the skill.
@@ -144,7 +145,7 @@ palette; compress with meshopt; render the icon from the fixed angle; export `ca
 
 ### 3. Content data: `island-game-logic`
 
-Add typed entries to `packages/content` (planned): goods, buildings, recipes, needs, stages, landmarks, goals,
+Add typed entries to `packages/content`: goods, buildings, recipes, needs, stages, landmarks, goals,
 event types (with importance), key staff traits. Whole-number units only (money in cents, times in game minutes),
 the stage, the footprint matching the model, price, build time, storage, staff slots, shift, levels (workplaces and
 services), recipe cycles, reach for service buildings, and for every good a Mainland price, a floor price and a
@@ -175,7 +176,7 @@ If the content needs behavior the sim does not have yet, write the failing tests
 ### 5. Server and protocol, only if needed: `island-server`
 
 Only when the content needs a new command or message (for example a new rule template a key staff member adds).
-`sim` defines the command types; `packages/protocol` (planned) wraps them in messages with Valibot schemas; the
+`sim` defines the command types; `packages/protocol` wraps them in messages with Valibot schemas; the
 server checks ownership and applies commands through `sim.applyCommand`, never adding game rules of its own.
 Placing, upgrading, hiring, collecting rewards (the spec's "collect" command) and buying missing landmark materials
 are general commands, so most content needs no server change; confirm against the real command set once it exists.
@@ -206,8 +207,8 @@ icons only, never emoji, no tables or tabs as the main display.
 
 ### 8. Pacing harness: `island-testing`
 
-Run the headless pacing harness (planned in `tools/`): a scripted bot plays through the stages and reports the
-real time each stage would take. Compare with the targets in `references/stages.md` (first residents in the first
+Run the headless pacing harness (`pnpm pacing`, in `tools/pacing/`): a scripted bot plays through the stages and
+reports the real time each stage would take. Compare with the targets in `references/stages.md` (first residents in the first
 session of about an hour, Settlement within the first day, Village in a day or two, Town in about a week, Modern
 island after 3 to 4 weeks, about a month in total).
 
@@ -271,7 +272,8 @@ All PLANNED from spec sections 3, 7 and 12; none exist yet. File names inside th
 | 3D scene and UI (Vite, React, React Three Fiber) | `apps/client/` |
 | Exported models, `category_name-part_variant.glb` | `apps/client/public/models/` |
 | Building and goods icons, key staff portraits rendered in Blender | `apps/client/public/icons/` |
-| Pacing harness, asset validator, admin commands | `tools/` |
+| Pacing harness (built); asset validator (planned) | `tools/pacing/`; `tools/` |
+| Admin commands (`pnpm admin`) | `apps/server/src/admin/` |
 | Original packs (git-ignored) and their provenance | `assets/packs/`, `assets/raw/<zip base name>/`, `assets/SOURCES.md` |
 
 ## Not decided yet
