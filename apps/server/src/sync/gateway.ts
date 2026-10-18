@@ -43,16 +43,24 @@ export class Gateway {
   }
 
   upgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
-    if (new URL(req.url ?? '/', 'http://host').pathname !== '/ws') return refuse(socket, 404);
-    if (!fromOrigin(req, this.deps.config.origin)) return refuse(socket, 403);
-    const token = cookieValue(req, SESSION_COOKIE);
-    const session = token === null ? null : this.deps.accounts.session(token);
-    if (!session) return refuse(socket, 401);
-    this.server.handleUpgrade(req, socket, head, (ws) => {
-      const connection = new Connection(ws, session, this.deps);
-      this.connections.add(connection);
-      ws.on('close', () => this.connections.delete(connection));
-    });
+    // Once upgraded, Node leaves the raw socket without an 'error' listener: a client that resets would crash the process.
+    socket.on('error', () => {});
+    try {
+      // Not URL parsing: Node accepts request targets such as "//" that `new URL` throws on.
+      if ((req.url ?? '/').split('?')[0] !== '/ws') return refuse(socket, 404);
+      if (!fromOrigin(req, this.deps.config.origin)) return refuse(socket, 403);
+      const token = cookieValue(req, SESSION_COOKIE);
+      const session = token === null ? null : this.deps.accounts.session(token);
+      if (!session) return refuse(socket, 401);
+      this.server.handleUpgrade(req, socket, head, (ws) => {
+        const connection = new Connection(ws, session, this.deps);
+        this.connections.add(connection);
+        ws.on('close', () => this.connections.delete(connection));
+      });
+    } catch (error) {
+      this.deps.log.error('upgrade failed', { error: error instanceof Error ? error.stack : String(error) });
+      refuse(socket, 500);
+    }
   }
 
   /** Closes every connection; clients reconnect with backoff to the next server. */
@@ -65,5 +73,5 @@ export class Gateway {
 }
 
 function refuse(socket: Duplex, status: number): void {
-  socket.end(`HTTP/1.1 ${status} ${STATUS_CODES[status] ?? ''}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
+  socket.end(`HTTP/1.1 ${status} ${STATUS_CODES[status] ?? ''}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`, () => socket.destroy());
 }

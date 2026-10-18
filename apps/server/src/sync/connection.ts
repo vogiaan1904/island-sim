@@ -54,6 +54,8 @@ export class Connection {
   private readonly socket: WebSocket;
   private readonly deps: ConnectionDeps;
   private greeted = false;
+  /** Set when the server closes this connection or the socket closes: ws keeps delivering messages while CLOSING. */
+  private closed = false;
   private open: OpenIsland | null = null;
   private readonly helloTimer: ReturnType<typeof setTimeout>;
   private readonly commands: RateLimiter;
@@ -79,6 +81,12 @@ export class Connection {
       this.alive = true;
     });
     socket.on('close', () => this.cleanUp());
+    // ws emits an error for an oversized frame, invalid UTF-8 or a bad opcode and closes the socket itself; without a
+    // listener the emit is an uncaught exception that would stop every world.
+    socket.on('error', (error) => {
+      deps.log.warn('socket error', { account: this.account.id, error: error.message });
+      this.cleanUp();
+    });
   }
 
   close(code: number): void {
@@ -98,6 +106,7 @@ export class Connection {
   }
 
   private receive(text: string, isBinary: boolean): void {
+    if (this.closed || this.socket.readyState !== this.socket.OPEN) return;
     let json: unknown;
     try {
       json = isBinary ? undefined : JSON.parse(text);
@@ -270,6 +279,7 @@ export class Connection {
   }
 
   private cleanUp(): void {
+    this.closed = true;
     clearTimeout(this.helloTimer);
     this.leave();
   }

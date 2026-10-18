@@ -1,17 +1,20 @@
+import { connect as tcpConnect } from 'node:net';
 import { CLOSE_CODES, PROTOCOL_VERSION, type PlayerCommand } from '@island/protocol';
 import { stateHash } from '@island/sim';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ServerConfig } from '../src/config.ts';
 import type { IslandServer } from '../src/server.ts';
+import { Connection } from '../src/sync/connection.ts';
 import { islandEntities } from '../src/sync/views.ts';
 import { Player } from './player.ts';
-import { Browser, addAccount, startTestServer } from './server.ts';
+import { Browser, ORIGIN, addAccount, startTestServer } from './server.ts';
 import { TICK_MS } from './support.ts';
 
 let running: IslandServer[] = [];
 let players: Player[] = [];
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   for (const player of players) player.socket.terminate();
   await Promise.all(running.map((server) => server.close()));
   running = [];
@@ -245,5 +248,76 @@ describe('ending a session', () => {
     await alice.hello();
     await browsers.alice.post('/api/logout');
     expect(await alice.closed).toEqual({ code: CLOSE_CODES.sessionEnded });
+  });
+});
+
+/** A raw TCP client that writes one HTTP upgrade request for `target`, and resolves with the status line it gets back. */
+function rawUpgrade(server: IslandServer, target: string, headers: Record<string, string>, reset = false): Promise<string> {
+  const { port } = new URL(server.url);
+  return new Promise((resolve) => {
+    const socket = tcpConnect(Number(port), '127.0.0.1');
+    let reply = '';
+    socket.on('data', (chunk) => {
+      reply += chunk.toString();
+    });
+    socket.on('error', () => {});
+    socket.on('close', () => resolve(reply.split('\r\n')[0] ?? ''));
+    const lines = [`GET ${target} HTTP/1.1`, 'Host: game.test', 'Connection: Upgrade', 'Upgrade: websocket', 'Sec-WebSocket-Version: 13', 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ=='];
+    for (const [name, value] of Object.entries(headers)) lines.push(`${name}: ${value}`);
+    // With reset, the client vanishes with a TCP reset as soon as the request is written, before any answer.
+    socket.write(`${lines.join('\r\n')}\r\n\r\n`, () => {
+      if (reset) socket.resetAndDestroy();
+    });
+  });
+}
+
+describe('a client that misbehaves cannot stop the server (it runs every world)', () => {
+  it('closes only its own connection for a message over the size limit', async () => {
+    const { browsers, connect } = await friends();
+    const big = await connect(browsers.alice);
+    await big.hello();
+    big.send(JSON.stringify({ type: 'hello', protocolVersion: PROTOCOL_VERSION, padding: 'x'.repeat(20 * 1_024) }));
+    expect(await big.closed).toEqual({ code: 1009 });
+    const other = await connect(browsers.bob);
+    expect((await other.hello()).account.username).toBe('bob');
+  });
+
+  it('refuses an upgrade target that is not a URL path', async () => {
+    const { server, browsers, connect } = await friends();
+    const headers = { Origin: ORIGIN, Cookie: `island_session=${browsers.alice.token}` };
+    expect(await rawUpgrade(server, '//', headers)).toBe('HTTP/1.1 404 Not Found');
+    expect(await rawUpgrade(server, '/ws?x=1', {})).toBe('HTTP/1.1 403 Forbidden');
+    const other = await connect(browsers.bob);
+    expect((await other.hello()).account.username).toBe('bob');
+  });
+
+  it('survives a client that resets its socket after a refused upgrade', async () => {
+    const { server, browsers, connect } = await friends();
+    await rawUpgrade(server, '/ws', { Origin: 'https://evil.example', Cookie: `island_session=${browsers.alice.token}` }, true);
+    await rawUpgrade(server, '/ws', { Origin: ORIGIN }, true);
+    const other = await connect(browsers.bob);
+    expect((await other.hello()).account.username).toBe('bob');
+  });
+
+  it('ignores what a connection sends after the server closed it', async () => {
+    const { server, browsers, connect, runtime } = await friends();
+    // Waits for the server to have handled the command message, without a fixed sleep.
+    const proto = Connection.prototype as unknown as { receive: (text: string, isBinary: boolean) => void };
+    const receive = proto.receive;
+    let handled = false;
+    vi.spyOn(proto, 'receive').mockImplementation(function (this: Connection, text, isBinary) {
+      receive.call(this, text, isBinary);
+      if (text.includes('hire-commuters')) handled = true;
+    });
+    const alice = await connect(browsers.alice);
+    await alice.hello();
+    // A paused client never reads the close frame, so it never answers it and the server's socket stays CLOSING.
+    alice.socket.pause();
+    await browsers.alice.post('/api/logout');
+    const logged = server.store.commandsAfter(runtime.id, 0).length;
+    alice.send({ type: 'open-island', world: runtime.id, slot: 0 });
+    alice.send({ type: 'command', requestId: 1, command: { type: 'hire-commuters', count: 1 } });
+    await vi.waitFor(() => expect(handled).toBe(true));
+    expect(server.store.commandsAfter(runtime.id, 0)).toHaveLength(logged);
   });
 });
