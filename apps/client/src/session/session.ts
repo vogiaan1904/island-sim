@@ -54,6 +54,8 @@ export interface Session {
   regenerateInvite(worldId: string): Promise<ClientApiReason | null>;
   /** Ends this device's session and returns to the log-in screen; null on success. */
   logOut(): Promise<ClientApiReason | null>;
+  /** Changes the signed-in player's password; the server ends their other devices' sessions, this one stays. Null on success. */
+  changePassword(currentPassword: string, newPassword: string): Promise<ClientApiReason | null>;
   /** Sends a command for the own open island and returns its request id; null when no own island is open. */
   command(command: PlayerCommand): number | null;
   /** Tells the server the news up to this event was seen (the port master's Done); nothing happens with no own island open. */
@@ -335,6 +337,10 @@ export function createSession(store: GameStore, clock: GameClock, services: Sess
       store.getState().clearIsland();
       store.getState().setSession({ phase: 'signed-out', account: null, worlds: [], reconnecting: false });
       return null;
+    },
+    async changePassword(currentPassword, newPassword) {
+      const result = await services.api.request<{ ok: true }>('POST', '/api/password', { currentPassword, newPassword });
+      return result.ok ? null : result.reason;
     },
     command(command) {
       const state = store.getState();

@@ -3,6 +3,7 @@ import { useStore } from 'zustand';
 import { createApi } from '../connection/api.ts';
 import { createGameClock, type GameClock } from '../glide/clock.ts';
 import { createGameStore, type GameState, type GameStore } from '../store/store.ts';
+import { applySavedSettings, deviceStorage } from '../store/settings.ts';
 import { createSession, pageServices, type Session } from './session.ts';
 
 /** Everything a running game holds: the one store, the session that feeds it, and the gliding clock. */
@@ -16,6 +17,7 @@ export interface Game {
 export function createPageGame(): Game {
   const store = createGameStore();
   const clock = createGameClock();
+  applySavedSettings(store, deviceStorage());
   const session = createSession(store, clock, pageServices(createApi()));
   return { store, session, clock };
 }

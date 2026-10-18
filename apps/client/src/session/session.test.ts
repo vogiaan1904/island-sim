@@ -194,6 +194,20 @@ describe('the session: sign-up, worlds and invite codes', () => {
     expect(await session.regenerateInvite('no-such-world')).toBe('no-such-world');
   });
 
+  it('changes the password of the signed-in player and stays signed in; a wrong current password changes nothing', async () => {
+    const { store, session, jar } = await page();
+    await jar.login('alice');
+    await session.start();
+    await vi.waitFor(() => expect(store.getState().session.phase).toBe('playing'));
+
+    expect(await session.changePassword('not-my-password', 'brand-new-pass')).toBe('bad-credentials');
+    expect(await session.changePassword('password-1', 'brand-new-pass')).toBeNull();
+    expect(store.getState().session.phase).toBe('playing');
+    expect(await session.logOut()).toBeNull();
+    expect(await session.logIn('alice', 'password-1')).toBe('bad-credentials');
+    expect(await session.logIn('alice', 'brand-new-pass')).toBeNull();
+  });
+
   it('logs out this device: back to the log-in screen with nothing of the island left', async () => {
     const { store, session, jar } = await page();
     await jar.login('alice');
