@@ -28,8 +28,11 @@ export interface IslandServer {
   readonly worlds: Worlds;
   /** The worlds' records, logs and snapshots. */
   readonly store: WorldStore;
-  /** Graceful shutdown: the worlds stop, each is snapshotted (spec 5.2), the listeners close, then the database. */
-  close(): Promise<void>;
+  /**
+   * Graceful shutdown: the worlds stop, each is snapshotted (spec 5.2), the listeners close, then the database. With
+   * snapshot false it stops the way a crash would, leaving recovery to the snapshots and logs already written.
+   */
+  close(options?: { snapshot?: boolean }): Promise<void>;
 }
 
 /**
@@ -58,12 +61,12 @@ export async function startServer(config: ServerConfig, options: StartOptions = 
   log.info('server started', { url, worlds: worlds.all().length, notLoaded: worlds.failed.size });
 
   let closing: Promise<void> | null = null;
-  const close = async () => {
+  const close = async (snapshot: boolean) => {
     gateway.close();
     worlds.stop();
     // A paused world is not snapshotted: its log and last good tick already rebuild it.
     for (const runtime of worlds.all()) {
-      if (runtime.status !== 'paused') runtime.snapshot();
+      if (snapshot && runtime.status !== 'paused') runtime.snapshot();
     }
     http.closeAllConnections();
     await new Promise<void>((resolve) => http.close(() => resolve()));
@@ -76,7 +79,7 @@ export async function startServer(config: ServerConfig, options: StartOptions = 
     accounts,
     worlds,
     store,
-    close: () => (closing ??= close()),
+    close: (options) => (closing ??= close(options?.snapshot ?? true)),
   };
 }
 
