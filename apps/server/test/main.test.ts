@@ -1,15 +1,24 @@
-import { execFile, spawn } from 'node:child_process';
+import { type ChildProcess, execFile, spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import type { JoinedResponse, MeResponse } from '@island/protocol';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 const run = promisify(execFile);
 const SRC = join(import.meta.dirname, '..', 'src');
 const NODE_FLAGS = ['--disable-warning=ExperimentalWarning'];
 const ORIGIN = 'http://game.test';
+
+/** Every child this file spawned; a failed assertion must not leave one running with its port and database. */
+let spawned: { child: ChildProcess; exited: Promise<unknown> }[] = [];
+
+afterEach(async () => {
+  for (const { child } of spawned) if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+  await Promise.all(spawned.map(({ exited }) => exited));
+  spawned = [];
+});
 
 function serverEnv() {
   return {
@@ -27,16 +36,25 @@ function serverEnv() {
 async function startProcess(env: Record<string, string | undefined>) {
   const child = spawn(process.execPath, [...NODE_FLAGS, join(SRC, 'main.ts')], { env });
   let output = '';
+  let errors = '';
   const exited = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
     child.once('exit', (code, signal) => resolve({ code, signal }));
   });
+  spawned.push({ child, exited });
+  child.stderr.on('data', (chunk: Buffer) => {
+    errors += chunk.toString();
+  });
   const started = await new Promise<{ url: string; adminUrl: string }>((resolve, reject) => {
+    let pending = '';
     child.stdout.on('data', (chunk: Buffer) => {
       output += chunk.toString();
-      const line = output.split('\n').find((text) => text.includes('"server started"'));
+      // Only complete lines are parsed: a chunk can end inside the "server started" line.
+      const lines = (pending + chunk.toString()).split('\n');
+      pending = lines.pop() ?? '';
+      const line = lines.find((text) => text.includes('"server started"'));
       if (line) resolve(JSON.parse(line) as { url: string; adminUrl: string });
     });
-    void exited.then(({ code }) => reject(new Error(`server exited with ${code}: ${output}`)));
+    void exited.then(({ code }) => reject(new Error(`server exited with ${code} before it started\nstdout: ${output}\nstderr: ${errors}`)));
   });
   return { child, started, exited, output: () => output };
 }
@@ -58,7 +76,7 @@ async function login(url: string, username: string, password: string): Promise<{
 }
 
 describe('pnpm server and pnpm admin', () => {
-  it('start from the command line, take admin commands, and stop gracefully on SIGTERM', async () => {
+  it.each(['SIGTERM', 'SIGINT'] as const)('start from the command line, take admin commands, and stop gracefully on %s', async (signal) => {
     const env = serverEnv();
     const server = await startProcess(env);
     const created = await adminCommand(env, server.started.adminUrl, 'create-account', 'host');
@@ -72,7 +90,7 @@ describe('pnpm server and pnpm admin', () => {
     expect(signedIn.headers.getSetCookie()[0]).not.toContain('Secure');
     await expect(adminCommand(env, server.started.adminUrl, 'resume')).rejects.toMatchObject({ code: 2 });
 
-    server.child.kill('SIGTERM');
+    server.child.kill(signal);
     expect(await server.exited).toEqual({ code: 0, signal: null });
     expect(server.output()).toContain('"server stopped"');
   }, 20_000);

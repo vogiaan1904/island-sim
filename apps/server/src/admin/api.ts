@@ -25,6 +25,12 @@ const ForUsername = v.strictObject({ username: v.pipe(v.string(), v.maxLength(64
 const ForWorld = v.strictObject({ world: WorldId });
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
+
+/** The host name of a Host header, without its port. */
+function hostName(host: string): string {
+  return (host.startsWith('[') ? host.slice(0, host.indexOf(']') + 1) : host.split(':')[0] ?? '').toLowerCase();
+}
 
 class AdminError extends Error {
   readonly status: number;
@@ -108,8 +114,12 @@ export function createAdminApi(deps: AdminDeps): (req: IncomingMessage, res: Ser
 
   return async (req, res) => {
     try {
-      // Only programs on this machine; a web page would send an Origin (a browser on the host is not the host).
-      if (!LOOPBACK.has(req.socket.remoteAddress ?? '') || req.headers.origin !== undefined) {
+      // Only programs on this machine: a web page sends an Origin, or a Host that is its own name rebound to loopback.
+      if (
+        !LOOPBACK.has(req.socket.remoteAddress ?? '') ||
+        req.headers.origin !== undefined ||
+        !LOCAL_HOSTS.has(hostName(req.headers.host ?? ''))
+      ) {
         throw new AdminError(403, 'forbidden');
       }
       const route = routes[`${req.method ?? ''} ${new URL(req.url ?? '/', 'http://host').pathname}`];

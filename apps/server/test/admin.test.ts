@@ -1,4 +1,5 @@
 import { mkdtempSync } from 'node:fs';
+import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -95,6 +96,25 @@ describe('the admin interface', () => {
       body: { error: 'forbidden' },
     });
     expect(server.accounts.store.accountByUsername('mallory')).toBeUndefined();
+  });
+
+  it('refuses a Host header that is not this machine (a name rebound to loopback)', async () => {
+    const { server } = await adminServer();
+    const { port } = new URL(server.adminUrl);
+    // fetch cannot set Host, so send the request by hand.
+    const get = (host: string) =>
+      new Promise<number>((resolve, reject) => {
+        const req = request(server.adminUrl + '/admin/worlds', { headers: { host } }, (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+        });
+        req.on('error', reject);
+        req.end();
+      });
+    const statuses = await Promise.all(
+      [`evil.example:${port}`, `127.0.0.1.evil.example:${port}`, 'evil.example', `127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`].map(get),
+    );
+    expect(statuses).toEqual([403, 403, 403, 200, 200, 200]);
   });
 
   it('writes a backup a server can start from', async () => {
