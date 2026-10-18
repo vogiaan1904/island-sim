@@ -9,11 +9,14 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p packages/content && tsc -p packages/sim && tsc -p packages/protocol && tsc -p apps/server && tsc -p tools/pacing && tsc -p tools/assets",
+    "typecheck": "tsc -p packages/content && tsc -p packages/sim && tsc -p packages/protocol && tsc -p apps/server && tsc -p apps/client && tsc -p tools/pacing && tsc -p tools/assets",
     "lint": "eslint .",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "pacing": "node --disable-warning=ExperimentalWarning tools/pacing/src/run.ts",
     "server": "node --disable-warning=ExperimentalWarning apps/server/src/main.ts",
+    "server:dev": "ISLAND_ORIGIN=http://localhost:5173 ISLAND_SECURE_COOKIES=0 node --disable-warning=ExperimentalWarning apps/server/src/main.ts",
+    "client": "pnpm --filter @island/client dev",
+    "client:build": "pnpm --filter @island/client build",
     "admin": "node --disable-warning=ExperimentalWarning apps/server/src/admin/cli.ts",
     "assets": "node --disable-warning=ExperimentalWarning tools/assets/src/cli.ts",
     "blender": "node --disable-warning=ExperimentalWarning tools/assets/src/blender.ts"
