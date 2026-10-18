@@ -6,10 +6,12 @@ import './LoginScreen.css';
 export interface LoginScreenProps {
   /** Null when the log-in worked (the island then opens), else why it was refused. */
   onLogIn(username: string, password: string): Promise<ClientApiReason | null>;
+  /** The player has a friend's invite code and wants an account. */
+  onSignUp(): void;
 }
 
-/** The plain log-in screen (style A): username and password. Sign-up with an invite code comes with ticket 06. */
-export function LoginScreen({ onLogIn }: LoginScreenProps) {
+/** The log-in screen (style A): username and password, and the way to sign up with an invite code. */
+export function LoginScreen({ onLogIn, onSignUp }: LoginScreenProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -60,6 +62,9 @@ export function LoginScreen({ onLogIn }: LoginScreenProps) {
         )}
         <button className="login-button" type="submit" disabled={busy}>
           {busy ? 'Logging in' : 'Log in'}
+        </button>
+        <button className="login-link" type="button" onClick={onSignUp}>
+          I have an invite code
         </button>
       </form>
     </main>

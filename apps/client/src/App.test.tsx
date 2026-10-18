@@ -32,7 +32,7 @@ describe('the app', () => {
   });
 
   it('tells a player with no island yet, in plain words', () => {
-    const { container } = render(<App game={stubGame('no-island')} />);
+    const { container } = render(<App game={stubGame('worlds')} />);
     expect(screen.getByRole('heading', { name: 'No island yet' })).toBeInTheDocument();
     expectNoEmoji(container);
   });
