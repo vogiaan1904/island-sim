@@ -397,6 +397,12 @@ any of them during spec review; the skills follow this section.
 - **Paying for things:** placing a building or starting an upgrade costs its price up front; if you can't afford it,
   Place is disabled with "Need N more coins" (nothing is queued). Roads are paid per tile when placed. Running costs (wages, upkeep) never push money
   below zero: a building that can't be paid slows down and shows "waiting for money".
+  It keeps its workers and runs at reduced output (`waitingOutputPermille`) until a later payment succeeds (decided
+  2026-10-18, plan 5).
+- **Mainland help** (decided 2026-10-18, plan 5; closes plan 2 decision 15): at the morning ferry, before commuters
+  board, an island with no residents, too few coins for one commuter's wage, no goods in any store, nothing in transit
+  or cargo and no reward waiting gets a small grant (`mainlandHelpCents`) and a "mainland-help" event. So an island
+  that spent everything can always hire again, even while its owner is away.
 - **Building levels:** workplaces and services have levels 1–3 (the stars on the card); an upgrade adds jobs,
   storage or output. Homes never level up (better homes are different house types, 2.2). Levels arrive in slice 2; the Settlement's "bigger
   market" is market level 2. A higher level shows on the island (for example an extra floor or a side building); the

@@ -1,0 +1,21 @@
+# Island Sim
+
+The language of the game: the islands, their people and the Mainland. Words the design spec already uses
+(Outpost, Settlement, commuters, key staff, Goods flow, ...) keep the spec's meaning until they are listed here.
+
+## Language
+
+**Mainland help**:
+A small grant of coins the Mainland sends on the morning ferry to an island that is stuck: no residents, too few
+coins for one commuter's wage, and nothing it could sell or collect.
+_Avoid_: bailout, loan, stipend
+
+**Waiting for money**:
+The condition of a building whose upkeep could not be paid; it keeps its workers but runs at reduced output until a
+later payment succeeds.
+_Avoid_: unpaid, stopped, broken
+
+**Mirror**:
+The client's copy of the open island, built from the server's full state and kept current by its updates; the
+client reads it and never changes it.
+_Avoid_: cache, local state, replica

@@ -20,7 +20,7 @@ the islands keep running while you're away, and you can watch each other's islan
 | 2 | Simulation: Outpost to Settlement | The gameplay of the first stage, headless and tested | plan 1 | done: `2026-10-17-slice1-plan2-outpost-gameplay.md` |
 | 3 | Protocol and server | `packages/protocol`, `apps/server`: the always-running worlds behind accounts and invite codes | plans 1-2 | done: `2026-10-18-slice1-plan3-protocol-server.md` |
 | 4 | Art direction and asset pipeline | The chosen look, the conventions, and every slice 1 model and icon | the user and Blender (can run beside plans 1-3) | done: `2026-10-18-slice1-plan4-art-assets.md` |
-| 5 | Client | `apps/client`: the 3D island and the style A UI on phones | plans 1-3; plan 4 for final models | next: `.scratch/slice1-client/` |
+| 5 | Client | `apps/client`: the 3D island and the style A UI on phones. Two features: `slice1-client` (the playable island, plus the soft lock fix) then `slice1-alive` (crowds, ferry, watch mode, sound) | plans 1-3; plan 4 for final models | next: `.scratch/slice1-client/` spec written; `slice1-alive` not grilled |
 | 6 | Ship slice 1 | Installable app, two-player end-to-end test, deployment, phone performance check | plans 1-5 | not written: `.scratch/slice1-ship/` |
 
 ## What each later plan covers
@@ -96,7 +96,17 @@ Inputs for its `/grill-with-docs` and `/to-spec` session: design spec 6.1, 6.2, 
 for the soft lock); the skills `island-3d-client`, `island-ui` and `island-testing` (plus `island-game-logic` for
 the soft lock); the mockups in `docs/mockups/`.
 
-Open questions to settle in that session:
+Settled in the `/grill-with-docs` session of 2026-10-18 (spec: `.scratch/slice1-client/spec.md`):
+- Soft lock: Mainland help (an automatic grant at the morning ferry to a stuck island) and "waiting for money" slows a
+  building down instead of stopping it, as spec 12.1 says. Tickets 01 and 02 of `slice1-client`.
+- Two features: `slice1-client` (the playable island) first, then `slice1-alive` (crowds of Mini Characters, the
+  ferry, watch mode, sound, friends' islands far away, the crowd level of detail), grilled on top of the real code.
+- Test seams: the mirror store fed by a real in-process server, placement through the sim's own check, a pure camera
+  controller, pure render data, the UI with Vitest and Testing Library; 3D visuals and touch checked by the user.
+- `ready-for-human`: the look review and camera feel on a real phone (`slice1-client`); the crowd frame rate on a
+  phone (`slice1-alive`).
+
+The questions as they were asked:
 - The soft lock way out (plan 2 decision 15). It is a sim rule, so it also needs sim tests, the golden scenario and
   `pnpm pacing`. It may become the feature's first ticket or a small feature of its own before the client.
 - One feature or two (for example the playable island first, then crowds, ferry, watch mode and sound). One spec
