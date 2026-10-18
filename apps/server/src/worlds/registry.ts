@@ -24,6 +24,10 @@ export class Worlds {
   readonly failed = new Map<string, string>();
   private readonly runtimes = new Map<string, WorldRuntime>();
   private readonly deps: RuntimeDeps;
+  /** True from start() to stop(): a world created meanwhile ticks on its own timer at once. */
+  private ticking = false;
+  /** True after stop(): the server is shutting down, so no world is created. */
+  private stopped = false;
 
   constructor(deps: RuntimeDeps) {
     this.deps = deps;
@@ -49,10 +53,14 @@ export class Worlds {
 
   /** Starts every world's tick timer; each first catches up the time it missed (spec 5.2). */
   start(): void {
+    this.ticking = true;
     for (const runtime of this.all()) runtime.start();
   }
 
+  /** Stops every world's timer and refuses their commands and new worlds from now on (the shutdown snapshots follow). */
   stop(): void {
+    this.ticking = false;
+    this.stopped = true;
     for (const runtime of this.all()) runtime.stop();
   }
 
@@ -85,6 +93,7 @@ export class Worlds {
 
   /** Creates a world with a new invite code, and claims its first island for the creator (spec 12.3). */
   create(creatorId: string, islandName: string, seed: number = newSeed()): ClaimResult {
+    if (this.stopped) return { ok: false, reason: 'world-paused' };
     const now = this.deps.clock.now();
     const record: WorldRecord = {
       id: newId(),
@@ -102,7 +111,10 @@ export class Worlds {
       this.deps.store.insertWorld(record);
       runtime.snapshot();
     });
-    if (result.ok) this.runtimes.set(record.id, runtime);
+    if (result.ok) {
+      this.runtimes.set(record.id, runtime);
+      if (this.ticking) runtime.start();
+    }
     return result;
   }
 

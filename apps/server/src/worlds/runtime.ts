@@ -105,6 +105,8 @@ export class WorldRuntime {
    * followed, its sequence number and its events in one transaction before anyone hears of it (spec 12.3).
    */
   apply(command: Command, accountId: string | null): ApplyResult {
+    // A stopped world (shutdown) takes nothing more: a command logged after its final snapshot would break the empty replay.
+    if (!this.running) return { ok: false, reason: 'world-paused', shortfallCents: 0 };
     if (this.status !== 'running') {
       return { ok: false, reason: this.status === 'paused' ? 'world-paused' : 'world-catching-up', shortfallCents: 0 };
     }
