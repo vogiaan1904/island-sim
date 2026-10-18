@@ -1,6 +1,6 @@
 import type { Content } from '@island/content';
 import { footprintSize } from '@island/sim';
-import type { PlacementDraft } from '../placement/draft.ts';
+import type { BuildingDraft } from '../placement/draft.ts';
 import { footprintCenter, rotationY } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
 import { buildingModel } from './models.ts';
@@ -21,7 +21,7 @@ export interface GhostInstance {
   depth: number;
 }
 
-export function ghostInstance(draft: PlacementDraft, content: Content): GhostInstance {
+export function ghostInstance(draft: BuildingDraft, content: Content): GhostInstance {
   const def = content.buildings.find((d) => d.id === draft.building);
   if (def === undefined) throw new Error(`unknown building ${draft.building}`);
   const { w, h } = footprintSize(def, draft.rotation);

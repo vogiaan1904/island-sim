@@ -23,7 +23,7 @@ export interface BuildingAim {
 
 export interface PlacementLabel {
   /** The sim's check, or 'locked' for a building the island cannot place yet. */
-  id: PlacementCheckId | 'locked';
+  id: PlacementCheckId | 'locked' | 'length';
   ok: boolean;
   text: string;
 }

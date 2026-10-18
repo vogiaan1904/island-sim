@@ -220,6 +220,12 @@
   cursor: pointer;
 }
 
+/* The road pen: pressed means "look around" is on, so a drag moves the camera instead of drawing. */
+.placing-pen[aria-pressed='true'] {
+  color: #fff;
+  background: var(--teal);
+}
+
 .placing-cancel {
   color: #fff;
   background: var(--red);

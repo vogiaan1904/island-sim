@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { Euler, Matrix4, Quaternion, Vector3, type InstancedMesh } from 'three';
+import { Euler, Matrix4, Quaternion, Vector3, type InstancedMesh, type Material } from 'three';
 import type { ModelInstance } from '../render/instances.ts';
 import { useModelGeometry } from './modelGeometry.ts';
 import { usePaletteMaterial } from './palette.ts';
@@ -19,9 +19,11 @@ function capacityFor(count: number): number {
  * One model type as one instanced draw call on the shared palette material. React renders it when its instance list
  * changes (at most once per tick); the matrices are written imperatively, never one component per instance.
  */
-export function ModelInstances({ file, instances }: { file: string; instances: readonly ModelInstance[] }) {
+export function ModelInstances({ file, instances, material: own }: { file: string; instances: readonly ModelInstance[]; material?: Material }) {
   const geometry = useModelGeometry(file);
-  const material = usePaletteMaterial();
+  const palette = usePaletteMaterial();
+  // A preview (the road drag) brings its own see-through material and casts no shadow.
+  const material = own ?? palette;
   const mesh = useRef<InstancedMesh>(null);
   const capacity = capacityFor(instances.length);
 
@@ -40,5 +42,5 @@ export function ModelInstances({ file, instances }: { file: string; instances: r
     target.computeBoundingSphere();
   }, [instances]);
 
-  return <instancedMesh key={capacity} ref={mesh} args={[geometry, material, capacity]} castShadow receiveShadow />;
+  return <instancedMesh key={capacity} ref={mesh} args={[geometry, material, capacity]} castShadow={own === undefined} receiveShadow={own === undefined} />;
 }

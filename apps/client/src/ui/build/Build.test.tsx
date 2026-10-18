@@ -37,6 +37,13 @@ function show(coinsCents?: number) {
 
 const placement = (game: Game) => game.store.getState().view.placement;
 
+/** The building draft in progress; fails the test when the player is placing something else. */
+function buildingDraft(game: Game) {
+  const draft = placement(game);
+  if (draft?.kind !== 'building') throw new Error('not placing a building');
+  return draft;
+}
+
 /** Picks a building the way a player does: Build, then its row. */
 async function pick(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(screen.getByRole('button', { name: 'Build' }));
@@ -45,7 +52,7 @@ async function pick(user: ReturnType<typeof userEvent.setup>, name: string) {
 
 /** Aims the draft at a footprint's top-left tile, as a drag or a tap on the island would. */
 function aim(game: Game, x: number, y: number) {
-  act(() => game.store.getState().setView({ placement: { ...(placement(game) as NonNullable<ReturnType<typeof placement>>), x, y, refusal: null } }));
+  act(() => game.store.getState().setView({ placement: { ...buildingDraft(game), x, y, refusal: null } }));
 }
 
 function result(game: Game, requestId: number, body: { ok: true; data: Record<string, number> } | { ok: false; reason: 'tile-occupied'; shortfallCents: number }) {
@@ -90,7 +97,7 @@ describe('the Build picker', () => {
   it('can start on a building it cannot afford; Place then waits', async () => {
     const { game, user } = show(39_000);
     await pick(user, 'Farm');
-    expect(placement(game)?.building).toBe('farm');
+    expect(buildingDraft(game).building).toBe('farm');
   });
 
   it('is not offered while visiting a friend', () => {
@@ -158,7 +165,7 @@ describe('the placement panel', () => {
     const { game, user } = show();
     await pick(user, 'Farm');
     await user.click(screen.getByRole('button', { name: 'Rotate' }));
-    expect(placement(game)?.rotation).toBe(1);
+    expect(buildingDraft(game).rotation).toBe(1);
     expect(screen.getByRole('region', { name: 'Placing Farm' })).toHaveTextContent('Takes 3 x 2 tiles.');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(placement(game)).toBeNull();

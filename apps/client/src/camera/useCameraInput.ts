@@ -13,9 +13,15 @@ export interface CameraInputOptions {
   /**
    * While a building is being placed (`view.placement` in its aiming phase), a one-finger drag, a tap and a mouse hover
    * aim the ghost with the pointer's position relative to the element, and do not move the camera. A pinch or a second
-   * finger still does.
+   * finger still does. A road draft with the pen down takes the same drags (but no mouse hover); with the pen switched
+   * to looking around it takes none, so the camera moves.
    */
   onAim?(x: number, y: number, pointer: 'touch' | 'mouse'): void;
+  /**
+   * A drag or tap that aims begins (before its first `onAim`). A road draft uses it to start a new stroke instead of
+   * joining the end of the last one.
+   */
+  onAimStart?: (() => void) | undefined;
 }
 
 /** The keys currently held, read by the rig every frame. */
@@ -40,7 +46,7 @@ function typingInField(target: EventTarget | null): boolean {
  * Browser zoom, pull-to-refresh and the context menu are switched off here and in CSS (`touch-action: none` on the
  * canvas, `overscroll-behavior: none` on the page).
  */
-export function useCameraInput({ element, store, onTap, onAim }: CameraInputOptions): HeldKeys {
+export function useCameraInput({ element, store, onTap, onAim, onAimStart }: CameraInputOptions): HeldKeys {
   const held = useRef<Set<Key>>(new Set());
   const state = useRef({
     tracker: createPinchTracker(),
@@ -56,7 +62,14 @@ export function useCameraInput({ element, store, onTap, onAim }: CameraInputOpti
   tapRef.current = onTap;
   const aimRef = useRef(onAim);
   aimRef.current = onAim;
-  const aiming = () => aimRef.current !== undefined && store.getState().view.placement?.phase === 'aiming';
+  const startRef = useRef(onAimStart);
+  startRef.current = onAimStart;
+  // A drag aims a building's ghost, or draws a road while the pen is down; the mouse hovering only aims a building.
+  const aiming = () => {
+    const placement = store.getState().view.placement;
+    return aimRef.current !== undefined && placement?.phase === 'aiming' && (placement.kind === 'building' || placement.pen === 'draw');
+  };
+  const hovering = () => aimRef.current !== undefined && store.getState().view.placement?.kind === 'building' && aiming();
 
   const send = (gesture: Gesture) => store.getState().cameraGesture(gesture);
   const viewportOf = (): { viewport: Viewport; left: number; top: number } => {
@@ -78,6 +91,7 @@ export function useCameraInput({ element, store, onTap, onAim }: CameraInputOpti
           s.suppressed = false;
           s.lastMove = time;
           if (s.dragMode !== 'aim') send({ kind: 'stop' });
+          else startRef.current?.();
         }
         if (g.touches > 1 || s.pinching) s.suppressed = true;
         const [dx, dy] = g.delta;
@@ -133,7 +147,7 @@ export function useCameraInput({ element, store, onTap, onAim }: CameraInputOpti
       onMove: (g) => {
         // A mouse with no button down: the ghost sits under the cursor.
         const event = g.event as PointerEvent;
-        if (event.pointerType !== 'mouse' || event.buttons !== 0 || !aiming()) return;
+        if (event.pointerType !== 'mouse' || event.buttons !== 0 || !hovering()) return;
         const { left, top } = viewportOf();
         aimRef.current?.(g.xy[0] - left, g.xy[1] - top, 'mouse');
       },

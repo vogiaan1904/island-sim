@@ -2,12 +2,13 @@ import { content } from '@island/content';
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { Color, DoubleSide, Matrix4, MeshBasicMaterial, Object3D, type Group, type InstancedMesh, type Mesh, type MeshStandardMaterial } from 'three';
-import type { PlacementDraft } from '../placement/draft.ts';
+import type { BuildingDraft } from '../placement/draft.ts';
 import { buildingVerdict } from '../placement/verdict.ts';
 import { dustPuff, ghostInstance, landingBounce, LANDING_SECONDS } from '../render/ghost.ts';
 import { TILE_SIZE } from '../render/look.ts';
 import { useGame, useGameState } from '../session/game.tsx';
 import { useModelGeometry } from './modelGeometry.ts';
+import { RoadGhost } from './RoadGhost.tsx';
 import { usePaletteMaterial } from './palette.ts';
 
 // The same green and red as the labels and buttons (styles/tokens.css --green and --red), so 2D and 3D agree.
@@ -26,10 +27,10 @@ const matrix = new Matrix4();
 export function PlacementGhost() {
   const draft = useGameState((state) => state.view.placement);
   if (draft === null) return null;
-  return <Ghost draft={draft} />;
+  return draft.kind === 'road' ? <RoadGhost draft={draft} /> : <Ghost draft={draft} />;
 }
 
-function Ghost({ draft }: { draft: PlacementDraft }) {
+function Ghost({ draft }: { draft: BuildingDraft }) {
   const { store } = useGame();
   const island = useGameState((state) => state.island?.state ?? null);
   const ghost = useMemo(() => ghostInstance(draft, content), [draft]);

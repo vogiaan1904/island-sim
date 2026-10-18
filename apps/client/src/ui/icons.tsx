@@ -121,6 +121,13 @@ const LINE_ICONS = {
       <path d="M21 3v5h-5" />
     </>
   ),
+  /** Take back what was drawn so far (Lucide undo-2). */
+  undo: (
+    <>
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />
+    </>
+  ),
   plus: <path d="M5 12h14M12 5v14" />,
   route: (
     <>

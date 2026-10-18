@@ -7,7 +7,7 @@ import { cameraPose, groundPoint, type Key, type Pose } from '../camera/controll
 import { ISLAND_LIMITS } from '../camera/limits.ts';
 import { tapTarget } from '../camera/tap.ts';
 import { useCameraInput } from '../camera/useCameraInput.ts';
-import { aimAt, aimPoint, groundTile } from '../placement/draft.ts';
+import { aimAt, aimPoint, drawRoad, groundTile, tileAtWorld } from '../placement/draft.ts';
 import { useGame } from '../session/game.tsx';
 
 const NONE = CameraControlsImpl.ACTION.NONE;
@@ -26,11 +26,17 @@ export function CameraRig() {
   const gl = useThree((three) => three.gl);
   const controls = useRef<CameraControlsImpl>(null);
   const applied = useRef<{ camera: unknown; jumps: number }>({ camera: null, jumps: -1 });
+  // Set when a new aiming drag begins; the first sample of it starts a new road stroke.
+  const strokeBegins = useRef(false);
 
   const keys = useCameraInput({
     element: gl.domElement,
     store,
+    onAimStart: () => {
+      strokeBegins.current = true;
+    },
     // Placing a building: the ghost snaps to the tile under the pointer (above a finger), and the camera stays put.
+    // Drawing a road: the tiles under the pointer are laid along the grid, the same way.
     onAim: (x, y, pointer) => {
       const impl = controls.current;
       const placement = store.getState().view.placement;
@@ -41,7 +47,13 @@ export function CameraRig() {
       const at = aimPoint({ x, y }, pointer);
       const ground = groundPoint(pose, { width: rect.width, height: rect.height }, at.x, at.y);
       if (ground === null) return;
-      const next = aimAt(placement, groundTile(ground), content);
+      const begin = strokeBegins.current;
+      strokeBegins.current = false;
+      const island = store.getState().island?.state;
+      const next =
+        placement.kind === 'road'
+          ? island === undefined ? placement : drawRoad(placement, tileAtWorld(ground.x, ground.z, content), begin, { content, roads: island.roads })
+          : aimAt(placement, groundTile(ground), content);
       if (next !== placement) store.getState().setView({ placement: next });
     },
     onTap: (x, y) => {

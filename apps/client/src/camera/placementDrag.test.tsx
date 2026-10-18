@@ -2,7 +2,7 @@ import { content } from '@island/content';
 import { fireEvent, render } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { startDraft } from '../placement/draft.ts';
+import { penTo, startDraft, startRoadDraft } from '../placement/draft.ts';
 import { createGameStore, type GameStore } from '../store/store.ts';
 import { useCameraInput } from './useCameraInput.ts';
 
@@ -14,16 +14,16 @@ beforeAll(() => {
 
 // The acceptance criterion "placement drags do not move the camera", through the real input binding on a real element.
 
-function Bound({ element, store, onAim }: { element: HTMLElement; store: GameStore; onAim: (x: number, y: number, pointer: 'touch' | 'mouse') => void }) {
-  useCameraInput({ element, store, onTap: () => true, onAim });
+function Bound({ element, store, onAim, onAimStart }: { element: HTMLElement; store: GameStore; onAim: (x: number, y: number, pointer: 'touch' | 'mouse') => void; onAimStart?: (() => void) | undefined }) {
+  useCameraInput({ element, store, onTap: () => true, onAim, onAimStart });
   return null;
 }
 
-function Surface({ store, onAim }: { store: GameStore; onAim: (x: number, y: number, pointer: 'touch' | 'mouse') => void }) {
+function Surface({ store, onAim, onAimStart }: { store: GameStore; onAim: (x: number, y: number, pointer: 'touch' | 'mouse') => void; onAimStart?: (() => void) | undefined }) {
   const [element, setElement] = useState<HTMLElement | null>(null);
   return (
     <div ref={setElement} data-testid="surface">
-      {element !== null && <Bound element={element} store={store} onAim={onAim} />}
+      {element !== null && <Bound element={element} store={store} onAim={onAim} onAimStart={onAimStart} />}
     </div>
   );
 }
@@ -101,5 +101,55 @@ describe('dragging while placing', () => {
     fireEvent.pointerUp(surface, { ...init, buttons: 0, clientX: 71, clientY: 90 });
     expect(onAim).toHaveBeenLastCalledWith(71, 90, 'touch');
     expect(onTap).not.toHaveBeenCalled();
+  });
+});
+
+describe('dragging while drawing a road', () => {
+  it('draws with a one-finger drag and leaves the camera alone, telling the rig when a new drag begins', () => {
+    const store = createGameStore();
+    store.getState().setView({ placement: startRoadDraft() });
+    const before = store.getState().view.camera;
+    const onAim = vi.fn();
+    const onAimStart = vi.fn();
+    const view = render(<Surface store={store} onAim={onAim} onAimStart={onAimStart} />);
+    drag(view.getByTestId('surface'), 'touch', [100, 100], [180, 160]);
+    expect(store.getState().view.camera).toBe(before);
+    expect(onAimStart).toHaveBeenCalledTimes(1);
+    expect(onAim).toHaveBeenLastCalledWith(180, 160, 'touch');
+    drag(view.getByTestId('surface'), 'touch', [10, 10], [60, 90]);
+    expect(onAimStart).toHaveBeenCalledTimes(2);
+  });
+
+  it('draws with a left-button mouse drag, but a mouse that only hovers draws nothing', () => {
+    const store = createGameStore();
+    store.getState().setView({ placement: startRoadDraft() });
+    const onAim = vi.fn();
+    const view = render(<Surface store={store} onAim={onAim} onAimStart={vi.fn()} />);
+    fireEvent.pointerMove(view.getByTestId('surface'), { pointerId: 1, pointerType: 'mouse', isPrimary: true, buttons: 0, clientX: 40, clientY: 50 });
+    expect(onAim).not.toHaveBeenCalled();
+    drag(view.getByTestId('surface'), 'mouse', [100, 100], [180, 160]);
+    expect(onAim).toHaveBeenLastCalledWith(180, 160, 'mouse');
+  });
+
+  it('moves the camera instead when the player switched to looking around', () => {
+    const store = createGameStore();
+    store.getState().setView({ placement: penTo(startRoadDraft(), 'look') });
+    const before = store.getState().view.camera;
+    const onAim = vi.fn();
+    const onAimStart = vi.fn();
+    const view = render(<Surface store={store} onAim={onAim} onAimStart={onAimStart} />);
+    drag(view.getByTestId('surface'), 'touch', [100, 100], [180, 160]);
+    expect(store.getState().view.camera).not.toBe(before);
+    expect(onAim).not.toHaveBeenCalled();
+    expect(onAimStart).not.toHaveBeenCalled();
+  });
+
+  it('moves the camera again once the road is sent and the draft stops aiming', () => {
+    const store = createGameStore();
+    store.getState().setView({ placement: { ...startRoadDraft(), phase: 'placing', requestId: 3 } });
+    const before = store.getState().view.camera;
+    const view = render(<Surface store={store} onAim={vi.fn()} onAimStart={vi.fn()} />);
+    drag(view.getByTestId('surface'), 'touch', [100, 100], [180, 160]);
+    expect(store.getState().view.camera).not.toBe(before);
   });
 });

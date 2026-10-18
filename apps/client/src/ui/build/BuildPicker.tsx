@@ -2,7 +2,7 @@ import { content } from '@island/content';
 import { useMemo } from 'react';
 import { cameraPose } from '../../camera/controller.ts';
 import { ISLAND_LIMITS } from '../../camera/limits.ts';
-import { startDraft, tileAtWorld } from '../../placement/draft.ts';
+import { startDraft, startRoadDraft, tileAtWorld } from '../../placement/draft.ts';
 import { buildingOptions, type BuildingOption } from '../../placement/verdict.ts';
 import { useGame, useGameState } from '../../session/game.tsx';
 import { Icon } from '../icons.tsx';
@@ -23,25 +23,45 @@ export function BuildPicker() {
     const pose = cameraPose(camera, ISLAND_LIMITS);
     store.getState().setView({ placement: startDraft(option.id, tileAtWorld(pose.x, pose.z, content), content), openPanel: null, tappedBuilding: null });
   };
+  const startRoad = () => store.getState().setView({ placement: startRoadDraft(), openPanel: null, tappedBuilding: null });
   return (
-    <ul className="build-list" aria-label="Buildings">
-      {options.map((option) => (
-        <li key={option.id}>
-          <button className="build-row" type="button" data-state={option.state.kind} disabled={option.state.kind === 'locked'} onClick={() => pick(option)}>
+    <>
+      <ul className="build-list" aria-label="Roads">
+        <li>
+          <button className="build-row" type="button" onClick={startRoad}>
             <span className="build-picture">
-              <img src={`/icons/building_${option.id}_a.png`} alt="" width={48} height={48} draggable={false} />
+              <Icon name="route" size={28} />
             </span>
             <span className="build-text">
-              <span className="build-name">{option.name}</span>
-              {option.state.kind !== 'ready' && <span className="build-note">{option.state.text}</span>}
+              <span className="build-name">Road</span>
+              <span className="build-note">Per tile</span>
             </span>
             <span className="build-cost">
               <Icon name="coin" size={18} />
-              {option.coins.toLocaleString('en-US')}
+              {Math.floor(content.rules.roadPricePerTileCents / 100).toLocaleString('en-US')}
             </span>
           </button>
         </li>
-      ))}
-    </ul>
+      </ul>
+      <ul className="build-list" aria-label="Buildings">
+        {options.map((option) => (
+          <li key={option.id}>
+            <button className="build-row" type="button" data-state={option.state.kind} disabled={option.state.kind === 'locked'} onClick={() => pick(option)}>
+              <span className="build-picture">
+                <img src={`/icons/building_${option.id}_a.png`} alt="" width={48} height={48} draggable={false} />
+              </span>
+              <span className="build-text">
+                <span className="build-name">{option.name}</span>
+                {option.state.kind !== 'ready' && <span className="build-note">{option.state.text}</span>}
+              </span>
+              <span className="build-cost">
+                <Icon name="coin" size={18} />
+                {option.coins.toLocaleString('en-US')}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }

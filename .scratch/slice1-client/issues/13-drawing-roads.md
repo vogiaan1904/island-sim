@@ -5,10 +5,10 @@ the road appears joined to its neighbors. User story 37.
 
 **Blocked by:** 12.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The road drag snaps to grid tiles and previews the pieces it will make.
-- [ ] The placement module gives the cost per tile and the `place-road` command, respecting the sim's tiles-per-command
+- [x] The road drag snaps to grid tiles and previews the pieces it will make.
+- [x] The placement module gives the cost per tile and the `place-road` command, respecting the sim's tiles-per-command
       limit; tests agree with the sim's own command on the same state.
-- [ ] Too few coins shows "Need N more coins" and disables confirm; a refusal shows its reason.
-- [ ] Road drags do not move the camera.
+- [x] Too few coins shows "Need N more coins" and disables confirm; a refusal shows its reason.
+- [x] Road drags do not move the camera.

@@ -8,8 +8,10 @@ import type { CommandState } from '../store/mirror.ts';
 // island, and is only ever replaced by the pure functions below. The verdict (verdict.ts) says whether the aimed spot
 // is good; the draft only remembers where it is aimed and how far along the Place command is.
 //
-// Ticket 13 adds a road draft as a second kind here (`kind: 'road'`, the tiles dragged so far) with the same phases,
-// so the panel, the placing state and the landing work for both.
+// A road draft (`kind: 'road'`, ticket 13) is the second kind: the new tiles dragged so far, with the same phases, so the
+// panel, the placing state and the landing work for both. It also has a pen: 'draw' (a one-finger drag lays road and
+// leaves the camera alone) or 'look' (the player chose to move the camera; nothing is drawn). The switch is a button in
+// the panel, never guessed from the gesture.
 
 /**
  * aiming: the ghost follows the player. placing: Place was pressed and the server has not answered (the ghost stays
@@ -33,7 +35,19 @@ export interface BuildingDraft {
   landedBuildingId?: number;
 }
 
-export type PlacementDraft = BuildingDraft;
+export interface RoadDraft {
+  kind: 'road';
+  /** The tiles to build, in the order they were dragged. Tiles that are road already are never in it. */
+  tiles: Tile[];
+  /** Where the current drag is, so the next sample is joined to it by a path of tiles; null before a drag and after one ends. */
+  cursor: Tile | null;
+  pen: 'draw' | 'look';
+  phase: DraftPhase;
+  requestId: number | null;
+  refusal: { reason: Reason; shortfallCents: number } | null;
+}
+
+export type PlacementDraft = BuildingDraft | RoadDraft;
 
 export interface Tile {
   x: number;
@@ -63,7 +77,7 @@ export function startDraft(building: BuildingId, tile: Tile, content: Content): 
 
 /** Aims the footprint's middle at this tile. Tiles off the grid are kept: the verdict then says "Off the island". */
 export function aimAt(draft: PlacementDraft, tile: Tile, content: Content): PlacementDraft {
-  if (draft.phase !== 'aiming') return draft;
+  if (draft.kind !== 'building' || draft.phase !== 'aiming') return draft;
   const { w, h } = sizeOf(content, draft.building, draft.rotation);
   const x = tile.x - Math.floor(w / 2);
   const y = tile.y - Math.floor(h / 2);
@@ -73,7 +87,7 @@ export function aimAt(draft: PlacementDraft, tile: Tile, content: Content): Plac
 
 /** A quarter turn, around the same middle tile so the ghost does not jump. */
 export function rotateDraft(draft: PlacementDraft, content: Content): PlacementDraft {
-  if (draft.phase !== 'aiming') return draft;
+  if (draft.kind !== 'building' || draft.phase !== 'aiming') return draft;
   const before = sizeOf(content, draft.building, draft.rotation);
   const rotation = ((draft.rotation + 1) % 4) as Rotation;
   const after = sizeOf(content, draft.building, rotation);
@@ -93,7 +107,9 @@ export function sendingDraft(draft: PlacementDraft, requestId: number): Placemen
  */
 export function settleDraft(draft: PlacementDraft, command: CommandState | undefined): PlacementDraft {
   if (draft.phase !== 'placing' || command === undefined || command.requestId !== draft.requestId) return draft;
-  if (command.status === 'ok') return { ...draft, phase: 'landing', landedBuildingId: command.data['buildingId'] ?? 0 };
+  if (command.status === 'ok') {
+    return draft.kind === 'building' ? { ...draft, phase: 'landing', landedBuildingId: command.data['buildingId'] ?? 0 } : { ...draft, phase: 'landing' };
+  }
   if (command.status === 'refused') {
     return { ...draft, phase: 'aiming', requestId: null, refusal: { reason: command.reason, shortfallCents: command.shortfallCents } };
   }
@@ -104,6 +120,57 @@ export function settleDraft(draft: PlacementDraft, command: CommandState | undef
 export function lostDraft(draft: PlacementDraft): PlacementDraft {
   if (draft.phase !== 'placing') return draft;
   return { ...draft, phase: 'aiming', requestId: null, refusal: { reason: 'world-catching-up', shortfallCents: 0 } };
+}
+
+/** A new road draft: no tiles yet, the pen down. */
+export function startRoadDraft(): RoadDraft {
+  return { kind: 'road', tiles: [], cursor: null, pen: 'draw', phase: 'aiming', requestId: null, refusal: null };
+}
+
+/** The tiles a drag walks from one tile to another: one side-step at a time, along the longer way first. */
+function pathBetween(from: Tile, to: Tile): Tile[] {
+  const path: Tile[] = [];
+  let { x, y } = from;
+  while (x !== to.x || y !== to.y) {
+    if (Math.abs(to.x - x) >= Math.abs(to.y - y)) x += Math.sign(to.x - x);
+    else y += Math.sign(to.y - y);
+    path.push({ x, y });
+  }
+  return path;
+}
+
+/**
+ * The pointer is on this tile. `begin` marks the first sample of a new drag, which starts where it is instead of
+ * joining the end of the last one. Every tile between samples is taken, so a quick swipe leaves no gaps; tiles that
+ * are road already (`roads` is the island's string) are walked over but not added; nothing is added past the most the
+ * sim takes in one command. Only a road draft that is aiming and has the pen down draws.
+ */
+export function drawRoad(draft: PlacementDraft, tile: Tile, begin: boolean, ctx: { content: Content; roads: string }): PlacementDraft {
+  if (draft.kind !== 'road' || draft.phase !== 'aiming' || draft.pen !== 'draw') return draft;
+  const size = ctx.content.rules.islandSize;
+  const last = size - 1;
+  const here = { x: Math.min(last, Math.max(0, tile.x)), y: Math.min(last, Math.max(0, tile.y)) };
+  const from = begin ? null : draft.cursor;
+  if (from !== null && from.x === here.x && from.y === here.y) return draft;
+  const limit = ctx.content.rules.maxRoadTilesPerCommand;
+  const tiles = [...draft.tiles];
+  for (const step of from === null ? [here] : pathBetween(from, here)) {
+    const taken = tiles.some((t) => t.x === step.x && t.y === step.y);
+    if (!taken && ctx.roads[step.y * size + step.x] !== '1' && tiles.length < limit) tiles.push(step);
+  }
+  return { ...draft, tiles, cursor: here, refusal: null };
+}
+
+/** Changes the pen. Going back to drawing starts the next drag fresh. */
+export function penTo(draft: PlacementDraft, pen: 'draw' | 'look'): PlacementDraft {
+  if (draft.kind !== 'road' || draft.phase !== 'aiming' || draft.pen === pen) return draft;
+  return { ...draft, pen, cursor: null };
+}
+
+/** Drops every tile dragged so far. */
+export function clearRoad(draft: PlacementDraft): PlacementDraft {
+  if (draft.kind !== 'road' || draft.phase !== 'aiming') return draft;
+  return { ...draft, tiles: [], cursor: null, refusal: null };
 }
 
 /** The tile under a point on the ground (world units); off the island's grid it is still a tile, with a negative or large number. */

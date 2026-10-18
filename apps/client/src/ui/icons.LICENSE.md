@@ -1,7 +1,7 @@
 # UI icon license
 
 The line icons in `icons.tsx` are shapes from **Lucide** (https://lucide.dev), taken as path data through the approved
-HUD mockup's icon sheet (`docs/mockups/a-merged.html`), plus the gear (`settings`) and `droplet`. Lucide is released
+HUD mockup's icon sheet (`docs/mockups/a-merged.html`), plus the gear (`settings`), `droplet` and `undo`. Lucide is released
 under the ISC license:
 
 ```

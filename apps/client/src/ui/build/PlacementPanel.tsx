@@ -1,6 +1,7 @@
 import { content } from '@island/content';
 import { useEffect, useMemo } from 'react';
-import { lostDraft, rotateDraft, sendingDraft, settleDraft, type PlacementDraft } from '../../placement/draft.ts';
+import { clearRoad, lostDraft, penTo, rotateDraft, sendingDraft, settleDraft, type PlacementDraft } from '../../placement/draft.ts';
+import { roadVerdict } from '../../placement/roadVerdict.ts';
 import { buildingVerdict, needMoreCoins, type PlacementVerdict } from '../../placement/verdict.ts';
 import { useGame, useGameState } from '../../session/game.tsx';
 import { Icon } from '../icons.tsx';
@@ -27,10 +28,10 @@ export function PlacementPanel() {
   const phase = draft?.phase ?? null;
   const set = (placement: PlacementDraft | null) => store.getState().setView({ placement });
 
-  const verdict = useMemo(
-    () => (draft === null || island === null ? null : buildingVerdict(island.state, content, draft)),
-    [island?.state, draft?.building, draft?.x, draft?.y, draft?.rotation],
-  );
+  const verdict = useMemo(() => {
+    if (draft === null || island === null) return null;
+    return draft.kind === 'road' ? roadVerdict(island.state, content, draft.tiles) : buildingVerdict(island.state, content, draft);
+  }, [island?.state, draft]);
 
   // The server's answer (or its loss) settles a command that is out.
   useEffect(() => {
@@ -58,8 +59,8 @@ export function PlacementPanel() {
   useEffect(() => () => store.getState().setView({ placement: null }), [store]);
 
   if (draft === null || verdict === null || island === null || !island.own || draft.phase === 'landing') return null;
-  const name = BUILDING_NAMES[draft.building];
-  const def = content.buildings.find((d) => d.id === draft.building);
+  const name = draft.kind === 'road' ? 'Road' : BUILDING_NAMES[draft.building];
+  const def = draft.kind === 'road' ? undefined : content.buildings.find((d) => d.id === draft.building);
   const placing = draft.phase === 'placing';
 
   const place = () => {
@@ -71,18 +72,23 @@ export function PlacementPanel() {
 
   return (
     <div className="placing" data-placement={draft.phase}>
-      <p className="placing-hint">Drag to move</p>
+      <p className="placing-hint">{draft.kind === 'road' ? (draft.pen === 'draw' ? 'Drag to draw a road' : 'Drag to move the view') : 'Drag to move'}</p>
       <section className="placing-card" role="region" aria-label={`Placing ${name}`}>
         <PlacementLabels verdict={verdict} />
         <div className="placing-body">
           <span className="build-picture">
-            <img src={`/icons/building_${draft.building}_a.png`} alt="" width={56} height={56} draggable={false} />
+            {draft.kind === 'road' ? (
+              <Icon name="route" size={32} />
+            ) : (
+              <img src={`/icons/building_${draft.building}_a.png`} alt="" width={56} height={56} draggable={false} />
+            )}
           </span>
           <div className="placing-text">
             <h2 className="placing-name">{name}</h2>
             <p className="placing-blurb">
-              {BUILDING_BLURBS[draft.building]}
-              {def !== undefined && ` Takes ${def.footprint.w} x ${def.footprint.h} tiles.`}
+              {draft.kind === 'road'
+                ? roadWords(draft.tiles.length)
+                : `${BUILDING_BLURBS[draft.building]}${def === undefined ? '' : ` Takes ${def.footprint.w} x ${def.footprint.h} tiles.`}`}
             </p>
           </div>
           <span className="build-cost">
@@ -96,9 +102,27 @@ export function PlacementPanel() {
           </p>
         )}
         <div className="placing-controls">
-          <button className="placing-round" type="button" aria-label="Rotate" disabled={placing} onClick={() => set(rotateDraft(draft, content))}>
-            <Icon name="rotate" size={24} />
-          </button>
+          {draft.kind === 'road' ? (
+            <>
+              <button
+                className="placing-round placing-pen"
+                type="button"
+                aria-label="Look around"
+                aria-pressed={draft.pen === 'look'}
+                disabled={placing}
+                onClick={() => set(penTo(draft, draft.pen === 'look' ? 'draw' : 'look'))}
+              >
+                <Icon name="eye" size={24} />
+              </button>
+              <button className="placing-round" type="button" aria-label="Start over" disabled={placing || draft.tiles.length === 0} onClick={() => set(clearRoad(draft))}>
+                <Icon name="undo" size={24} />
+              </button>
+            </>
+          ) : (
+            <button className="placing-round" type="button" aria-label="Rotate" disabled={placing} onClick={() => set(rotateDraft(draft, content))}>
+              <Icon name="rotate" size={24} />
+            </button>
+          )}
           <button className="placing-round placing-cancel" type="button" aria-label="Cancel" disabled={placing} onClick={() => set(null)}>
             <Icon name="x" size={24} strokeWidth={3} />
           </button>
@@ -107,6 +131,13 @@ export function PlacementPanel() {
       </section>
     </div>
   );
+}
+
+/** What the road card says about the tiles dragged so far and the price of each. */
+function roadWords(tiles: number): string {
+  const price = Math.floor(content.rules.roadPricePerTileCents / 100);
+  const each = `Each new tile costs ${price} coins.`;
+  return tiles === 0 ? each : `${tiles} ${tiles === 1 ? 'tile' : 'tiles'}. ${each}`;
 }
 
 function PlacementLabels({ verdict }: { verdict: PlacementVerdict }) {
