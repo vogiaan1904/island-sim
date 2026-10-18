@@ -1,6 +1,7 @@
 import { stateHash, type Command } from '@island/sim';
 import { describe, expect, it, vi } from 'vitest';
 import { aliceWorld, runTicks } from '../../test/support.ts';
+import { recoverWorld } from './recovery.ts';
 import { Worlds } from './registry.ts';
 import type { RuntimeEvent, WorldRuntime } from './runtime.ts';
 
@@ -144,5 +145,63 @@ describe('a world the server stopped', () => {
     runtime.stop();
     expect(await runtime.resume()).toBe(false);
     expect(runtime.status).toBe('paused');
+  });
+});
+
+describe('a paused world', () => {
+  it('is snapshotted once its rebuild succeeds, so the log after the newest snapshot is empty', () => {
+    const { runtime, clock, deps } = aliceWorld();
+    expect(runtime.apply({ type: 'hire-commuters', slot: 0, count: 2 }, 'id-alice').ok).toBe(true);
+    runTicks(runtime, clock, 5);
+    breakNextTick(runtime);
+    runTicks(runtime, clock, 1);
+    const snapshot = deps.store.latestSnapshot(runtime.id);
+    expect([runtime.status, snapshot?.tick, snapshot?.lastSequence]).toEqual(['paused', 5, 2]);
+    expect(deps.store.commandsAfter(runtime.id, snapshot?.lastSequence ?? 0)).toEqual([]);
+    // Loading the snapshot and replaying what follows it gives the state the paused runtime holds.
+    const recovered = recoverWorld(deps.store, runtime.id, runtime.record.pausedTick);
+    expect(recovered.ok && stateHash(recovered.world)).toBe(stateHash(runtime.world));
+  });
+
+  it('is snapshotted after a throwing command too, which the log never held', () => {
+    const { runtime, worlds, deps } = aliceWorld();
+    const second = runtime.world.islands[1];
+    if (!second) throw new Error('no slot 1');
+    second.terrain = '0'.repeat(second.terrain.length);
+    expect(worlds.claim(runtime, 'id-bob', 'Coral Bay')).toEqual({ ok: false, reason: 'server-error' });
+    const snapshot = deps.store.latestSnapshot(runtime.id);
+    expect([snapshot?.tick, snapshot?.lastSequence]).toEqual([0, 1]);
+    expect(deps.store.commandsAfter(runtime.id, 1)).toEqual([]);
+    const recovered = recoverWorld(deps.store, runtime.id, runtime.record.pausedTick);
+    expect(recovered.ok && stateHash(recovered.world)).toBe(stateHash(runtime.world));
+  });
+
+  it('stays paused, without throwing, when its snapshot cannot be written', () => {
+    const { runtime, clock, deps, log } = aliceWorld();
+    runTicks(runtime, clock, 3);
+    vi.spyOn(deps.store, 'insertSnapshot').mockImplementation(() => {
+      throw new Error('disk full');
+    });
+    breakNextTick(runtime);
+    expect(() => runTicks(runtime, clock, 1)).not.toThrow();
+    expect(runtime.status).toBe('paused');
+    expect(log.entries.find((entry) => entry.message === 'snapshot failed')?.fields).toMatchObject({ world: runtime.id });
+  });
+
+  it('is trusted for a shutdown snapshot only when its rebuild succeeded', () => {
+    const { runtime, clock, deps } = aliceWorld();
+    runTicks(runtime, clock, 3);
+    breakNextTick(runtime);
+    runTicks(runtime, clock, 1);
+    expect([runtime.status, runtime.suspect]).toEqual(['paused', false]);
+
+    const other = aliceWorld();
+    runTicks(other.runtime, other.clock, 3);
+    vi.spyOn(other.deps.store, 'insertEvents').mockImplementation(() => {
+      throw new Error('disk full');
+    });
+    runTicks(other.runtime, other.clock, 1);
+    expect([other.runtime.status, other.runtime.suspect]).toEqual(['paused', true]);
+    expect(deps.store.latestSnapshot(runtime.id)?.tick).toBe(3);
   });
 });

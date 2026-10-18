@@ -59,6 +59,11 @@ export class WorldRuntime {
   readonly id: string;
   world: WorldState;
   status: WorldStatus;
+  /**
+   * True while the world holds the state a throw left behind because its rebuild failed. A paused world that rebuilt
+   * holds its last good state, which the shutdown snapshot may keep; a suspect one never goes into a snapshot.
+   */
+  suspect = false;
   private recordValue: WorldRecord;
   private readonly deps: RuntimeDeps;
   private nextSequence: number;
@@ -194,6 +199,7 @@ export class WorldRuntime {
    */
   async resume(): Promise<boolean> {
     if (!this.running || this.status !== 'paused' || !this.rebuild(this.recordValue.pausedTick ?? this.world.tick)) return false;
+    this.suspect = false;
     this.deps.store.setPaused(this.id, null, null);
     this.recordValue = { ...this.recordValue, pausedReason: null, pausedTick: null };
     this.status = 'running';
@@ -322,8 +328,10 @@ export class WorldRuntime {
    * rebuilds it from the log, or stores the pause again when the world already paused.
    */
   pauseAfterRollback(error: unknown): void {
-    if (this.status === 'paused') this.storePause();
-    else this.fail('command', error);
+    if (this.status === 'paused') {
+      this.storePause();
+      this.snapshotPaused();
+    } else this.fail('command', error);
   }
 
   /**
@@ -331,6 +339,8 @@ export class WorldRuntime {
    * again: the world is rebuilt from its snapshot and log to its last good tick (a throwing tick never completed, a
    * throwing command was never logged), and waits for the host to resume it. Never throws, whatever the store does:
    * the world is paused first, so a store that fails here leaves it paused, not running on a state it should not use.
+   * When the rebuild worked, the rebuilt state is snapshotted: a deploy that changes the sim version or the content
+   * can then still load the paused world, as no logged command follows its newest snapshot.
    */
   private fail(kind: 'tick' | 'command', error: unknown): void {
     const tick = this.world.tick;
@@ -339,8 +349,19 @@ export class WorldRuntime {
     this.recordValue = { ...this.recordValue, pausedReason: reason, pausedTick: tick };
     this.setStatus('paused');
     this.deps.log.error('world paused', { world: this.id, kind, tick, error: error instanceof Error ? error.stack : message });
-    this.rebuild(tick);
+    this.suspect = !this.rebuild(tick);
     this.storePause();
+    this.snapshotPaused();
+  }
+
+  /** Snapshots a paused world that rebuilt; a store that fails is logged, never thrown (the world stays paused). */
+  private snapshotPaused(): void {
+    if (this.suspect) return;
+    try {
+      this.snapshot();
+    } catch (error) {
+      this.deps.log.error('snapshot failed', { world: this.id, error: error instanceof Error ? error.message : String(error) });
+    }
   }
 
   private storePause(): void {
