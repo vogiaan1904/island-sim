@@ -95,17 +95,20 @@ describe('createWorld', () => {
         expect(island.terrain, where).toHaveLength(size * size);
         expect(landCount(island), where).toBeGreaterThanOrEqual(200);
         expect(connectedLandCount(island), where).toBe(landCount(island));
+        // Collected and asserted once per island: an expect per tile made this test slow enough to time out under load.
+        const wrong: string[] = [];
         for (let y = 0; y < size; y += 1) {
           for (let x = 0; x < size; x += 1) {
             const tile = island.terrain[tileIndex(size, x, y)];
-            if (x < 2 || y < 2 || x >= size - 2 || y >= size - 2) expect(tile, `${where} margin`).toBe(WATER);
+            if ((x < 2 || y < 2 || x >= size - 2 || y >= size - 2) && tile !== WATER) wrong.push(`margin ${x},${y}`);
             if (tile === WATER) continue;
             const touchesWater = NEIGHBORS4.some(
               ([ox, oy]) => island.terrain[tileIndex(size, x + ox, y + oy)] === WATER,
             );
-            expect(tile, `${where} at ${x},${y}`).toBe(touchesWater ? BEACH : GRASS);
+            if (tile !== (touchesWater ? BEACH : GRASS)) wrong.push(`${x},${y}`);
           }
         }
+        expect(wrong, where).toEqual([]);
       }
     }
   });
