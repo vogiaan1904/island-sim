@@ -71,12 +71,13 @@ export async function startServer(config: ServerConfig, options: StartOptions = 
     if (backupTimer !== null) clearTimeout(backupTimer);
     backupTimer = null;
     worlds.stop();
-    await Promise.allSettled(backupsRunning);
     await closeGateway();
     for (const listener of listeners) {
       listener.closeAllConnections();
       await new Promise<void>((resolve) => listener.close(() => resolve()));
     }
+    // Only now: until the admin listener closed, a request could still start a backup.
+    await Promise.allSettled(backupsRunning);
     try {
       db.close();
     } catch (error) {
