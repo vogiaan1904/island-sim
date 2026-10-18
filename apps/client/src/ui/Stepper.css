@@ -1,0 +1,50 @@
+/* A count with a minus and a plus (island-ui, style A): white round buttons with the dark outline and hard shadow. */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font);
+  color: var(--ink);
+}
+
+.stepper-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--ink);
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 120ms ease-out;
+}
+
+.stepper-button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+
+.stepper-button:disabled {
+  color: var(--muted);
+  background: var(--track);
+  border-color: var(--muted);
+  box-shadow: none;
+  cursor: default;
+}
+
+.stepper-button:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.stepper-value {
+  min-width: 2.5ch;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

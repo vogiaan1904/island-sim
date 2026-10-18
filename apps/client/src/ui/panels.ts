@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
 import type { PanelId } from '../store/view.ts';
+import { StaffPanel } from './staff/StaffPanel.tsx';
+import { TradePanel } from './trade/TradePanel.tsx';
 
 // The hook for the panels the HUD opens (ticket 11). The bottom buttons and the gear set `view.openPanel`; the panel
 // host shows its title and a Close button, and renders the body registered here for that panel. A ticket that fills a
@@ -21,4 +23,7 @@ export const PANEL_TITLES: Record<PanelId, string> = {
 
 export type PanelBodies = Partial<Record<PanelId, ComponentType>>;
 
-export const PANEL_BODIES: PanelBodies = {};
+export const PANEL_BODIES: PanelBodies = {
+  staff: StaffPanel,
+  trade: TradePanel,
+};
