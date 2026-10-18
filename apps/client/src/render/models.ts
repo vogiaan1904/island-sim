@@ -1,5 +1,5 @@
 import { catalog } from '@island/assets/src/catalog.ts';
-import type { BuildingId } from '@island/content';
+import type { BuildingId, Content, StageId } from '@island/content';
 
 // The client loads only the processed files the asset catalog lists (tools/assets/src/catalog.ts), never anything
 // from assets/raw or assets/packs. Every model URL goes through here.
@@ -15,6 +15,39 @@ export function modelUrl(file: string): string {
 /** The model file of a building type: `building_<content id>_a.glb`. */
 export function buildingModel(type: BuildingId): string {
   return `building_${type}_a.glb`;
+}
+
+export type RoadPieceName = 'single' | 'end' | 'straight' | 'corner' | 't' | 'cross';
+
+/** The model file of a road piece: `road_<piece>_a.glb`. */
+export function roadModel(piece: RoadPieceName): string {
+  return `road_${piece}_a.glb`;
+}
+
+/** The scaffold of a footprint of w by h tiles at rotation 0; a turned building turns the same model. */
+export function scaffoldModel(w: number, h: number): string {
+  return `prop_scaffold_${w}x${h}.glb`;
+}
+
+/** One tile of walkway on the water beside the dock. */
+export const PIER_MODEL = 'prop_pier_a.glb';
+
+const ROAD_PIECES: readonly RoadPieceName[] = ['single', 'end', 'straight', 'corner', 't', 'cross'];
+
+/**
+ * The model files an island in this stage can show, in load order: what the stage's buildings, their scaffolds, the
+ * roads and the pier need, plus everything earlier stages need. The game loads the Outpost list first and the rest of
+ * the stages in the background (a building is only placed in a stage it is available from).
+ */
+export function stageModels(content: Content, stage: StageId): string[] {
+  const reached = content.stages.find((s) => s.id === stage)?.order ?? 0;
+  const orderOf = (id: StageId) => content.stages.find((s) => s.id === id)?.order ?? Number.POSITIVE_INFINITY;
+  const files: string[] = [PIER_MODEL, ...ROAD_PIECES.map(roadModel)];
+  for (const def of content.buildings) {
+    if (orderOf(def.availableFrom) > reached) continue;
+    files.push(buildingModel(def.id), scaffoldModel(def.footprint.w, def.footprint.h));
+  }
+  return [...new Set(files)];
 }
 
 /** The one palette texture every model's `palette` material samples. */
