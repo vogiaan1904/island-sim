@@ -1,5 +1,6 @@
 import { createCamera, type CameraState } from '../camera/controller.ts';
 import { ISLAND_LIMITS } from '../camera/limits.ts';
+import type { PlacementDraft } from '../placement/draft.ts';
 import type { Quality } from '../render/quality.ts';
 
 /**
@@ -41,6 +42,12 @@ export interface ViewState {
    * may open or close one with `setView({ openPanel })`: opening one replaces the one before.
    */
   openPanel: PanelId | null;
+  /**
+   * What the player is placing, or null (ticket 12): set by the Build picker, moved by drags and taps on the island,
+   * ended by Cancel, or by the landing once the server accepted it. While it is set, a one-finger drag aims it and
+   * does not move the camera.
+   */
+  placement: PlacementDraft | null;
 }
 
 export function initialView(): ViewState {
@@ -54,5 +61,6 @@ export function initialView(): ViewState {
     controlsDetected: 'mouse',
     tappedBuilding: null,
     openPanel: null,
+    placement: null,
   };
 }

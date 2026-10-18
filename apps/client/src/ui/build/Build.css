@@ -1,0 +1,291 @@
+/* The Build picker and the placement panel: style A "Cozy and bright" (island-ui). Colors come from styles/tokens.css.
+   Touch targets are at least 44 px. */
+
+/* ---- the Build picker (the body of the Build panel) ---- */
+.build-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.build-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 10px 6px 6px;
+  font-family: var(--font);
+  font-size: 1rem;
+  color: var(--ink);
+  text-align: left;
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.build-row:focus-visible,
+.placing button:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.build-row:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+
+.build-row:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.build-picture {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  background: var(--picture-tile);
+  border-radius: 10px;
+}
+
+.build-picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.build-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.build-name {
+  font-weight: 700;
+}
+
+.build-note {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.build-row[data-state='short'] .build-note {
+  color: #9a3412;
+}
+
+.build-cost {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  font-weight: 700;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+}
+
+/* ---- the placement panel ---- */
+.placing {
+  position: fixed;
+  inset: 0;
+  z-index: 7;
+  /* The empty layer lets touches through to the island; the card and the hint turn them back on. */
+  pointer-events: none;
+  font-family: var(--font);
+  color: var(--ink);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.placing-hint {
+  position: absolute;
+  top: max(84px, calc(env(safe-area-inset-top) + 76px));
+  left: 50%;
+  margin: 0;
+  padding: 6px 14px;
+  transform: translateX(-50%);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(36, 50, 59, 0.88);
+  border-radius: 14px;
+  white-space: nowrap;
+}
+
+.placing-card {
+  position: absolute;
+  left: max(8px, env(safe-area-inset-left));
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 0.75rem;
+  pointer-events: auto;
+  touch-action: manipulation;
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 0 4px 0 var(--shadow);
+  animation: placing-in 160ms ease-out;
+}
+
+.placing-labels {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.placing-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px 2px 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--red);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+}
+
+.placing-label[data-ok='true'] {
+  background: var(--green);
+}
+
+.placing-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.placing-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.placing-name {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.placing-blurb {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.placing-refusal {
+  margin: 0.5rem 0 0;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--problem-bg);
+  border: 2px solid var(--problem-border);
+  border-radius: 10px;
+}
+
+.placing-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 0.6rem;
+}
+
+.placing-round {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  padding: 0;
+  color: var(--ink);
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+}
+
+.placing-cancel {
+  color: #fff;
+  background: var(--red);
+}
+
+.placing-place {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 3.25rem;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--green);
+  border: 2.5px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+}
+
+.placing button:disabled {
+  cursor: default;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.placing-place:disabled {
+  color: var(--ink);
+  background: var(--track);
+  opacity: 1;
+}
+
+.placing-place[aria-busy='true'] {
+  animation: placing-pulse 900ms ease-in-out infinite;
+}
+
+@keyframes placing-in {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
+
+@keyframes placing-pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Wide: the card sits at the bottom left, clear of the counters and the Settings gear on the right. */
+@media (min-aspect-ratio: 5/4) {
+  .placing-card {
+    right: auto;
+    left: max(12px, env(safe-area-inset-left));
+    width: 26rem;
+    margin: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .placing-card,
+  .placing-place[aria-busy='true'] {
+    animation: none;
+  }
+}

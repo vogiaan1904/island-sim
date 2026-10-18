@@ -3,11 +3,12 @@ import { CameraControls, CameraControlsImpl } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
-import { cameraPose, type Key, type Pose } from '../camera/controller.ts';
+import { cameraPose, groundPoint, type Key, type Pose } from '../camera/controller.ts';
 import { ISLAND_LIMITS } from '../camera/limits.ts';
 import { setLivePose } from '../camera/livePose.ts';
 import { tapTarget } from '../camera/tap.ts';
 import { useCameraInput } from '../camera/useCameraInput.ts';
+import { aimAt, aimPoint, groundTile } from '../placement/draft.ts';
 import { useGame } from '../session/game.tsx';
 
 const NONE = CameraControlsImpl.ACTION.NONE;
@@ -30,6 +31,20 @@ export function CameraRig() {
   const keys = useCameraInput({
     element: gl.domElement,
     store,
+    // Placing a building: the ghost snaps to the tile under the pointer (above a finger), and the camera stays put.
+    onAim: (x, y, pointer) => {
+      const impl = controls.current;
+      const placement = store.getState().view.placement;
+      if (impl === null || placement === null) return;
+      impl.getTarget(scratch);
+      const pose: Pose = { x: scratch.x, z: scratch.z, distance: impl.distance, azimuth: impl.azimuthAngle, polar: impl.polarAngle };
+      const rect = gl.domElement.getBoundingClientRect();
+      const at = aimPoint({ x, y }, pointer);
+      const ground = groundPoint(pose, { width: rect.width, height: rect.height }, at.x, at.y);
+      if (ground === null) return;
+      const next = aimAt(placement, groundTile(ground), content);
+      if (next !== placement) store.getState().setView({ placement: next });
+    },
     onTap: (x, y) => {
       const impl = controls.current;
       const island = store.getState().island?.state;

@@ -114,6 +114,13 @@ const LINE_ICONS = {
   minus: <path d="M5 12h14" />,
   x: <path d="M18 6 6 18M6 6l12 12" />,
   check: <path d="M20 6 9 17l-5-5" />,
+  /** Turn a ghost a quarter (Lucide rotate-cw). */
+  rotate: (
+    <>
+      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+    </>
+  ),
   plus: <path d="M5 12h14M12 5v14" />,
   route: (
     <>

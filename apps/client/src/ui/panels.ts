@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import { LogPanel } from '../news/LogPanel.tsx';
 import type { PanelId } from '../store/view.ts';
+import { BuildPicker } from './build/BuildPicker.tsx';
 import { StaffPanel } from './staff/StaffPanel.tsx';
 import { TradePanel } from './trade/TradePanel.tsx';
 import { SettingsPanel } from './SettingsPanel.tsx';
@@ -9,7 +10,6 @@ import { SettingsPanel } from './SettingsPanel.tsx';
 // host shows its title and a Close button, and renders the body registered here for that panel. A ticket that fills a
 // panel adds ONE line to PANEL_BODIES (its component, which reads the store with `useGameState`) and nothing else:
 //
-//   build: BuildPicker,      (ticket 12)
 //   staff: StaffPanel,       (ticket 16)
 //   trade: TradePanel,       (ticket 16)
 //   log: LogPanel,           (ticket 17)
@@ -26,6 +26,7 @@ export const PANEL_TITLES: Record<PanelId, string> = {
 export type PanelBodies = Partial<Record<PanelId, ComponentType>>;
 
 export const PANEL_BODIES: PanelBodies = {
+  build: BuildPicker,
   staff: StaffPanel,
   trade: TradePanel,
   log: LogPanel,
