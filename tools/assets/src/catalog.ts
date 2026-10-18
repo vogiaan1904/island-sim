@@ -5,6 +5,8 @@
 export const catalog: { models: readonly string[]; icons: readonly string[] } = {
   models: [
     'palette.png',
+    'accessory_bag_a.glb',
+    'accessory_wheelchair_a.glb',
     'building_cottage_a.glb',
     'building_dock_a.glb',
     'building_farm_a.glb',

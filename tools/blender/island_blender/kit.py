@@ -103,16 +103,17 @@ def place(piece, x: float = 0.0, y: float = 0.0, z: float = 0.0, turns: int = 0)
     return piece
 
 
-def finish(parts: list, name: str, footprint_center=(0.0, 0.0)):
+def finish(parts: list, name: str, footprint_center=(0.0, 0.0), grounded: bool = True):
     """Joins the parts into one mesh named name, on the palette material, origin at the footprint's bottom center.
 
     footprint_center is where the footprint's center sits in the assembly, in world units; a recipe builds around
-    (0, 0) unless an overhang makes that awkward. The lowest point becomes height 0.
+    (0, 0) unless an overhang makes that awkward. The lowest point becomes height 0, unless grounded is False: an
+    accessory keeps its place in the characters' rest pose, with its origin at the world origin.
     """
     model = join(parts, name)
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
     corners = [model.matrix_world @ Vector(c) for c in model.bound_box]
-    bottom = min(c.z for c in corners)
+    bottom = min(c.z for c in corners) if grounded else 0.0
     bpy.context.scene.cursor.location = (footprint_center[0], footprint_center[1], bottom)
     bpy.ops.object.origin_set(type="ORIGIN_CURSOR")
     model.location = (0.0, 0.0, 0.0)

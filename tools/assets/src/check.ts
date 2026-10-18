@@ -91,7 +91,8 @@ export async function checkModel(file: string, bytes: Uint8Array, rules: Rules, 
 
   const { min, max } = getBounds(root.listScenes()[0]!);
   // A quantized skinned mesh keeps its scale in the skin, which bounds do not apply; the Blender tests check characters.
-  if (parsed.category !== 'character' && Math.abs(min[1]) > rules.originTolerance) {
+  // An accessory sits where its joint holds it in the characters' rest pose (a bag at the hand), not on the ground.
+  if (parsed.category !== 'character' && parsed.category !== 'accessory' && Math.abs(min[1]) > rules.originTolerance) {
     problems.push(`the lowest point is at ${min[1].toFixed(3)}, not 0`);
   }
 

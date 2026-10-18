@@ -77,6 +77,11 @@ describe('checkModel', () => {
     ]);
   });
 
+  it('lets an accessory stay at its joint above the ground', async () => {
+    const accessories = testRules({ triangleBudgets: { accessory: 100 } });
+    expect(await check('accessory_bag_a.glb', boxGlb({ size: [0.3, 0.3, 0.2], lift: 0.9 }), accessories)).toEqual([]);
+  });
+
   it('passes a rigid character with exactly the kept clips', async () => {
     expect(await check('character_female_a.glb', characterGlb())).toEqual([]);
   });

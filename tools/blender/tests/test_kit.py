@@ -47,3 +47,11 @@ class KitTest(unittest.TestCase):
         self.assertAlmostEqual(max(c.z for c in corners), 0.4)
         self.assertEqual({tuple(round(c, 6) for c in loop.uv) for loop in box.data.uv_layers.active.data},
                          {tuple(round(c, 6) for c in uv)})
+
+    def test_finish_can_keep_a_model_where_it_was_built(self):
+        uv = kit.swatch_uv("kenney_fantasy-town-kit", "planks")
+        bag = kit.finish([kit.box("bag", (0.3, 0.2, 0.2), (0.5, 0.0, 0.9), uv)], "accessory_test_a", grounded=False)
+        corners = [bag.matrix_world @ Vector(c) for c in bag.bound_box]
+        self.assertAlmostEqual(min(c.z for c in corners), 0.9, places=5)
+        self.assertAlmostEqual(min(c.x for c in corners), 0.35, places=5)
+        self.assertEqual(tuple(bag.location), (0.0, 0.0, 0.0))

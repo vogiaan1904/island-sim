@@ -29,6 +29,7 @@
     "good": 400
   },
   "iconSize": 256,
+  "accessories": { "bag": "arm-right", "wheelchair": "root" },
   "look": {
     "saturation": 1.1,
     "lightness": 1.0,
