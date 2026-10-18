@@ -3,6 +3,7 @@
 import json
 from functools import cache
 
+import bmesh
 import bpy
 from mathutils import Vector
 
@@ -88,10 +89,22 @@ def finish(parts: list, name: str, footprint_center=(0.0, 0.0)):
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.mesh.remove_doubles(threshold=0.0001)
+    # Welding leaves faces with no area and n-gons with corners in a line, which the exporter would triangulate into
+    # slivers whose normals Blender guesses differently on each run: triangulate here, then drop every sliver.
+    mesh = bmesh.from_edit_mesh(model.data)
+    bmesh.ops.triangulate(mesh, faces=mesh.faces[:], quad_method="BEAUTY", ngon_method="BEAUTY")
+    bmesh.ops.delete(mesh, geom=[f for f in mesh.faces if _sliver(f)], context="FACES_ONLY")
+    bmesh.update_edit_mesh(model.data)
     bpy.ops.mesh.normals_make_consistent(inside=False)
     bpy.ops.object.mode_set(mode="OBJECT")
     use_palette(model)
     return model
+
+
+def _sliver(face) -> bool:
+    """A triangle whose height is under 0.01% of its longest edge: corners in a line, give or take float noise."""
+    longest = max(edge.calc_length() for edge in face.edges)
+    return longest == 0.0 or 2 * face.calc_area() / longest < 1e-4 * longest
 
 
 def use_palette(obj) -> None:
