@@ -1,10 +1,11 @@
 import { content } from '@island/content';
 import { CameraControls, CameraControlsImpl } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
 import { cameraPose, groundPoint, type Key, type Pose } from '../camera/controller.ts';
 import { ISLAND_LIMITS } from '../camera/limits.ts';
+import { setLivePose } from '../camera/livePose.ts';
 import { tapTarget } from '../camera/tap.ts';
 import { useCameraInput } from '../camera/useCameraInput.ts';
 import { aimAt, aimPoint, drawRoad, groundTile, tileAtWorld } from '../placement/draft.ts';
@@ -69,9 +70,14 @@ export function CameraRig() {
     },
   });
 
+  // The overlay's bubbles stick to the real camera, which glides behind the asked-for one.
+  useEffect(() => () => setLivePose(null), []);
+
   useFrame((_, delta) => {
     const impl = controls.current;
     if (impl === null) return;
+    impl.getTarget(scratch);
+    setLivePose({ x: scratch.x, z: scratch.z, distance: impl.distance, azimuth: impl.azimuthAngle, polar: impl.polarAngle });
     const dt = Math.min(delta, 0.1);
     if (keys.size > 0) store.getState().cameraGesture({ kind: 'keys', held: [...keys] as Key[], dt });
     store.getState().cameraStep(dt);

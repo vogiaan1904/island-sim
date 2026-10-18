@@ -4,6 +4,7 @@ import { NewsCard } from '../../news/NewsCard.tsx';
 import { StageCelebration } from '../../news/StageCelebration.tsx';
 import { useGame, useGameState } from '../../session/game.tsx';
 import type { PanelId } from '../../store/view.ts';
+import { BubbleLayer } from '../bubbles/BubbleLayer.tsx';
 import { CardHost } from '../cards/CardHost.tsx';
 import { Compass } from '../Compass.tsx';
 import { Icon, type IconName } from '../icons.tsx';
@@ -31,6 +32,7 @@ export function Hud() {
   return (
     <>
       <div className="hud" data-panel-open={panelOpen}>
+        <BubbleLayer />
         <StageBadge model={model} />
         <div className="hud-right">
           <Counters model={model} glideKey={glideKey} />
@@ -80,7 +82,7 @@ function Counters({ model, glideKey }: { model: HudModel; glideKey: string }) {
 
 function Pill({ label, icon, value, glideKey }: { label: string; icon: IconName; value: number; glideKey: string }) {
   return (
-    <div className="hud-pill" role="group" aria-label={`${label}: ${value.toLocaleString('en-US')}`}>
+    <div className="hud-pill" role="group" aria-label={`${label}: ${value.toLocaleString('en-US')}`} data-counter={label.toLowerCase()}>
       <span className="hud-pill-icon">
         <Icon name={icon} size={22} />
       </span>
