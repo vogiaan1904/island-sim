@@ -8,7 +8,7 @@ Only the processed output (optimized `.glb` files and rendered icons used by the
 ## Packs
 
 All packs are by Kenney ([kenney.nl](https://www.kenney.nl)), license **CC0 1.0** (public domain; credit appreciated but not required).
-Downloaded 2026-10-15.
+Downloaded 2026-10-15 unless the row says otherwise.
 
 | Zip file | Pack (version) | Pack created | Download page | SHA-256 |
 |---|---|---|---|---|
@@ -22,6 +22,11 @@ Downloaded 2026-10-15.
 | `kenney_toy-car-kit.zip` | Toy Car Kit (1.2) | 2025-01-05 | https://kenney.nl/assets/toy-car-kit | `26c11bbb77102b8dd00cdaf7b2c7ab692416d750dd064de886d809acec346782` |
 | `kenney_train-kit.zip` | Train Kit (1.1) | 2024-09-22 | https://kenney.nl/assets/train-kit | `cf50d77e8cbacbf38dd50826d4bce5392db8e4f67373d3c4e583b0ed0e474475` |
 | `kenney_watercraft-pack.zip` | Watercraft Kit (2.1) | 2024-04-19 | https://kenney.nl/assets/watercraft-kit | `cd1470c1cf441c7f46d0944ae6d0d897242365dc97677c5079b3238965d659f3` |
+| `kenney_city-kit-roads.zip` | City Kit Roads (2.2), downloaded 2026-10-18 | 2026-10-10 | https://kenney.nl/assets/city-kit-roads | `374a4552115cbd11b4ec5c930ee31a533562dc78a09af249a655d03f7ea3b959` |
+| `kenney_fantasy-town-kit.zip` | Fantasy Town Kit (2.0), downloaded 2026-10-18 as `kenney_fantasy-town-kit_2.0.zip` | 2025-08-03 | https://kenney.nl/assets/fantasy-town-kit | `1a7530c09f4d2fa2cdee259876f089334f8b1f27fa86a0c4f54ef86cdd8676ef` |
+| `kenney_nature-kit.zip` | Nature Kit (2.1), downloaded 2026-10-18; material colors, no colormap | 2020-04-29 | https://kenney.nl/assets/nature-kit | `fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d` |
+| `kenney_pirate-kit.zip` | Pirate Kit (2.1), downloaded 2026-10-18 | 2026-02-17 | https://kenney.nl/assets/pirate-kit | `667ed2caf92954ddb98f7b7cede831fe99ab75063c26b25e23d32715bee9c943` |
+| `kenney_survival-kit.zip` | Survival Kit (2.0), downloaded 2026-10-18 | 2024-04-03 | https://kenney.nl/assets/survival-kit | `c3586341b5932c87eb43d75d915434f47daed168b17ed36a03e8ca9977c7443e` |
 
 Verify all checksums: `cd assets/packs && shasum -a 256 *.zip`
 

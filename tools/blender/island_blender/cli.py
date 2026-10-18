@@ -14,7 +14,8 @@ def reset_scene() -> None:
 
 def cmd_palette() -> None:
     look = conventions.load()["look"]
-    result = palette.build_palette(paths.colormaps(), paths.PALETTE_PNG, paths.PALETTE_MAP, look)
+    flat = {pack: palette.glb_colors(folder) for pack, folder in paths.flat_packs().items()}
+    result = palette.build_palette(paths.colormaps(), paths.PALETTE_PNG, paths.PALETTE_MAP, look, flat)
     print(f"palette {paths.PALETTE_PNG} {result['slots']} slots")
 
 

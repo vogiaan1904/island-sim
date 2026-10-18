@@ -4,11 +4,13 @@ A Kenney colormap is 512x512: a grid of 16 x 4 swatches of 32x128 pixels, each a
 the same swatch size in a 32 x 8 grid (1024x1024), so a model moves onto it by moving each UV into the matching slot
 with its position inside the swatch unchanged. Slot 0 is reserved for window glass, which the client lights at night:
 the packs draw glass with an untextured, half-transparent "glass" material, which becomes an opaque flat swatch here.
+Packs drawn with material colors (paths.FLAT_PACKS) get one flat swatch per color, after the colormap swatches.
 """
 
 import array
 import colorsys
 import json
+import struct
 from pathlib import Path
 
 import bpy
@@ -76,12 +78,14 @@ def recolor(cell: bytes, look: dict, cache: dict) -> bytes:
     return bytes(out)
 
 
-def build_palette(colormaps: dict[str, Path], png: Path, mapping: Path, look: dict = NEUTRAL_LOOK) -> dict:
+def build_palette(colormaps: dict[str, Path], png: Path, mapping: Path, look: dict = NEUTRAL_LOOK,
+                  flat: dict[str, list[tuple[int, int, int]]] | None = None) -> dict:
     """Writes the palette image and its map; returns the map.
 
-    colormaps: pack name -> its colormap. look: the chosen look's colors (the window slot keeps its own). The map is
-    {"slots": n, "packs": {pack: {"col,row": slot}}}. Packs are read in name order and swatches in reading order, so
-    the same packs always give the same palette.
+    colormaps: pack name -> its colormap. look: the chosen look's colors (the window slot keeps its own). flat: pack
+    name -> the sRGB colors of a material-color pack (glb_colors). The map is {"slots": n, "packs": {pack: {"col,row":
+    slot}}, "flat": {pack: {"r,g,b": slot}}}. Packs are read in name order and swatches in reading order, so the same
+    packs always give the same palette.
     """
     slots: list[bytes] = []
     index: dict[bytes, int] = {}
@@ -95,6 +99,15 @@ def build_palette(colormaps: dict[str, Path], png: Path, mapping: Path, look: di
                 index[cell] = len(slots)
                 slots.append(cell)
             packs[pack][f"{col},{row}"] = index[cell]
+    flats: dict[str, dict[str, int]] = {}
+    for pack, colors in sorted((flat or {}).items()):
+        flats[pack] = {}
+        for rgb in sorted(set(colors)):
+            cell = bytes(rgb + (255,)) * (CELL_W * CELL_H)
+            if cell not in index:
+                index[cell] = len(slots)
+                slots.append(cell)
+            flats[pack][",".join(map(str, rgb))] = index[cell]
     if len(slots) > COLS * ROWS:
         raise ValueError(f"{len(slots)} swatches do not fit the {COLS * ROWS} palette slots")
     cache: dict = {}
@@ -114,10 +127,37 @@ def build_palette(colormaps: dict[str, Path], png: Path, mapping: Path, look: di
     image.file_format = "PNG"
     image.save()
     bpy.data.images.remove(image)
-    result = {"slots": len(slots), "packs": packs}
+    result = {"slots": len(slots), "packs": packs, "flat": flats}
     mapping.parent.mkdir(parents=True, exist_ok=True)
     mapping.write_text(json.dumps(result, indent=1, sort_keys=True) + "\n")
     return result
+
+
+def _srgb(linear: float) -> int:
+    c = min(max(linear, 0.0), 1.0)
+    return round(255 * (12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055))
+
+
+def glb_colors(folder: Path) -> list[tuple[int, int, int]]:
+    """The sRGB colors of every untextured, non-glass material in a folder of .glb files, read from their JSON as data."""
+    colors = set()
+    for glb in sorted(folder.glob("*.glb")):
+        data = glb.read_bytes()
+        length, kind = struct.unpack_from("<II", data, 12)
+        if data[:4] != b"glTF" or kind != 0x4E4F534A:
+            raise ValueError(f"{glb}: not a binary glTF file")
+        for material in json.loads(data[20:20 + length]).get("materials", []):
+            pbr = material.get("pbrMetallicRoughness", {})
+            if "baseColorTexture" in pbr or material.get("name", "").split(".")[0] == "glass":
+                continue
+            colors.add(tuple(_srgb(c) for c in pbr.get("baseColorFactor", [1.0, 1.0, 1.0])[:3]))
+    return sorted(colors)
+
+
+def material_rgb(material) -> tuple[int, int, int]:
+    """The sRGB bytes of an untextured material's base color, as the glTF importer set it."""
+    bsdf = next(n for n in material.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+    return tuple(_srgb(c) for c in bsdf.inputs["Base Color"].default_value[:3])
 
 
 def _has_image(material) -> bool:
@@ -174,6 +214,28 @@ def remap_uvs(obj, pack: str, mapping: dict) -> None:
         for i in loops:
             u, v = layer[i].uv
             layer[i].uv = slot_uv(cells[key], u * SRC_COLS - col, v * SRC_ROWS - (SRC_ROWS - 1 - row))
+
+
+def remap_flat(obj, pack: str, mapping: dict) -> None:
+    """Moves every face of a material-color pack onto its color's flat swatch; glass goes to the window slot.
+
+    A color is matched to the nearest of the pack's flat swatches, which absorbs float rounding between the glTF file
+    and Blender's import of it.
+    """
+    swatches = {tuple(map(int, key.split(","))): slot for key, slot in mapping["flat"][pack].items()}
+    materials = obj.data.materials
+    layer = obj.data.uv_layers.active.data
+    for poly in obj.data.polygons:
+        material = materials[poly.material_index] if len(materials) else None
+        if material is None or _has_image(material):
+            raise ValueError(f"{obj.name}: face {poly.index} of the material-color pack {pack} has no plain color")
+        if material.name.split(".")[0] == "glass":
+            slot = WINDOW_SLOT
+        else:
+            rgb = material_rgb(material)
+            slot = swatches[min(swatches, key=lambda s: sum((a - b) ** 2 for a, b in zip(s, rgb)))]
+        for i in range(poly.loop_start, poly.loop_start + poly.loop_total):
+            layer[i].uv = slot_uv(slot, 0.5, 0.5)
 
 
 def move_slot(obj, from_slot: int, to_slot: int) -> int:

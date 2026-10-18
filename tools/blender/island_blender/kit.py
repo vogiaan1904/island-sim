@@ -37,7 +37,10 @@ def import_piece(pack: str, name: str, mapping: dict, scale: float):
     if not meshes:
         raise ValueError(f"{pack}/{name} holds no mesh")
     for o in meshes:
-        palette.remap_uvs(o, pack, mapping)
+        if pack in mapping["flat"]:
+            palette.remap_flat(o, pack, mapping)
+        else:
+            palette.remap_uvs(o, pack, mapping)
     piece = join(meshes, f"{pack}:{name}")
     piece.scale = (scale, scale, scale)
     bpy.context.view_layer.objects.active = piece

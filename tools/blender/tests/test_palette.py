@@ -10,8 +10,12 @@ from helpers import face_points, pixels, sample
 PIECES = [
     ("kenney_building-kit", "wall-window-square"),
     ("kenney_building-kit", "roof-flat-square"),
+    ("kenney_city-kit-roads", "road-crossroad"),
     ("kenney_coaster-kit", "tree-large"),
+    ("kenney_fantasy-town-kit", "roof-gable"),
     ("kenney_food-kit", "fish"),
+    ("kenney_pirate-kit", "palm-straight"),
+    ("kenney_survival-kit", "resource-wood"),
     ("kenney_toy-car-kit", "vehicle-truck"),
     ("kenney_train-kit", "train-carriage-lumber"),
     ("kenney_watercraft-pack", "boat-fishing-small"),
@@ -24,23 +28,24 @@ class PaletteTest(unittest.TestCase):
         cli.reset_scene()
         cls.dir = Path(tempfile.mkdtemp())
         cls.colormaps = paths.colormaps()
+        cls.flat = {pack: palette.glb_colors(folder) for pack, folder in paths.flat_packs().items()}
         cls.png, cls.map_path = cls.dir / "palette.png", cls.dir / "palette-map.json"
-        cls.mapping = palette.build_palette(cls.colormaps, cls.png, cls.map_path)
+        cls.mapping = palette.build_palette(cls.colormaps, cls.png, cls.map_path, flat=cls.flat)
         cls.image = pixels(cls.png)
 
     def test_fits_the_grid_and_is_the_same_every_build(self):
         self.assertLessEqual(self.mapping["slots"], palette.COLS * palette.ROWS)
         self.assertEqual(self.image[:2], (1024, 1024))
-        again = palette.build_palette(self.colormaps, self.dir / "again.png", self.dir / "again.json")
+        again = palette.build_palette(self.colormaps, self.dir / "again.png", self.dir / "again.json", flat=self.flat)
         self.assertEqual(again, self.mapping)
         self.assertEqual((self.dir / "again.png").read_bytes(), self.png.read_bytes())
         lit = dict(palette.NEUTRAL_LOOK, sun={"energy": 3.0}, sky=[0.6, 0.65, 0.7])  # light alone changes no color
-        palette.build_palette(self.colormaps, self.dir / "lit.png", self.dir / "lit.json", lit)
+        palette.build_palette(self.colormaps, self.dir / "lit.png", self.dir / "lit.json", lit, self.flat)
         self.assertEqual((self.dir / "lit.png").read_bytes(), self.png.read_bytes())
 
     def test_a_look_changes_colors_but_not_the_layout(self):
         gray = dict(palette.NEUTRAL_LOOK, saturation=0.0)
-        mapping = palette.build_palette(self.colormaps, self.dir / "gray.png", self.dir / "gray.json", gray)
+        mapping = palette.build_palette(self.colormaps, self.dir / "gray.png", self.dir / "gray.json", gray, self.flat)
         self.assertEqual(mapping, self.mapping)
         image = pixels(self.dir / "gray.png")
         for slot in range(1, mapping["slots"]):
@@ -102,5 +107,21 @@ class PaletteTest(unittest.TestCase):
             after[row * palette.COLS + col] = after.get(row * palette.COLS + col, 0) + 1
         self.assertEqual(after.get(palette.WINDOW_SLOT), counts[slot])
         self.assertNotIn(slot, after)
+        for obj in created:
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+    def test_a_flat_color_piece_lands_on_its_own_swatch(self):
+        self.assertIn("kenney_nature-kit", self.mapping["flat"])
+        created = kit.import_glb(paths.pack_glb("kenney_nature-kit", "crops_cornStageD"))
+        seen = set()
+        for obj in [o for o in created if o.type == "MESH"]:
+            colors = {poly.index: palette.material_rgb(obj.data.materials[poly.material_index])
+                      for poly in obj.data.polygons}
+            palette.remap_flat(obj, "kenney_nature-kit", self.mapping)
+            for poly, _, (u, v) in face_points(obj):
+                got = sample(self.image, u, v)
+                self.assertLessEqual(sum(abs(a - b) for a, b in zip(got, colors[poly.index])), 3, poly.index)
+                seen.add(colors[poly.index])
+        self.assertGreater(len(seen), 1)
         for obj in created:
             bpy.data.objects.remove(obj, do_unlink=True)
