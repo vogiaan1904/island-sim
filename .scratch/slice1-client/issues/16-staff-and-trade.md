@@ -7,11 +7,11 @@ to 53.
 
 **Blocked by:** 11.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Staff: hiring sends `hire-commuters` and shows the seats limit in words; the port master card uses the rendered
+- [x] Staff: hiring sends `hire-commuters` and shows the seats limit in words; the port master card uses the rendered
       portrait; the auto-sell rule sends `set-auto-sell`.
-- [ ] Trade: goods tiles with price badge and any trend as an icon, never a chart; Sell sends `sell`; a refusal below
+- [x] Trade: goods tiles with price badge and any trend as an icon, never a chart; Sell sends `sell`; a refusal below
       the floor shows "The Mainland pays too little right now".
-- [ ] Two clear choices with pictures, not tabs, not tables.
-- [ ] Testing Library tests for hire, auto-sell, sell and the floor refusal; no-emoji.
+- [x] Two clear choices with pictures, not tabs, not tables.
+- [x] Testing Library tests for hire, auto-sell, sell and the floor refusal; no-emoji.

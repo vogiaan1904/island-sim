@@ -1,0 +1,169 @@
+/* The Trade panel body: goods as picture tiles with a price badge (island-ui, style A). Colors come from tokens.css. */
+.trade {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.5rem 0 0;
+  list-style: none;
+  font-family: var(--font);
+  color: var(--ink);
+}
+
+.trade-note {
+  margin: 0.75rem 0 0;
+  font-family: var(--font);
+  color: var(--muted);
+}
+
+.trade-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 0 3px 0 var(--shadow);
+}
+
+.trade-top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.trade-picture {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  background: #fff3d1;
+  border: 2.5px solid var(--ink);
+  border-radius: 16px;
+}
+
+.trade-info {
+  min-width: 0;
+}
+
+.trade-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.trade-price {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.1rem 0;
+}
+
+.trade-price-number {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-each,
+.trade-stored {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.trade-trend {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: #fff;
+  border-radius: 50%;
+}
+
+.trade-trend[data-trend='above'] {
+  background: var(--green);
+}
+
+.trade-trend[data-trend='below'] {
+  background: var(--red);
+}
+
+.trade-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  align-self: flex-start;
+  margin: 0;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #9a3412;
+  background: #fff1dc;
+  border: 2px solid #f59e0b;
+  border-radius: 999px;
+}
+
+.trade-buttons {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.trade-sell {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 0.8rem;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.trade-sell-all {
+  color: #fff;
+  background: var(--green);
+}
+
+.trade-sell:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+
+.trade-sell:disabled {
+  color: var(--muted);
+  background: var(--track);
+  border-color: var(--muted);
+  box-shadow: none;
+  cursor: default;
+}
+
+.trade-sell:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.trade-result,
+.trade-refusal {
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+.trade-result {
+  background: #e8f8ee;
+  border: 2px solid var(--green);
+}
+
+.trade-refusal {
+  background: var(--problem-bg);
+  border: 2px solid var(--problem-border);
+}
