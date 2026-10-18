@@ -1,13 +1,42 @@
 {
-  "tileSize": null,
-  "packScale": {},
+  "tileSize": 4.0,
+  "packScale": {
+    "kenney_building-kit": 1.0,
+    "kenney_coaster-kit": 2.0,
+    "kenney_fantasy-town-kit": 2.0,
+    "kenney_food-kit": 2.0,
+    "kenney_mini-characters": 1.7,
+    "kenney_minigolf-kit": 2.0,
+    "kenney_nature-kit": 2.0,
+    "kenney_pirate-kit": 1.0,
+    "kenney_survival-kit": 2.0,
+    "kenney_toy-car-kit": 2.0,
+    "kenney_train-kit": 1.0,
+    "kenney_watercraft-pack": 1.0
+  },
   "categories": ["building", "road", "nature", "prop", "vehicle", "ship", "character", "accessory", "good", "portrait"],
   "originTolerance": 0.02,
   "overhang": 0.25,
   "minCover": 0.6,
-  "triangleBudgets": {},
+  "triangleBudgets": {
+    "building": 1800,
+    "road": 400,
+    "nature": 500,
+    "prop": 1500,
+    "ship": 500,
+    "character": 900,
+    "accessory": 700,
+    "good": 400
+  },
   "iconSize": 256,
-  "look": { "saturation": 1.0, "lightness": 1.0, "warmth": 0.0 },
+  "look": {
+    "saturation": 1.1,
+    "lightness": 1.0,
+    "warmth": 0.06,
+    "sun": { "color": [1.0, 0.85, 0.68], "energy": 3.2, "elevation": 30, "azimuth": 40 },
+    "sky": [0.62, 0.62, 0.7],
+    "water": [0.1, 0.32, 0.45]
+  },
   "character": {
     "joints": ["root", "leg-left", "leg-right", "torso", "arm-left", "arm-right", "head"],
     "layers": {

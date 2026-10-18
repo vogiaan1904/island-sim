@@ -377,9 +377,13 @@ implementation plan includes tasks to update each skill once its domain has real
 
 ## 11. Open questions (resolved inside slice 1)
 
-- **Q10 Art direction:** decided by rendering real pack models in candidate looks in Blender (slice 1, step 1).
-- **Q12 Pack gaps:** the inventory in step 1 shows what's missing (nature, crops, industrial buildings); more CC0
-  packs get added to `assets/SOURCES.md` if needed.
+- **Q10 Art direction:** decided 2026-10-18 (plan 4 Task 5): the "golden" look, picked from four candidates rendered
+  on a vignette of real pack models: the packs' palette at saturation 1.1, lightness 1.0, warmth 0.06; one warm low
+  sun (color 1.0, 0.85, 0.68 linear, energy 3.2, 30 degrees up, azimuth 40); sky 0.62, 0.62, 0.70; water 0.10, 0.32,
+  0.45. The values live in `tools/assets/conventions.json` (`look`).
+- **Q12 Pack gaps:** decided 2026-10-18 (plan 4 Task 4): added Kenney Fantasy Town Kit 2.0, Survival Kit 2.0, Pirate
+  Kit 2.1, Nature Kit 2.1 and City Kit Roads 2.2, all CC0, in `assets/SOURCES.md`. The Nature Kit's material colors
+  join the palette as flat swatches.
 - **Balancing numbers** (population targets, costs, rates): set with the pacing harness against the targets in 2.1.
 - **Hosting provider:** chosen when the server is first deployed (5.5).
 
@@ -516,7 +520,11 @@ any of them during spec review; the skills follow this section.
 
 - The packs have no ready-made buildings (the Building Kit is modular pieces with flat roofs), so the pipeline has an
   **assemble** step, and the slice 1 inventory checks other CC0 packs for nature, crops and buildings.
-- Characters keep their own colormap (one extra texture); merging them into the shared palette is optional.
+- Characters move onto the shared palette too (plan 4, decision 6): one texture and one material for every model.
 - Model names use hyphens inside each part: `category_name-part_variant.glb`, variant always present.
 - glTF forward (+Z) is Blender's -Y. Each pack extracts to `assets/raw/<zip base name>/`.
-- Whether the palette image is embedded in each `.glb` or shipped once is decided in the slice 1 pipeline task.
+- The palette image ships once (`apps/client/public/models/palette.png`); no `.glb` embeds an image (plan 4,
+  decision 5).
+- Tile size: 4 world units, 1 unit is about 1 m (Building Kit at scale 1.0); a cottage is 2 x 2 wall modules on one
+  tile. Mini Characters at scale 1.7 (adults about 1.32 m); the other pack scales are in `conventions.json`. Roads use
+  the Fantasy Town Kit cobble tiles; the ferry starts from the Watercraft `boat-house-a` (decided 2026-10-18).

@@ -44,7 +44,7 @@ def cmd_icons(*names: str) -> None:
         reset_scene()
         model = recipes.RECIPES[name]["build"]()
         out = paths.ICONS / f"{name}.png"
-        icons.render([model], out, size)
+        icons.render([model], out, size, conventions.load()["look"])
         print(f"rendered {out}")
 
 

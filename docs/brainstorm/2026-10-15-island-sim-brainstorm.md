@@ -294,9 +294,9 @@ Friends: trade by ship (from Village), visit and watch (any time), shared world 
 - ~~Q7. Platform~~ → decided: mostly phones, desktop also supported (decision 12, changed from the desktop-first assumption)
 - ~~Q8. Player interaction~~ → decided: trade + co-op world projects, optional (decision 11)
 - ~~Q9. Assets~~ → decided: many downloaded packs, unified via Blender MCP (decision 13)
-- **Q10. Target vibe / art direction:** what should the unified look be (e.g. bright low-poly, soft pastel, semi-realistic)? We need this before the style unification pass
+- ~~Q10. Target vibe / art direction~~ → decided 2026-10-18: the "golden" look (the packs' palette slightly more saturated and warmer, one low warm sun), see spec 11
 - ~~Q11. Blender install~~ → done: Blender 5.2.2 LTS installed, MCP add-on file in place
-- Q12. Which packs to use: once the packs are in the project, Claude inventories them (what exists, styles, gaps) via Blender MCP
+- ~~Q12. Which packs to use~~ → decided 2026-10-18: the ten original Kenney packs plus Fantasy Town, Survival, Pirate, Nature and City Kit Roads (spec 11)
 
 ## The core idea
 

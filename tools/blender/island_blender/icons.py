@@ -21,8 +21,11 @@ def use_engine(scene) -> str:
     raise RuntimeError("no real-time render engine found")
 
 
-def rig(size: int, sun_energy: float = 3.0, sun_color=(1.0, 1.0, 1.0), world_color=(0.6, 0.65, 0.7)):
-    """Creates (or reuses) the icon camera and sun in the current scene; returns the camera."""
+def rig(size: int, look: dict):
+    """Creates (or reuses) the icon camera and sun in the current scene, lit by the look; returns the camera.
+
+    look["sun"] gives the sun's color, energy, elevation and azimuth (degrees); look["sky"] the world color.
+    """
     scene = bpy.context.scene
     use_engine(scene)
     scene.render.resolution_x = scene.render.resolution_y = size
@@ -34,17 +37,18 @@ def rig(size: int, sun_energy: float = 3.0, sun_color=(1.0, 1.0, 1.0), world_col
     scene.world = world
     world.use_nodes = True
     background = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
-    background.inputs["Color"].default_value = (*world_color, 1.0)
+    background.inputs["Color"].default_value = (*look["sky"], 1.0)
     camera = bpy.data.objects.get("icon-camera")
     if camera is None:
         camera = bpy.data.objects.new("icon-camera", bpy.data.cameras.new("icon-camera"))
         scene.collection.objects.link(camera)
         sun = bpy.data.objects.new("icon-sun", bpy.data.lights.new("icon-sun", "SUN"))
-        sun.rotation_euler = Euler((math.radians(50), math.radians(10), math.radians(30)), "XYZ")
         scene.collection.objects.link(sun)
     sun = bpy.data.objects["icon-sun"]
-    sun.data.energy = sun_energy
-    sun.data.color = sun_color
+    light = look["sun"]
+    sun.rotation_euler = Euler((math.radians(90 - light["elevation"]), 0.0, math.radians(light["azimuth"])), "XYZ")
+    sun.data.energy = light["energy"]
+    sun.data.color = light["color"]
     camera.data.type = "ORTHO"
     camera.rotation_euler = CAMERA_TURN
     scene.camera = camera
@@ -64,10 +68,10 @@ def frame(camera, objects: list) -> None:
     camera.data.clip_end = (hi.z - lo.z) + 20.0
 
 
-def render(objects: list, path, size: int) -> None:
-    """Renders only the given objects to a PNG of size x size pixels."""
+def render(objects: list, path, size: int, look: dict) -> None:
+    """Renders only the given objects to a PNG of size x size pixels, lit by the look."""
     scene = bpy.context.scene
-    camera = rig(size)
+    camera = rig(size, look)
     shown = set(objects) | {camera, bpy.data.objects["icon-sun"]}
     hidden = [o for o in scene.objects if o not in shown and not o.hide_render]
     for o in hidden:
