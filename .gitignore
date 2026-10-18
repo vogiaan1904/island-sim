@@ -7,6 +7,9 @@
 assets/packs/
 assets/raw/
 
+# The server's database and backups (pnpm server): they hold password and session hashes, never commit them
+data/
+
 # Dependencies and build output
 node_modules/
 dist/

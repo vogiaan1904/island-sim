@@ -3,7 +3,9 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { dirname } from 'node:path';
 import { Accounts } from './accounts/accounts.ts';
+import { createAdminApi } from './admin/api.ts';
 import { AccountStore } from './accounts/store.ts';
+import { backupDatabase } from './backup.ts';
 import { systemClock, type Clock } from './clock.ts';
 import type { ServerConfig } from './config.ts';
 import { openDatabase } from './db.ts';
@@ -23,6 +25,8 @@ export interface StartOptions {
 export interface IslandServer {
   /** The game's address, e.g. http://127.0.0.1:8787. */
   readonly url: string;
+  /** The admin interface, on 127.0.0.1 only. */
+  readonly adminUrl: string;
   readonly config: ServerConfig;
   readonly accounts: Accounts;
   readonly worlds: Worlds;
@@ -56,9 +60,27 @@ export async function startServer(config: ServerConfig, options: StartOptions = 
   const gateway = new Gateway({ config, clock, log, worlds, store, accounts });
   http.on('upgrade', (req, socket, head) => gateway.upgrade(req, socket, head));
   await listen(http, config.port, config.host);
+
+  const backup = () => (config.backupDir === null ? Promise.resolve(null) : backupDatabase(db, config.backupDir, clock.now()));
+  const daily =
+    config.backupDir === null
+      ? null
+      : setInterval(() => {
+          backup().then(
+            (path) => log.info('backup written', { path }),
+            (error: unknown) => log.error('backup failed', { error: error instanceof Error ? error.message : String(error) }),
+          );
+        }, config.backupMs);
+  const adminApi = createAdminApi({ accounts, worlds, log, backup });
+  const admin = createServer((req, res) => {
+    void adminApi(req, res);
+  });
+  await listen(admin, config.adminPort, '127.0.0.1');
+
   if (options.autoTick !== false) worlds.start();
   const url = `http://${config.host}:${(http.address() as AddressInfo).port}`;
-  log.info('server started', { url, worlds: worlds.all().length, notLoaded: worlds.failed.size });
+  const adminUrl = `http://127.0.0.1:${(admin.address() as AddressInfo).port}`;
+  log.info('server started', { url, adminUrl, worlds: worlds.all().length, notLoaded: worlds.failed.size });
 
   let closing: Promise<void> | null = null;
   const close = async (snapshot: boolean) => {
@@ -68,13 +90,17 @@ export async function startServer(config: ServerConfig, options: StartOptions = 
     for (const runtime of worlds.all()) {
       if (snapshot && runtime.status !== 'paused') runtime.snapshot();
     }
-    http.closeAllConnections();
-    await new Promise<void>((resolve) => http.close(() => resolve()));
+    if (daily !== null) clearInterval(daily);
+    for (const listener of [http, admin]) {
+      listener.closeAllConnections();
+      await new Promise<void>((resolve) => listener.close(() => resolve()));
+    }
     db.close();
     log.info('server stopped', {});
   };
   return {
     url,
+    adminUrl,
     config,
     accounts,
     worlds,

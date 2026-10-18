@@ -12,7 +12,9 @@
     "typecheck": "tsc -p packages/content && tsc -p packages/sim && tsc -p packages/protocol && tsc -p apps/server && tsc -p tools/pacing",
     "lint": "eslint .",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
-    "pacing": "node --disable-warning=ExperimentalWarning tools/pacing/src/run.ts"
+    "pacing": "node --disable-warning=ExperimentalWarning tools/pacing/src/run.ts",
+    "server": "node --disable-warning=ExperimentalWarning apps/server/src/main.ts",
+    "admin": "node --disable-warning=ExperimentalWarning apps/server/src/admin/cli.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
