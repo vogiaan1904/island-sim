@@ -5,11 +5,11 @@ status, residents) on its mirror instead of copying rules. Spec: "Sim: the islan
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A pure, exported function beside `worldEntities` that assembles one island's state from its `island`, `terrain`,
+- [x] A pure, exported function beside `worldEntities` that assembles one island's state from its `island`, `terrain`,
       `roads`, `building` and `transit` entities (buildings and shipments in id order, as the sim keeps them).
-- [ ] Round-trip test: for worlds at several points of the golden scenario, the island assembled from
+- [x] Round-trip test: for worlds at several points of the golden scenario, the island assembled from
       `worldEntities` equals the world's island, and so does one assembled after a run of `applyChanges` updates.
-- [ ] Missing or malformed entities give a clear error, not a half-built island.
-- [ ] No change to state, hashes or `SIM_VERSION`.
+- [x] Missing or malformed entities give a clear error, not a half-built island.
+- [x] No change to state, hashes or `SIM_VERSION`.

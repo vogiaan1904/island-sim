@@ -76,7 +76,7 @@ the same placement checks as the server.
 | Stock and goods held | `stock.ts` | `stockOf`, `stockTotal`, `goodsHeld` |
 | Residents | `people.ts` | `residentsOf`, `childrenOf`, `workersOf` |
 | Mainland trade | `mainland.ts` | `mainlandPaysEnough`, `buyPriceCents`, `storedForSale` |
-| Change sets for the server | `changes.ts` | `captureEntities`, `diffEntities`, `applyChanges`, `worldEntities` |
+| Change sets for the server | `changes.ts` | `captureEntities`, `diffEntities`, `applyChanges`, `worldEntities`, `islandFromEntities(entities, slot)` (the inverse for one island, for the client mirror) |
 | Invariants (runs `validateWorld`; tick moves by 0 or 1) | `invariants.ts` | `checkInvariants(before, after, ledger, content)` |
 | Snapshots, versions and the world shape | `snapshot.ts`, `version.ts`, `validate.ts` | `serializeWorld`, `loadWorld(json, content)`, `validateWorld`, `MIGRATIONS`, `SIM_VERSION` |
 | Content data | `packages/content/src/` | `content`, `Content`, `BuildingDef`, `WorldRules` |

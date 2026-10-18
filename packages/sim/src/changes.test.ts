@@ -1,8 +1,8 @@
 import { content } from '@island/content';
 import { describe, expect, it } from 'vitest';
-import { FIRST_BUILDINGS } from '../test/scenarios.ts';
+import { FIRST_BUILDINGS, OUTPOST_TO_SETTLEMENT } from '../test/scenarios.ts';
 import { SMALL, buildingOf, village } from '../test/fixtures.ts';
-import { applyChanges, captureEntities, diffEntities, worldEntities } from './changes.ts';
+import { applyChanges, captureEntities, diffEntities, islandFromEntities, worldEntities } from './changes.ts';
 import { applyCommand } from './commands/apply.ts';
 import { tickWorld } from './tick.ts';
 import { createWorld } from './world.ts';
@@ -87,5 +87,75 @@ describe('change sets', () => {
     const capture = captureEntities(world);
     tickWorld(world, content);
     expect(diffEntities(capture, world).changes).toEqual({ changed: [], removed: [] });
+  });
+});
+
+describe('the island from its entities', () => {
+  it('equals the world island, from the entities and after a run of updates, at several points of the scenario', () => {
+    const world = createWorld(42, content);
+    const mirror = worldEntities(structuredClone(world));
+    let capture = captureEntities(world);
+    let sequence = 1;
+    const checkpoints = new Set([0, 1, 400, 1500, 3000, 5000]);
+    const publish = () => {
+      const diff = diffEntities(capture, world);
+      applyChanges(mirror, diff.changes);
+      capture = diff.capture;
+    };
+    for (let tick = 0; tick <= 5000; tick += 1) {
+      for (const step of OUTPOST_TO_SETTLEMENT) {
+        if (step.afterTick !== tick) continue;
+        if (applyCommand(world, content, step.command, { sequence }).ok) sequence += 1;
+        publish();
+      }
+      if (checkpoints.has(tick)) {
+        for (const island of world.islands) {
+          expect(islandFromEntities(worldEntities(world), island.slot)).toEqual(island);
+          expect(islandFromEntities(mirror, island.slot)).toEqual(island);
+        }
+      }
+      tickWorld(world, content);
+      publish();
+    }
+    expect(world.islands[0]?.buildings.length).toBeGreaterThan(5);
+  }, 60_000);
+
+  it('keeps buildings and shipments in id order whatever order the entities arrive in', () => {
+    const world = village(1100);
+    buildingOf(world, 2).stock = { vegetables: 5 };
+    tickWorld(world, SMALL);
+    const island = world.islands[0]!;
+    expect(island.transit.length).toBeGreaterThan(0);
+    const reversed = new Map([...worldEntities(world)].reverse());
+    expect(islandFromEntities(reversed, island.slot)).toEqual(island);
+  });
+
+  it('does not alias the entities: changing the island leaves the mirror alone', () => {
+    const world = createWorld(42, content);
+    const mirror = worldEntities(world);
+    const island = islandFromEntities(mirror, 0);
+    island.roads = '0'.repeat(island.roads.length);
+    island.name = 'changed';
+    expect(mirror.get('roads/0')).toBe(world.islands[0]?.roads);
+    expect(mirror.get('island/0')).toMatchObject({ name: world.islands[0]?.name });
+  });
+
+  it('refuses a missing or malformed entity with a clear error', () => {
+    const world = village(1100);
+    const base = worldEntities(world);
+    const without = (key: string) => new Map([...base].filter(([k]) => k !== key));
+    const patched = (key: string, value: unknown) => new Map(base).set(key, value);
+    expect(() => islandFromEntities(without('island/0'), 0)).toThrow(/island\/0/);
+    expect(() => islandFromEntities(without('terrain/0'), 0)).toThrow(/terrain\/0/);
+    expect(() => islandFromEntities(without('roads/0'), 0)).toThrow(/roads\/0/);
+    expect(() => islandFromEntities(base, 7)).toThrow(/island\/7/);
+    expect(() => islandFromEntities(patched('terrain/0', 42), 0)).toThrow(/terrain\/0/);
+    expect(() => islandFromEntities(patched('roads/0', '01'), 0)).toThrow(/roads\/0/);
+    expect(() => islandFromEntities(patched('island/0', null), 0)).toThrow(/island\/0/);
+    expect(() => islandFromEntities(patched('island/0', { slot: 1 }), 0)).toThrow(/island\/0/);
+    expect(() => islandFromEntities(patched('building/0/2', 'x'), 0)).toThrow(/building\/0\/2/);
+    expect(() => islandFromEntities(patched('building/0/2', { id: 9 }), 0)).toThrow(/building\/0\/2/);
+    expect(() => islandFromEntities(patched('transit/0/1', []), 0)).toThrow(/transit\/0\/1/);
+    expect(() => islandFromEntities(patched('building/0/x', {}), 0)).toThrow(/building\/0\/x/);
   });
 });
