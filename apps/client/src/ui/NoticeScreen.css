@@ -1,0 +1,59 @@
+.notice-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  background: linear-gradient(180deg, var(--sky) 0%, var(--water) 100%);
+}
+
+.notice-card {
+  width: min(100%, 22rem);
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1.25rem 1.75rem;
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 1.75rem;
+  box-shadow: 0 4px 0 var(--shadow);
+  text-align: center;
+}
+
+.notice-picture {
+  width: 7rem;
+  height: 7rem;
+  padding: 0.375rem;
+  background: var(--picture-tile);
+  border: 2.5px solid var(--ink);
+  border-radius: 1.25rem;
+  object-fit: contain;
+}
+
+.notice-title {
+  margin: 0.25rem 0 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.notice-line {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.notice-button {
+  min-height: 48px;
+  min-width: 8rem;
+  margin-top: 0.5rem;
+  font: inherit;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--build-top), var(--build-bottom));
+  border: 2.5px solid var(--ink);
+  border-radius: 0.75rem;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+}

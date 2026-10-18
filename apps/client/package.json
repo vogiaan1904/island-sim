@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@island/assets": "workspace:*",
     "@island/content": "workspace:*",
     "@island/protocol": "workspace:*",
     "@island/sim": "workspace:*",

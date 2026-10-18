@@ -1,0 +1,9 @@
+.island-canvas {
+  position: fixed;
+  inset: 0;
+  /* The game handles its own drag and pinch: no browser pan, zoom, callouts or selection on the island. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}

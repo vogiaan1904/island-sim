@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { App } from '../App.tsx';
+import { stubGame } from '../test/game.ts';
 import { expectNoEmoji } from '../test/no-emoji.ts';
 import { LoadingScreen } from './LoadingScreen.tsx';
 
@@ -24,7 +25,7 @@ describe('the loading page', () => {
   });
 
   it('is the first screen of the app', () => {
-    const { container } = render(<App />);
+    const { container } = render(<App game={stubGame()} />);
     expect(screen.getByRole('status')).toHaveTextContent('Getting your island ready');
     expectNoEmoji(container);
   });

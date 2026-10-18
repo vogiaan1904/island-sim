@@ -29,6 +29,9 @@ importers:
 
   apps/client:
     dependencies:
+      '@island/assets':
+        specifier: workspace:*
+        version: link:../../tools/assets
       '@island/content':
         specifier: workspace:*
         version: link:../../packages/content
