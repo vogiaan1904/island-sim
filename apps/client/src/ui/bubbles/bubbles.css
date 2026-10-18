@@ -1,0 +1,267 @@
+/* Bubbles over the island and the coins that fly to the counter: style A (island-ui, screens.md sections 2 and 3).
+   Colors come from styles/tokens.css. The layer fills the screen but lets touches through to the island; only a bubble is
+   a target. A bubble's position is written onto it every frame (translate to its anchor), so its own motion lives on
+   the inner body. */
+.bubble-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  font-family: var(--font);
+  color: var(--ink);
+}
+
+.bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* The anchor is the tail tip: the bubble stands above it, centered. */
+  margin: 0;
+  padding: 0;
+  width: 0;
+  height: 0;
+  border: 0;
+  background: none;
+  pointer-events: none;
+  cursor: pointer;
+  /* The frame loop sets transform and visibility. */
+  will-change: transform;
+  isolation: isolate;
+}
+
+/* The touch target is 44 px at least, centered over the body, even when the picture is smaller. */
+.bubble::before {
+  content: '';
+  position: absolute;
+  left: -22px;
+  bottom: 0;
+  width: 44px;
+  height: 56px;
+  pointer-events: auto;
+}
+
+.bubble:focus-visible {
+  outline: none;
+}
+
+.bubble:focus-visible .bubble-body {
+  outline: 3px solid var(--teal);
+  outline-offset: 3px;
+}
+
+.bubble-body {
+  position: absolute;
+  left: -20px;
+  bottom: 12px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 0 3px 0 var(--shadow);
+  transition: transform 120ms ease-out;
+}
+
+.bubble:active .bubble-body {
+  transform: scale(0.92);
+}
+
+/* The tail points down at the building. */
+.bubble-tail {
+  position: absolute;
+  left: -6px;
+  bottom: 4px;
+  width: 12px;
+  height: 12px;
+  background: var(--surface);
+  border-right: 2.5px solid var(--ink);
+  border-bottom: 2.5px solid var(--ink);
+  transform: rotate(45deg) translate(-2px, -2px);
+  z-index: -1;
+}
+
+/* A wish is a thought: a trail of small circles instead of a tail. */
+.bubble-trail {
+  position: absolute;
+  left: -4px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+}
+
+.bubble-trail::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: -6px;
+  width: 5px;
+  height: 5px;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+}
+
+/* Problem: the picture in a warm red-orange with a small red badge, a gentle bob. Never an alarm. */
+.bubble[data-kind='problem'] .bubble-body {
+  color: var(--waiting-ink);
+  animation: bubble-bob 1.6s ease-in-out infinite;
+}
+
+.bubble-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 12px;
+  height: 12px;
+  background: var(--red);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+}
+
+/* Wish: calm, no bob, the wished thing in green. */
+.bubble[data-kind='wish'] .bubble-body {
+  color: var(--teal);
+}
+
+/* Reward: yellow with a sparkle, a gentle bob. */
+.bubble[data-kind='reward'] .bubble-body {
+  background: var(--yellow);
+  color: var(--ink);
+  animation: bubble-bob 1.6s ease-in-out infinite;
+}
+
+.bubble[data-kind='reward'] .bubble-tail {
+  background: var(--yellow);
+}
+
+.bubble[aria-busy='true'] {
+  opacity: 0.6;
+}
+
+.bubble-sparkle {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  width: 9px;
+  height: 9px;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  transform: rotate(45deg);
+  animation: bubble-twinkle 1.6s ease-in-out infinite;
+}
+
+/* Zoomed out to the whole island: small dots, problems only. The touch target stays 44 px. */
+.bubble[data-detail='dots'] .bubble-body {
+  left: -7px;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  background: var(--waiting-border);
+  box-shadow: 0 2px 0 var(--shadow);
+  animation: none;
+}
+
+.bubble[data-detail='dots']::before {
+  height: 44px;
+}
+
+.bubble-say {
+  position: absolute;
+  left: 50%;
+  top: max(5rem, calc(env(safe-area-inset-top) + 4.5rem));
+  transform: translateX(-50%);
+  max-width: min(22rem, 86vw);
+  margin: 0;
+  padding: 0.4rem 0.9rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 3px 0 var(--shadow);
+}
+
+/* Coins: the outer span carries them across, the inner one lifts them in an arc. */
+.coin-flight {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  pointer-events: none;
+  animation: coin-x var(--time) var(--delay) linear both;
+}
+
+.coin-flight-y {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--yellow);
+  animation: coin-y var(--time) var(--delay) cubic-bezier(0.3, -0.6, 0.6, 1) both;
+}
+
+@keyframes coin-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(var(--dx));
+  }
+}
+
+@keyframes coin-y {
+  from {
+    transform: translateY(0) scale(1);
+  }
+  to {
+    transform: translateY(var(--dy)) scale(0.7);
+  }
+}
+
+@keyframes bubble-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes bubble-twinkle {
+  0%,
+  100% {
+    transform: rotate(45deg) scale(0.8);
+  }
+  50% {
+    transform: rotate(45deg) scale(1.1);
+  }
+}
+
+/* The coin counter pops slightly when the coins land (set by the layer for a moment). */
+[data-counter][data-pop='true'] {
+  animation: counter-pop 320ms ease-out;
+}
+
+@keyframes counter-pop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble[data-kind] .bubble-body,
+  .bubble-sparkle,
+  [data-counter][data-pop='true'] {
+    animation: none;
+  }
+}
