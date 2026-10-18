@@ -1,0 +1,37 @@
+{
+  "tileSize": null,
+  "packScale": {},
+  "categories": ["building", "road", "nature", "prop", "vehicle", "ship", "character", "accessory", "good", "portrait"],
+  "originTolerance": 0.02,
+  "overhang": 0.25,
+  "minCover": 0.6,
+  "triangleBudgets": {},
+  "iconSize": 256,
+  "look": { "saturation": 1.0, "lightness": 1.0, "warmth": 0.0 },
+  "character": {
+    "joints": ["root", "leg-left", "leg-right", "torso", "arm-left", "arm-right", "head"],
+    "layers": {
+      "legs": ["root", "leg-left", "leg-right", "torso", "head"],
+      "arms": ["arm-left", "arm-right"]
+    },
+    "clips": [
+      { "name": "idle", "layer": "legs" },
+      { "name": "walk", "layer": "legs" },
+      { "name": "holding-both", "layer": "arms" },
+      { "name": "sprint", "layer": "full" },
+      { "name": "sit", "layer": "full" },
+      { "name": "drive", "layer": "full" },
+      { "name": "pick-up", "layer": "full" },
+      { "name": "interact-left", "layer": "full" },
+      { "name": "interact-right", "layer": "full" },
+      { "name": "emote-yes", "layer": "full" },
+      { "name": "wheelchair-sit", "layer": "full" },
+      { "name": "wheelchair-look-left", "layer": "full" },
+      { "name": "wheelchair-look-right", "layer": "full" },
+      { "name": "wheelchair-move-forward", "layer": "full" },
+      { "name": "wheelchair-move-back", "layer": "full" },
+      { "name": "wheelchair-move-left", "layer": "full" },
+      { "name": "wheelchair-move-right", "layer": "full" }
+    ]
+  }
+}

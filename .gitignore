@@ -6,6 +6,8 @@
 # Original asset packs and their extracted contents: re-downloadable, see assets/SOURCES.md
 assets/packs/
 assets/raw/
+# Pipeline intermediates (staging exports, the palette map, working .blend files): rebuilt by pnpm blender
+assets/build/
 
 # The server's database and backups (pnpm server): they hold password and session hashes, never commit them
 data/
