@@ -28,6 +28,12 @@ describe('configFromEnv', () => {
     });
   });
 
+  it('reads where the built client is, and turns serving it off with an empty value', () => {
+    expect(DEFAULT_CONFIG.clientDir).toMatch(/apps[\\/]client[\\/]dist$/);
+    expect(configFromEnv({ ISLAND_CLIENT_DIR: '/srv/island/client' }).clientDir).toBe('/srv/island/client');
+    expect(configFromEnv({ ISLAND_CLIENT_DIR: '' }).clientDir).toBeNull();
+  });
+
   it('refuses a port that is not a number', () => {
     expect(() => configFromEnv({ ISLAND_PORT: 'eighty' })).toThrow(/ISLAND_PORT/);
   });

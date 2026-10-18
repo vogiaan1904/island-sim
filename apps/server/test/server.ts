@@ -18,6 +18,7 @@ export async function startTestServer(overrides: Partial<ServerConfig> = {}, clo
     adminPort: 0,
     databasePath: ':memory:',
     backupDir: null,
+    clientDir: null,
     origin: ORIGIN,
     ...overrides,
   };

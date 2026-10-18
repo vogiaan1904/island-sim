@@ -10,6 +10,7 @@ import { systemClock, type Clock } from './clock.ts';
 import type { ServerConfig } from './config.ts';
 import { openDatabase } from './db.ts';
 import { createApi } from './http/api.ts';
+import { createStaticHandler } from './http/static.ts';
 import { consoleLog, type Log } from './log.ts';
 import { Gateway } from './sync/gateway.ts';
 import { Worlds } from './worlds/registry.ts';
@@ -116,7 +117,14 @@ export async function startServer(config: ServerConfig, options: StartOptions = 
     }
 
     const api = createApi({ config, clock, log, accounts, worlds, closing: () => closing });
-    const http = createServer(guarded(api, 'request', log));
+    const staticFiles = config.clientDir === null ? null : createStaticHandler(config.clientDir);
+    // /api and /ws belong to the API; every other path is the client, and anything the client cannot answer falls
+    // back to the API's own not-found.
+    const serve = async (req: IncomingMessage, res: ServerResponse) => {
+      if (staticFiles && !isServerPath(req.url ?? '/') && (await staticFiles(req, res))) return;
+      await api(req, res);
+    };
+    const http = createServer(guarded(serve, 'request', log));
     listeners.push(http);
     gateway = new Gateway({ config, clock, log, worlds, store, accounts });
     http.on('upgrade', (req, socket, head) => gateway?.upgrade(req, socket, head));
@@ -185,6 +193,12 @@ function guarded(
       res.end();
     });
   };
+}
+
+/** True for /api, /ws and what is under them: the paths that are never the client's. */
+function isServerPath(target: string): boolean {
+  const path = target.split(/[?#]/, 1)[0] ?? '';
+  return /^\/(api|ws)(\/|$)/.test(path);
 }
 
 function errorMessage(error: unknown): string {

@@ -60,7 +60,7 @@ verification below. Hard bugs start with `/diagnosing-bugs`.
 | `packages/sim` | The pure simulation; unit tests beside the code, whole runs and goldens in `test/` | `island-game-logic` |
 | `packages/protocol` | Valibot schemas for messages, commands and changes; the protocol version | `island-server` |
 | `apps/server` | Worlds ticking 24/7, SQLite, accounts, WebSocket sync, admin CLI; integration tests in `test/` | `island-server` |
-| `apps/client` | Not built yet (plan 5): the 3D island and the style A UI | `island-3d-client`, `island-ui` |
+| `apps/client` | The browser client (plan 5, in progress): Vite, React, R3F; the 3D island and the style A UI. `src/test/no-emoji.ts` is the shared no-emoji check | `island-3d-client`, `island-ui` |
 | `tools/pacing` | The pacing harness: a bot run against the stage-time targets | `island-testing` |
 | `assets/` | Kenney packs (git-ignored) and `SOURCES.md` | `island-blender` |
 | `docs/brainstorm/` | Numbered decisions, open questions, the design progress checklist | |
@@ -73,6 +73,17 @@ verification below. Hard bugs start with `/diagnosing-bugs`.
 Load `island-testing` for any test or "done" claim, whatever the layer. Durable decisions go where they belong:
 product decisions in the brainstorm's decisions table, resolved design details in spec section 12, layer conventions
 in that layer's skill.
+
+## Running and Building
+
+| Command | What it does |
+|---|---|
+| `pnpm server` | The game server on `http://127.0.0.1:8787`: `/api`, `/ws` and the built client from `apps/client/dist` (`ISLAND_CLIENT_DIR` changes the folder, empty turns it off) |
+| `pnpm client:build` | Builds the client into `apps/client/dist`; run it before `pnpm server` to play the build |
+| `pnpm server:dev` | The server for development: `ISLAND_ORIGIN=http://localhost:5173` so the WebSocket Origin check passes, and `ISLAND_SECURE_COOKIES=0` for plain HTTP |
+| `pnpm client` | The Vite dev server with hot reload on `http://localhost:5173`; it proxies `/api` and `/ws` to `pnpm server:dev` (`ISLAND_SERVER_URL` if that listens elsewhere) |
+
+For development run `pnpm server:dev` and `pnpm client` in two terminals and open `http://localhost:5173`.
 
 ## Verification Protocol
 
@@ -90,8 +101,8 @@ in that layer's skill.
      `apps/*` by itself, not `tools/*`.
    - A changed skill: run skill-creator's validator on it.
    - The look, rendering cost or phone speed: the agent cannot claim these. Prepare the check and ask the user.
-4. **Report:** what changed, each command run with its summary lines, and what could not be run and why. Client
-   tests, Playwright and the asset checks do not exist yet; never claim them. The full list is "Before you say
+4. **Report:** what changed, each command run with its summary lines, and what could not be run and why. Playwright
+   and screenshot checks do not exist yet (plan 6); never claim them. The 3D look and phone speed cannot be claimed. The full list is "Before you say
    done" in `island-testing`.
 
 ## Failure Escalation

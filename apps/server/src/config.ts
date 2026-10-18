@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 export interface ServerConfig {
   /** Address the game listens on; HTTPS is terminated by the reverse proxy in front (spec 5.4, 5.5). */
   host: string;
@@ -9,6 +11,8 @@ export interface ServerConfig {
   origin: string;
   /** The SQLite file, or ':memory:' (tests). */
   databasePath: string;
+  /** The client's build output (apps/client/dist) that the server serves beside /api and /ws; null serves no client. */
+  clientDir: string | null;
   /** Where the daily backups go; null turns them off. */
   backupDir: string | null;
   /** 2.5 s per tick, the same for every world (spec 4.1). */
@@ -34,6 +38,7 @@ export const DEFAULT_CONFIG: ServerConfig = {
   adminPort: 8788,
   origin: 'http://localhost:8787',
   databasePath: 'data/island.sqlite',
+  clientDir: fileURLToPath(new URL('../../client/dist', import.meta.url)),
   backupDir: 'data/backups',
   tickMs: 2_500,
   snapshotMs: 5 * 60_000,
@@ -53,6 +58,7 @@ export function configFromEnv(env: Record<string, string | undefined>): ServerCo
   if (env.ISLAND_ADMIN_PORT) config.adminPort = port(env.ISLAND_ADMIN_PORT, 'ISLAND_ADMIN_PORT');
   if (env.ISLAND_ORIGIN) config.origin = new URL(env.ISLAND_ORIGIN).origin;
   if (env.ISLAND_DB) config.databasePath = env.ISLAND_DB;
+  if (env.ISLAND_CLIENT_DIR !== undefined) config.clientDir = env.ISLAND_CLIENT_DIR === '' ? null : env.ISLAND_CLIENT_DIR;
   if (env.ISLAND_BACKUP_DIR !== undefined) config.backupDir = env.ISLAND_BACKUP_DIR === '' ? null : env.ISLAND_BACKUP_DIR;
   if (env.ISLAND_SECURE_COOKIES === '0') config.secureCookies = false;
   if (env.ISLAND_TRUST_PROXY === '1') config.trustProxy = true;
