@@ -1,4 +1,4 @@
-import type { AccountInfo, ApiReason, MeResponse } from '@island/protocol';
+import type { AccountInfo, ApiReason, InviteResponse, JoinedResponse, MeResponse, RegisterRequest } from '@island/protocol';
 
 // The client side of the server's /api routes. The page is served from the same origin, so the browser sends the
 // Origin header and the session cookie by itself. Responses are typed with the protocol's types and checked only as
@@ -16,7 +16,17 @@ export interface Api {
   me(): Promise<ApiResult<MeResponse>>;
   /** The username in any letter case; on success the server sets the session cookie. */
   login(username: string, password: string): Promise<ApiResult<{ account: AccountInfo }>>;
-  /** Any other route, for the screens that come later (register, worlds, invite, logout, password). */
+  /** A new account with an island in the world the invite code belongs to; on success the session cookie is set. */
+  register(request: RegisterRequest): Promise<ApiResult<JoinedResponse>>;
+  /** Ends this device's session only. */
+  logout(): Promise<ApiResult<{ ok: true }>>;
+  /** A new world; the island name is the creator's own island in it. */
+  createWorld(islandName: string): Promise<ApiResult<JoinedResponse>>;
+  /** An island in the world the invite code belongs to. */
+  joinWorld(inviteCode: string, islandName: string): Promise<ApiResult<JoinedResponse>>;
+  /** A new invite code for a world the account created; the old one stops working. */
+  regenerateInvite(world: string): Promise<ApiResult<InviteResponse>>;
+  /** Any other route, for the screens that come later (password). */
   request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<ApiResult<T>>;
 }
 
@@ -44,6 +54,11 @@ export function createApi(fetchFn: FetchLike = (input, init) => fetch(input, ini
   return {
     me: () => request<MeResponse>('GET', '/api/me'),
     login: (username, password) => request<{ account: AccountInfo }>('POST', '/api/login', { username, password }),
+    register: (body) => request<JoinedResponse>('POST', '/api/register', body),
+    logout: () => request<{ ok: true }>('POST', '/api/logout', {}),
+    createWorld: (islandName) => request<JoinedResponse>('POST', '/api/worlds', { islandName }),
+    joinWorld: (inviteCode, islandName) => request<JoinedResponse>('POST', '/api/worlds/join', { inviteCode, islandName }),
+    regenerateInvite: (world) => request<InviteResponse>('POST', '/api/worlds/invite', { world }),
     request,
   };
 }

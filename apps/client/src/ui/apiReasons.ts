@@ -8,6 +8,16 @@ const TEXT: Partial<Record<ClientApiReason, string>> = {
   'too-many-attempts': 'Too many tries for now. Wait a few minutes, then try again.',
   unreachable: "The island can't be reached right now. Check your connection and try again.",
   'shutting-down': 'The island is taking a short break. Try again in a minute.',
+  'username-taken': 'Someone already uses that username. Try another one.',
+  'bad-invite-code': "That invite code doesn't work. Check it with your friend.",
+  'world-full': 'This world is full. Ask your friend if they have room somewhere else.',
+  'world-resting': 'This world is resting, try again soon.',
+  'already-has-island': 'You already have an island in that world.',
+  'bad-island-name': "That island name doesn't work. Use 2 to 24 letters, digits, spaces, - or '.",
+  'bad-request': "Something in the form doesn't look right. Check the names and try again.",
+  'not-signed-in': 'You were signed out. Log in again to continue.',
+  'no-such-world': "That world can't be found any more.",
+  'not-the-creator': 'Only the person who made the world can change its invite code.',
 };
 
 export function apiReasonText(reason: ClientApiReason): string {

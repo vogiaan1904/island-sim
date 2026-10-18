@@ -1,0 +1,276 @@
+/* Shared by the sign-up and world screens (style A: thick outline, hard shadow, bright on cream). */
+.form-screen {
+  min-height: 100dvh;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  background: linear-gradient(180deg, var(--sky) 0%, var(--water) 100%);
+}
+
+.form-card {
+  width: min(100%, 24rem);
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.5rem 1.25rem 1.75rem;
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 1.75rem;
+  box-shadow: 0 4px 0 var(--shadow);
+}
+
+.form-picture {
+  justify-self: center;
+  width: 6rem;
+  height: 6rem;
+  padding: 0.375rem;
+  background: var(--picture-tile);
+  border: 2.5px solid var(--ink);
+  border-radius: 1.25rem;
+  object-fit: contain;
+}
+
+.form-title {
+  margin: 0;
+  text-align: center;
+  font-size: 1.625rem;
+  font-weight: 700;
+}
+
+.form-subtitle {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.form-line {
+  margin: 0;
+  text-align: center;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.form-field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.form-field label {
+  font-weight: 600;
+}
+
+.form-field input {
+  min-height: 44px;
+  padding: 0 0.875rem;
+  font: inherit;
+  /* 16px or more keeps iOS Safari from zooming into the field. */
+  font-size: 1.0625rem;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 0.75rem;
+}
+
+.form-field input[aria-invalid='true'] {
+  border-color: var(--problem-border);
+  background: var(--problem-bg);
+}
+
+.form-field input:focus-visible,
+.form-button:focus-visible,
+.form-small-button:focus-visible,
+.form-link:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 1px;
+}
+
+.form-hint {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+
+.form-field-error {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.form-error {
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  font-weight: 500;
+  background: var(--problem-bg);
+  border: 2px solid var(--problem-border);
+  border-radius: 0.75rem;
+}
+
+.form-button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0 1.25rem;
+  font: inherit;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--build-top), var(--build-bottom));
+  border: 2.5px solid var(--ink);
+  border-radius: 0.75rem;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+}
+
+.form-button:active:not(:disabled),
+.form-small-button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+
+.form-button:disabled,
+.form-small-button:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.form-small-button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0 0.875rem;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 0.75rem;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+}
+
+.form-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.worlds-column {
+  width: min(100%, 24rem);
+  display: grid;
+  gap: 1rem;
+}
+
+.worlds-header {
+  display: grid;
+  gap: 0.25rem;
+  padding-top: 0.5rem;
+}
+
+.worlds-logout {
+  justify-self: center;
+}
+
+.world-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.world-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 1rem;
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 0 var(--shadow);
+}
+
+.world-picture {
+  width: 4.5rem;
+  height: 4.5rem;
+  padding: 0.25rem;
+  background: var(--picture-tile);
+  border: 2.5px solid var(--ink);
+  border-radius: 1rem;
+  object-fit: contain;
+}
+
+.world-body {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.world-name {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.world-owner,
+.world-note {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.world-open {
+  grid-column: 1 / -1;
+}
+
+.invite {
+  display: grid;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--picture-tile);
+  border: 2px solid var(--ink);
+  border-radius: 0.875rem;
+}
+
+.invite-label {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.invite-code {
+  margin: 0;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  user-select: all;
+}
+
+.invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.invite-note {
+  margin: 0;
+  font-weight: 600;
+}
