@@ -19,6 +19,15 @@ export async function pack(bytes: Uint8Array): Promise<Uint8Array> {
   if (errors.length > 0) throw new Error(`the glTF validator found errors: ${errors.join('; ')}`);
   const io = await createIO();
   const document = await io.readBinary(bytes);
+  // Quantization stores a scale on each mesh node; a mesh node with children would get a mesh-less wrapper instead,
+  // so marker_ children move to the scene root first, keeping their world place.
+  const scene = document.getRoot().listScenes()[0]!;
+  for (const node of document.getRoot().listNodes()) {
+    if (!node.getName().startsWith('marker_') || !node.getParentNode()) continue;
+    const world = node.getWorldMatrix();
+    node.getParentNode()!.removeChild(node);
+    scene.addChild(node.setMatrix(world));
+  }
   await document.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
   return io.writeBinary(document);
 }

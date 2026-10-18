@@ -35,6 +35,8 @@ export interface BoxOptions {
   nodeOffset?: [number, number, number];
   nodeTurn?: [number, number, number, number];
   extraNode?: string;
+  /** A child node of the model, as Blender exports a marker_ empty parented to it: [name, translation]. */
+  child?: [string, [number, number, number]];
 }
 
 /** An uncompressed .glb holding one box mesh, as Blender's staging export would. */
@@ -66,6 +68,7 @@ export async function boxGlb(options: BoxOptions): Promise<Uint8Array> {
   const node = document.createNode('model').setMesh(mesh);
   if (options.nodeOffset) node.setTranslation(options.nodeOffset);
   if (options.nodeTurn) node.setRotation(options.nodeTurn);
+  if (options.child) node.addChild(document.createNode(options.child[0]).setTranslation(options.child[1]));
   const scene = document.createScene().addChild(node);
   if (options.extraNode) scene.addChild(document.createNode(options.extraNode));
   if (options.camera) scene.addChild(document.createNode('camera').setCamera(document.createCamera().setType('perspective')));
