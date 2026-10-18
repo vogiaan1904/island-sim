@@ -1,13 +1,17 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App.tsx';
 import { gameOn, ok, refused, signInOn, stubApi, world } from './test/api.ts';
+import { aliceWorld, islandMessage } from './test/islands.ts';
 import { expectNoEmoji } from './test/no-emoji.ts';
 import type { Game } from './session/game.tsx';
 
 // The sign-up and world flows end to end through the screens, the real session and store, over a stubbed API typed
 // with the protocol's responses. The socket never answers: opening an island is shown by the "opening" phase.
+
+// The 3D canvas needs WebGL, which jsdom does not have; these flows are about the screens around it.
+vi.mock('./scene/IslandCanvas.tsx', () => ({ default: ({ onReady }: { onReady: () => void }) => { onReady(); return null; } }));
 
 let running: Game | null = null;
 afterEach(() => {
@@ -157,5 +161,30 @@ describe('worlds', () => {
     const { game } = start(api);
     await act(() => game.session.start());
     expectNoEmoji(document.body);
+  });
+});
+
+describe('from the island back to the world screen', () => {
+  it("lets a creator with one world open Settings, go to My worlds, see the invite code and make a new one", async () => {
+    const api = stubApi();
+    await signInOn(api, [world({ id: 'w1', islandName: 'Palm Cove' })]);
+    const { game } = start(api);
+    await act(() => game.session.start());
+    // The socket never answers here, so the island message and the phase it brings are put in by hand.
+    act(() => {
+      game.store.getState().receive(islandMessage(aliceWorld(), 0, 'w1'));
+      game.store.getState().setSession({ phase: 'playing' });
+    });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Settings' }));
+    await userEvent.click(screen.getByRole('button', { name: 'My worlds' }));
+    expect(await screen.findByRole('heading', { name: 'Your worlds' })).toBeInTheDocument();
+    const card = screen.getByRole('listitem');
+    expect(within(card).getByText('ABCDE FGHJK')).toBeInTheDocument();
+    expect(game.store.getState().island).toBeNull();
+    expect(game.store.getState().view.openPanel).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'New invite code' }));
+    expect(await screen.findByText('NEWCO DE123')).toBeInTheDocument();
   });
 });

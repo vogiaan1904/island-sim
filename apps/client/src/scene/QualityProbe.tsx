@@ -17,8 +17,8 @@ export function QualityProbe({ guessed }: { guessed: Quality }) {
   const done = useRef(false);
   useFrame((_, delta) => {
     if (done.current) return;
-    const chosen = store.getState().view.quality;
-    if (chosen !== guessed) {
+    const { quality: chosen, qualityChosen } = store.getState().view;
+    if (qualityChosen || chosen !== guessed) {
       done.current = true; // The player picked a tier; it wins.
       return;
     }

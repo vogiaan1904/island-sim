@@ -6,10 +6,12 @@ change password, and log out. User stories 58 to 60.
 
 **Blocked by:** 06, 10, 11.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Quality and controls change the view state set by tickets 07 and 10, and are remembered on the device.
-- [ ] Change password uses `/api/password` and says it signed out the other devices; errors in plain words.
-- [ ] Log out ends only this device's session.
-- [ ] Plain words, big toggles, no nested menus.
-- [ ] Testing Library tests for each setting and the password flow; no-emoji.
+- [x] Quality and controls change the view state set by tickets 07 and 10, and are remembered on the device.
+- [x] Change password uses `/api/password` and says it signed out the other devices; errors in plain words.
+- [x] Log out ends only this device's session.
+- [x] Plain words, big toggles, no nested menus.
+- [x] Testing Library tests for each setting and the password flow; no-emoji.
+
+Also: Settings' account section has a "My worlds" button that leaves the island for the world screen (`showWorlds()`), so a creator with one world can see and renew the invite code (gap from ticket 06).
