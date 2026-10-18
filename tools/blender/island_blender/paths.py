@@ -7,9 +7,8 @@ STAGING = BUILD / "staging"
 MODELS = ROOT / "apps" / "client" / "public" / "models"
 ICONS = ROOT / "apps" / "client" / "public" / "icons"
 PALETTE_PNG = MODELS / "palette.png"
-PALETTE_MAP = BUILD / "palette-map.json"
-# Packs drawn with material colors instead of a colormap: their colors join the palette as flat swatches.
-FLAT_PACKS = ("kenney_nature-kit",)
+# Committed with palette.png: which slot each pack swatch occupies, so a rebuild can refuse to move a shipped swatch.
+PALETTE_MAP = ROOT / "tools" / "blender" / "palette-map.json"
 
 
 def pack_models(pack: str) -> Path:
@@ -27,11 +26,20 @@ def pack_colormap(pack: str) -> Path:
     return RAW / pack / "Models" / "GLB format" / "Textures" / "colormap.png"
 
 
-def colormaps() -> dict[str, Path]:
-    """Every extracted pack with a Kenney colormap, by pack name: together they make up the palette."""
-    return {p.name: pack_colormap(p.name) for p in sorted(RAW.iterdir()) if pack_colormap(p.name).exists()}
+def colormaps(packs: list[str]) -> dict[str, Path]:
+    """The colormap of each pack the palette is built from (conventions.json, palettePacks.colormap), by pack name."""
+    found = {pack: pack_colormap(pack) for pack in packs}
+    missing = sorted(pack for pack, path in found.items() if not path.exists())
+    if missing:
+        raise FileNotFoundError(f"the palette needs these packs extracted in assets/raw: {missing}")
+    return found
 
 
-def flat_packs() -> dict[str, Path]:
-    """Every extracted pack of FLAT_PACKS, by pack name: the folder holding its .glb files."""
-    return {pack: pack_models(pack) for pack in FLAT_PACKS if (RAW / pack).exists()}
+def flat_packs(packs: list[str]) -> dict[str, Path]:
+    """The .glb folder of each material-color pack the palette holds (palettePacks.flat): their colors become flat
+    swatches."""
+    found = {pack: pack_models(pack) for pack in packs}
+    missing = sorted(pack for pack, path in found.items() if not path.exists())
+    if missing:
+        raise FileNotFoundError(f"the palette needs these packs extracted in assets/raw: {missing}")
+    return found

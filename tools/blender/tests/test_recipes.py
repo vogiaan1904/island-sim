@@ -35,3 +35,15 @@ class RoadTest(unittest.TestCase):
                     self.assertEqual(strip == lane, side in open_sides, side)
                 corner = slot_at(edge, edge)
                 self.assertNotEqual(corner, lane)
+
+
+class WindowTest(unittest.TestCase):
+    def test_homes_and_offices_have_lit_windows(self):
+        recipes.load_all()
+        for name in ("building_cottage_a", "building_dock_a", "building_island-hall_a"):
+            with self.subTest(name=name):
+                cli.reset_scene()
+                model = recipes.RECIPES[name]["build"]()
+                lit = [poly for poly, col, row, _ in palette._faces_by_cell(model, palette.COLS, palette.ROWS)
+                       if row * palette.COLS + col == palette.WINDOW_SLOT]
+                self.assertGreater(len(lit), 0)

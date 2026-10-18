@@ -29,6 +29,30 @@ function triangles(document: Document): number {
   return total;
 }
 
+/** The extensionsUsed list of a binary glTF file, read from its JSON chunk; empty if the file is not one. */
+function declaredExtensions(bytes: Uint8Array): string[] {
+  if (bytes.byteLength < 20) return [];
+  const length = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(12, true);
+  try {
+    return JSON.parse(new TextDecoder().decode(bytes.subarray(20, 20 + length))).extensionsUsed ?? [];
+  } catch {
+    return [];
+  }
+}
+
+const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+/** a x b for column-major 4x4 matrices, as glTF stores them. */
+function multiply(a: readonly number[], b: readonly number[]): number[] {
+  const out = new Array<number>(16).fill(0);
+  for (let c = 0; c < 4; c += 1) {
+    for (let r = 0; r < 4; r += 1) {
+      for (let k = 0; k < 4; k += 1) out[c * 4 + r]! += a[k * 4 + r]! * b[c * 4 + k]!;
+    }
+  }
+  return out;
+}
+
 function checkCharacter(document: Document, rules: Rules): string[] {
   const problems: string[] = [];
   const root = document.getRoot();
@@ -43,6 +67,23 @@ function checkCharacter(document: Document, rules: Rules): string[] {
     const missing = wanted.filter((c) => !clips.includes(c));
     problems.push(`clips differ from the kept list: extra ${extra.join() || 'none'}, missing ${missing.join() || 'none'}`);
   }
+  // The rest position is jointWorld x inverse bind x POSITION, one matrix for every joint: meshopt keeps the real
+  // scale and offset there (POSITION itself is quantized), so the client needs it and the ground is checked through it.
+  const ibm = skins[0]!.getInverseBindMatrices();
+  const rest = skins[0]!.listJoints().map((joint, j) => multiply(joint.getWorldMatrix(), ibm ? (ibm.getElement(j, []) as number[]) : IDENTITY));
+  if (rest.some((m) => m.some((v, k) => Math.abs(v - rest[0]![k]!) > 1e-4))) {
+    problems.push('the joints disagree on the rest pose (jointWorld x inverse bind)');
+  }
+  let lowest = Infinity;
+  for (const primitive of root.listMeshes().flatMap((m) => m.listPrimitives())) {
+    const position = primitive.getAttribute('POSITION')!;
+    for (let i = 0; i < position.getCount(); i += 1) {
+      const [x, y, z] = position.getElement(i, [0, 0, 0]);
+      const m = rest[0]!;
+      lowest = Math.min(lowest, m[1]! * x + m[5]! * y + m[9]! * z + m[13]!);
+    }
+  }
+  if (Math.abs(lowest) > rules.originTolerance) problems.push(`the rest pose stands at ${lowest.toFixed(3)}, not 0`);
   for (const primitive of root.listMeshes().flatMap((m) => m.listPrimitives())) {
     const weights = primitive.getAttribute('WEIGHTS_0');
     if (!weights) {
@@ -63,6 +104,8 @@ function checkCharacter(document: Document, rules: Rules): string[] {
 export async function checkModel(file: string, bytes: Uint8Array, rules: Rules, content: Content): Promise<string[]> {
   const parsed = parseName(file, rules);
   if (!parsed || !file.endsWith('.glb')) return ['the name is not category_name-part_variant.glb with a known category'];
+  // Draco needs a decoder this checker does not load, so read the declared extensions before decoding.
+  if (declaredExtensions(bytes).includes('KHR_draco_mesh_compression')) return ['uses Draco: meshopt only'];
   const io = await createIO();
   const document = await io.readBinary(bytes);
   const root = document.getRoot();
@@ -152,7 +195,7 @@ interface AnimationManifest {
   joints: string[];
   layers: { legs: string[]; arms: string[] };
   variants: Array<{ characters: string[]; firstRow: number }>;
-  clips: Array<{ name: string; layer: string; firstRow: number; frames: number }>;
+  clips: Array<{ name: string; layer: string; loop: boolean; firstRow: number; frames: number }>;
 }
 
 /** Problems with the joint-animation texture and its manifest (layout in tools/blender/island_blender/bake.py). */
@@ -162,8 +205,8 @@ export function checkAnimation(manifest: AnimationManifest, bin: Uint8Array, rul
   if (manifest.joints.join() !== rules.character.joints.join()) problems.push('joints differ from the rig');
   if (manifest.width !== rules.character.joints.length * 3) problems.push(`width ${manifest.width} is not 3 texels per joint`);
   if (JSON.stringify(manifest.layers) !== JSON.stringify(rules.character.layers)) problems.push('layers differ from conventions');
-  const clips = manifest.clips.map((c) => `${c.name}:${c.layer}`).join();
-  if (clips !== rules.character.clips.map((c) => `${c.name}:${c.layer}`).join()) problems.push('clips differ from the kept list or its order');
+  const clips = manifest.clips.map((c) => `${c.name}:${c.layer}:${c.loop}`).join();
+  if (clips !== rules.character.clips.map((c) => `${c.name}:${c.layer}:${c.loop}`).join()) problems.push('clips differ from the kept list or its order');
   let row = 0;
   for (const clip of manifest.clips) {
     if (clip.firstRow !== row || clip.frames < 1) problems.push(`clip ${clip.name} does not follow the one before it`);

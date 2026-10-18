@@ -32,7 +32,7 @@ also checks other CC0 packs for nature, crops and buildings.
 | Watercraft Kit 2.1 (`kenney_watercraft-pack`) | 46 | GLB, FBX, OBJ | `colormap.png` | `boat-fishing-small`, `boat-row-*`, `boat-sail-*`, `boat-tug-*`, `boat-tow-*`, `boat-house-a-d`, speedboats, `ship-small`, `ship-large`, `ship-cargo-a-c`, `ship-ocean-liner`, `-small`, buoys, `cargo-container-a-c`, `cargo-pile-a-b`, ramps | The commuter ferry candidate, fishing boats, cargo ships, a cruise ship for the late game, dock cargo |
 | City Kit Roads 2.2 (`kenney_city-kit-roads`) | 95 | GLB, FBX, OBJ | `colormap.png` | Modern asphalt roads: straights, bends, crossroads, T, ends, driveways, sidewalks, bridges, ramps; lamps, poles, construction cones and barriers | Road candidate (Task 5) |
 | Fantasy Town Kit 2.0 (`kenney_fantasy-town-kit`) | 167 | GLB, FBX, OBJ | `colormap.png` | Pitched roofs (gable, high gable, corners) in red and green, wooden and stone walls, balconies, chimneys, fences, hedges, a fountain set, stalls, a cart, a water wheel, windmill blades, planks and poles, cobble road tiles, rocks, trees | Cottage and Island Hall roofs, the well, market, fences, scaffold poles and planks, rocks; a road candidate |
-| Nature Kit 2.1 (`kenney_nature-kit`) | 329 | `.glb` in `Models/GLTF format/`, FBX, OBJ | None: material colors (21 distinct) | Trees and palms, rocks, cliffs, crop rows and crop stages (corn, wheat, carrot, pumpkin, melon), dirt rows, fences, logs, tents, paths | Fields and crops, palms, bushes, rocks. Its colors join the palette as flat swatches (`paths.FLAT_PACKS`, `palette.remap_flat`) |
+| Nature Kit 2.1 (`kenney_nature-kit`) | 329 | `.glb` in `Models/GLTF format/`, FBX, OBJ | None: material colors (21 distinct) | Trees and palms, rocks, cliffs, crop rows and crop stages (corn, wheat, carrot, pumpkin, melon), dirt rows, fences, logs, tents, paths | Fields and crops, palms, bushes, rocks. Its colors join the palette as flat swatches (`palettePacks.flat`, `palette.remap_flat`) |
 | Pirate Kit 2.1 (`kenney_pirate-kit`) | 72 | GLB, FBX, OBJ | `colormap.png` | Galleons and rowboats, palms, rocks, sand and grass patches, wooden dock platforms (`structure-platform-dock*`, `platform-planks`), crates, barrels, towers and walls | Palms, rocks, pier and dock planks |
 | Survival Kit 2.0 (`kenney_survival-kit`) | 80 | GLB, FBX, OBJ | `colormap.png` | Logs (`resource-wood`), planks (`resource-planks`), stone, wooden and metal structures, fences, tents, rocks, grass, crates, barrels, tools, signposts, fish | Lumber camp, the `wood` good, scaffold, fishing hut frame, rocks |
 
@@ -108,8 +108,8 @@ slots: the window slot, 208 colormap swatches and 20 Nature Kit colors (its pure
 - **Different colormaps per pack:** each newer pack has its own `colormap.png`; `palette.remap_uvs` moves every UV
   onto the shared palette, characters included.
 - **Older packs without a colormap:** 3D Road Tiles, the Furniture Kit and the Nature Kit use plain material colors.
-  The Nature Kit is in `paths.FLAT_PACKS`, so its colors join the palette as flat swatches (`palette.remap_flat`); add
-  another such pack there before using it. Their `.glb` files live under `Models/GLTF format/`.
+  The Nature Kit is in `palettePacks.flat` (`conventions.json`), so its colors join the palette as flat swatches
+  (`palette.remap_flat`); list another such pack there before using it. Their `.glb` files live under `Models/GLTF format/`.
 - **Mixed naming:** the Furniture Kit uses camelCase, the road tiles use numbers, the Mini Characters have one
   underscore name (`aid_hearing`). Exported files always follow `conventions.md`, never the pack's names.
 - **Scale differs per pack:** the Toy Car Kit is toy-sized by design. Measure one scale factor per pack.

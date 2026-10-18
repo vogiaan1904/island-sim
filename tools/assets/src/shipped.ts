@@ -1,11 +1,12 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { content } from '@island/content';
 import { catalog } from './catalog.ts';
 import { checkAnimation, checkIcon, checkModel } from './check.ts';
 import { loadRules } from './rules.ts';
 
-const root = new URL('../../../', import.meta.url).pathname;
+const root = fileURLToPath(new URL('../../../', import.meta.url));
 export const STAGING = join(root, 'assets/build/staging');
 export const MODELS = join(root, 'apps/client/public/models');
 export const ICONS = join(root, 'apps/client/public/icons');

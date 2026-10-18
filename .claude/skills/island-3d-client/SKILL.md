@@ -136,11 +136,15 @@ client must do with them:
 - **One texture, one material.** Every `.glb` has one material named `palette` and no image. Load
   `apps/client/public/models/palette.png` once and bind it to every `palette` material with nearest filtering (the
   palette is solid swatches; linear filtering bleeds neighbors), sRGB, no mipmaps or mipmaps clamped per swatch.
-- **Lit windows**: palette slot 0 (UV 0 to 1/32 across, the top 1/8 down; color 226, 238, 255) is window glass. At
+- **Lit windows**: palette slot 0 (glTF TEXCOORD_0 u from 0 to 1/32 and v from 0 to 1/8 (the image's top-left 32 x 128 pixels; three.js loads glTF textures with flipY false, so these are the UVs the shader sees); color 226, 238, 255) is window glass. At
   night make that slot glow (an emissive term keyed on UV, or a second palette image with slot 0 bright).
 - **The look** (`tools/assets/conventions.json`, `look`): one sun, color [1.0, 0.85, 0.68] linear, about 30 degrees up,
   azimuth 40 degrees; sky [0.62, 0.62, 0.7]; water [0.1, 0.32, 0.45]. Terrain colors should come from the palette's
   look.
+- **Dequantize**: meshopt stores POSITION as normalized int16 in [-1, 1]. A static model's real translation and scale
+  sit on its mesh node (for example the bag: translation [-0.564, 0.545, 0.032], scale 0.160): fold the node's world
+  matrix into each instance matrix, or apply it to the geometry once. Never use raw POSITION as metres. Characters keep
+  it in the skin instead (see the people reference).
 - **Scale**: 1 unit is about 1 m; one tile is 4 units. Model origin = footprint bottom center; front = glTF +Z. Place a
   building at its footprint center and turn by the sim's rotation (footprint `w` along X at rotation 0).
 - **Roads**: `road_{straight,end,corner,t,cross,single}_a.glb`, one tile each; open sides at rotation 0: straight +Z
@@ -152,7 +156,8 @@ client must do with them:
   root-level nodes found by name.
 - **Construction**: `prop_scaffold_<w>x<h>.glb` per footprint, tall enough to raise the building inside it.
 - **Characters**: 12 `character_*.glb` (rigid skin, 7 joints) on the palette, and `characters-animation.bin` /
-  `.json`, the joint-animation texture: details in `references/people-vehicles-ships.md`.
+  `.json`, the joint-animation texture: details, including the rest-position matrix and how to combine the two clip
+  layers, in `references/people-vehicles-ships.md`.
 - **Accessories**: `accessory_bag_a.glb` follows `arm-right`, `accessory_wheelchair_a.glb` follows `root`
   (`accessories` in `conventions.json`): draw it at `joint matrix x position`, like a vertex of that joint.
 

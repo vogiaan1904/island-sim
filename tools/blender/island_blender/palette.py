@@ -4,7 +4,7 @@ A Kenney colormap is 512x512: a grid of 16 x 4 swatches of 32x128 pixels, each a
 the same swatch size in a 32 x 8 grid (1024x1024), so a model moves onto it by moving each UV into the matching slot
 with its position inside the swatch unchanged. Slot 0 is reserved for window glass, which the client lights at night:
 the packs draw glass with an untextured, half-transparent "glass" material, which becomes an opaque flat swatch here.
-Packs drawn with material colors (paths.FLAT_PACKS) get one flat swatch per color, after the colormap swatches.
+Packs drawn with material colors (conventions.json, palettePacks.flat) get one flat swatch per color, after the colormap swatches.
 """
 
 import array
@@ -160,6 +160,18 @@ def material_rgb(material) -> tuple[int, int, int]:
     return tuple(_srgb(c) for c in bsdf.inputs["Base Color"].default_value[:3])
 
 
+def moved_swatches(old: dict, new: dict) -> list[str]:
+    """The swatches of an earlier palette map (pack and key) that a new map puts in another slot: shipped models point
+    at the old slots, so moving one would recolor them."""
+    moved = []
+    for group in ("packs", "flat"):
+        for pack, cells in sorted(old.get(group, {}).items()):
+            for key, slot in sorted(cells.items()):
+                if new.get(group, {}).get(pack, {}).get(key) != slot:
+                    moved.append(f"{pack} {key}")
+    return moved
+
+
 def _has_image(material) -> bool:
     return material is not None and material.use_nodes and any(
         n.type == "TEX_IMAGE" and n.image is not None for n in material.node_tree.nodes
@@ -214,8 +226,9 @@ def remap_uvs(obj, pack: str, mapping: dict) -> None:
             raise ValueError(f"{obj.name}: face {poly.index} lies in the black swatch {key} of {pack}")
         for i in loops:
             u, v = layer[i].uv
-            du = min(max(u * SRC_COLS - col, 0.0), 1.0)
-            dv = min(max(v * SRC_ROWS - (SRC_ROWS - 1 - row), 0.0), 1.0)
+            # half a texel inside the swatch, so nearest filtering never reads the neighbor
+            du = min(max(u * SRC_COLS - col, 0.5 / CELL_W), 1.0 - 0.5 / CELL_W)
+            dv = min(max(v * SRC_ROWS - (SRC_ROWS - 1 - row), 0.5 / CELL_H), 1.0 - 0.5 / CELL_H)
             layer[i].uv = slot_uv(cells[key], du, dv)
 
 

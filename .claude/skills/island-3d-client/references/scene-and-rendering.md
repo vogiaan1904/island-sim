@@ -72,8 +72,10 @@ Library details must be checked against the installed versions. Anything marked 
   accessories included.
 - **The palette ships once** as `apps/client/public/models/palette.png`; no `.glb` holds an image. Load it once, bind
   it to every material named `palette` with nearest filtering and sRGB, and share that one material.
-- Load a model with drei's glTF loading and the meshopt decoder, take its single mesh's geometry, and draw every
-  copy through one `InstancedMesh` with the shared material. Never add a cloned glTF scene per building.
+- Load a model with drei's glTF loading and the meshopt decoder, take its single mesh's geometry **with its node's
+  world matrix** (meshopt quantization keeps the real translation and scale there; the raw positions are int16 in
+  [-1, 1]), and draw every copy through one `InstancedMesh` with the shared material, the node matrix folded into each
+  instance matrix. Never add a cloned glTF scene per building.
 - A model's front faces the road and is glTF +Z (Blender's -Y, spec 12.6); its origin is the footprint's bottom
   center (spec 7). Instance rotations turn +Z toward the building's road side.
 - Allocate instance capacity with headroom and use the mesh's instance count; reallocate rarely.
@@ -124,8 +126,7 @@ Spec 12.5:
   light value. Light the buildings the state says are in use at night: occupied homes, and workplaces that run
   around the clock (port and power, whose night shift is worked by residents, never commuters; spec 12.1). In slice 1
   every building works the day shift, so at first only homes are lit at night. Stagger switch-on times with a hash
-  of the building id so a street lights up gradually. Windows are palette slot 0 (UV u from 0 to 1/32, v from 7/8 to
-  1; color 226, 238, 255): pack glass and window panes are moved there by the pipeline.
+  of the building id so a street lights up gradually. Windows are palette slot 0 (glTF TEXCOORD_0 u from 0 to 1/32 and v from 0 to 1/8 (the image's top-left 32 x 128 pixels; three.js loads glTF textures with flipY false, so these are the UVs the shader sees); color 226, 238, 255): pack glass and window panes are moved there by the pipeline.
 - **Street lights**: instanced camera-facing glow sprites (additive blending, no depth write), one draw call, fading
   in with the night factor. No point or spot lights.
 - **Shadows**: one shadow map from the sun. Its shadow camera follows the camera target and covers only the area near

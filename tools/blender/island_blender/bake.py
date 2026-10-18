@@ -7,6 +7,11 @@ Layout (shared with the client, recorded in island-blender and island-3d-client)
   the pose puts it, so the rest pose is the identity. Every vertex follows exactly one joint, its first JOINTS_0
   entry, whose weight is 1.
 - Rows run variant by variant, clip by clip, frame by frame. Characters whose rows are identical share a variant.
+- The client reads POSITION through the file's dequantization: a meshopt-packed character stores POSITION as
+  normalized int16 and the scale in its inverse bind matrices, so the rest position is jointWorld x IBM x POSITION
+  (the same matrix for every joint), and the baked matrix applies to that rest position.
+- Two layers combine as legs-layer torso matrix x arms-layer arm matrix for the arm joints (the arms are children of
+  the torso, `parents` in the manifest); an `arms` clip keeps every other joint at rest.
 - Frames are sampled at 30 per second from the clip's first to its last key, both included; a looping clip plays
   frames 0 to frames - 2 and wraps, since its last key repeats its first.
 """
@@ -57,6 +62,7 @@ def add_character(state: dict, name: str, rig, actions: dict, clips: list[dict])
     """Samples one character and files it under an existing variant with identical rows, or a new one."""
     rows, counts = sample_clips(rig, actions, clips)
     joints = [b.name for b in rig.data.bones]
+    state.setdefault("parents", [b.parent.name if b.parent else None for b in rig.data.bones])
     if state.setdefault("joints", joints) != joints:
         raise ValueError(f"{name}: joints {joints} differ from {state['joints']}")
     if state.setdefault("counts", counts) != counts:
@@ -79,7 +85,8 @@ def manifest(state: dict, clips: list[dict], layers: dict) -> tuple[dict, bytes]
     first = 0
     clip_rows = []
     for clip, count in zip(clips, state["counts"]):
-        clip_rows.append({"name": clip["name"], "layer": clip["layer"], "firstRow": first, "frames": count})
+        clip_rows.append({"name": clip["name"], "layer": clip["layer"], "loop": clip["loop"], "firstRow": first,
+                          "frames": count})
         first += count
     if sys.byteorder != "little":
         data.byteswap()
@@ -90,6 +97,7 @@ def manifest(state: dict, clips: list[dict], layers: dict) -> tuple[dict, bytes]
         "height": per_variant * len(variants),
         "fps": characters.FPS,
         "joints": state["joints"],
+        "parents": state["parents"],
         "layers": layers,
         "variants": variants,
         "clips": clip_rows,

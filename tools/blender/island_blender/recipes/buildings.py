@@ -4,7 +4,11 @@ Fantasy Town walls stand on the +X edge of their 1 x 1 cell; a quarter turn move
 counterclockwise (seen from above), so SIDE gives the turns for each edge. The front is Blender -Y (glTF +Z).
 """
 
-from .. import conventions, kit
+import math
+
+from mathutils import Matrix
+
+from .. import conventions, kit, palette
 from . import recipe
 
 TOWN, BUILDING, COASTER, FOOD, WATER, SURVIVAL = (
@@ -15,8 +19,18 @@ SIDE = {"E": 0, "N": 1, "W": 2, "S": 3}
 
 
 def wall(name: str, cx: float, cy: float, side: str, z: float = 0.0):
-    """A Fantasy Town wall on one edge of the module centered at (cx, cy)."""
-    return kit.place(kit.piece(TOWN, name), cx, cy, z, SIDE[side])
+    """A Fantasy Town wall on one edge of the module centered at (cx, cy). The kit's `*-window-glass` walls leave their
+    window open, so a pane made in Blender on the window slot fills it: the client lights that slot at night."""
+    piece = kit.place(kit.piece(TOWN, name), cx, cy, z, SIDE[side])
+    if "window-glass" not in name:
+        return piece
+    scale = conventions.pack_scale(TOWN)
+    # the opening, measured in the piece at scale 1: y from -0.15 to 0.15, z from 0.3 to 0.7, inside x 0.4 to 0.5
+    pane = kit.box("pane", (0.01 * scale, 0.3 * scale, 0.4 * scale), (0.45 * scale, 0.0, 0.3 * scale),
+                   palette.slot_uv(palette.WINDOW_SLOT, 0.5, 0.5))
+    pane.matrix_world = Matrix.Translation((cx, cy, z)) @ Matrix.Rotation(SIDE[side] * math.pi / 2, 4, "Z") \
+        @ pane.matrix_world
+    return kit.join([piece, pane], piece.name)
 
 
 def gabled_house(cx: float, cy: float, walls: dict, z: float = 0.0, rows: int = 2, levels: int = 1) -> list:

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import bpy
 
-from island_blender import cli, kit, palette, paths
+from island_blender import cli, conventions, kit, palette, paths
 from helpers import face_points, pixels, sample
 
 PIECES = [
@@ -27,8 +27,9 @@ class PaletteTest(unittest.TestCase):
     def setUpClass(cls):
         cli.reset_scene()
         cls.dir = Path(tempfile.mkdtemp())
-        cls.colormaps = paths.colormaps()
-        cls.flat = {pack: palette.glb_colors(folder) for pack, folder in paths.flat_packs().items()}
+        packs = conventions.load()["palettePacks"]
+        cls.colormaps = paths.colormaps(packs["colormap"])
+        cls.flat = {pack: palette.glb_colors(folder) for pack, folder in paths.flat_packs(packs["flat"]).items()}
         cls.png, cls.map_path = cls.dir / "palette.png", cls.dir / "palette-map.json"
         cls.mapping = palette.build_palette(cls.colormaps, cls.png, cls.map_path, flat=cls.flat)
         cls.image = pixels(cls.png)
@@ -107,6 +108,13 @@ class PaletteTest(unittest.TestCase):
             after[row * palette.COLS + col] = after.get(row * palette.COLS + col, 0) + 1
         self.assertEqual(after.get(palette.WINDOW_SLOT), counts[slot])
         self.assertNotIn(slot, after)
+        # the place inside the swatch is kept, so a gradient swatch keeps its shading
+        before = {i: (loop.uv[0] * palette.COLS % 1.0, loop.uv[1] * palette.ROWS % 1.0)
+                  for i, loop in enumerate(obj.data.uv_layers.active.data)}
+        palette.move_slot(obj, palette.WINDOW_SLOT, slot)
+        for i, loop in enumerate(obj.data.uv_layers.active.data):
+            self.assertAlmostEqual(loop.uv[0] * palette.COLS % 1.0, before[i][0], places=5)
+            self.assertAlmostEqual(loop.uv[1] * palette.ROWS % 1.0, before[i][1], places=5)
         for obj in created:
             bpy.data.objects.remove(obj, do_unlink=True)
 
@@ -135,5 +143,23 @@ class PaletteTest(unittest.TestCase):
                 col, row = palette.cell_of(u, v, palette.COLS, palette.ROWS)
                 slots.setdefault(poly.index, set()).add(row * palette.COLS + col)
             self.assertEqual({p: s for p, s in slots.items() if len(s) > 1}, {})
+            # every corner stays half a texel inside its swatch, so nearest filtering never reads the next one
+            for loop in obj.data.uv_layers.active.data:
+                u, v = loop.uv
+                du, dv = u * palette.COLS % 1.0, v * palette.ROWS % 1.0
+                self.assertTrue(0.5 / palette.CELL_W - 1e-6 <= du <= 1 - 0.5 / palette.CELL_W + 1e-6, (u, v))
+                self.assertTrue(0.5 / palette.CELL_H - 1e-6 <= dv <= 1 - 0.5 / palette.CELL_H + 1e-6, (u, v))
         for obj in created:
             bpy.data.objects.remove(obj, do_unlink=True)
+
+    def test_a_refused_piece_is_named(self):
+        # the Fantasy Town fountain carries an untextured "Water" material, which the palette cannot hold
+        with self.assertRaisesRegex(ValueError, "kenney_fantasy-town-kit/fountain-round"):
+            kit.import_piece("kenney_fantasy-town-kit", "fountain-round", self.mapping, 1.0)
+
+    def test_a_rebuild_that_moves_a_shipped_swatch_is_found(self):
+        old = {"slots": 3, "packs": {"a": {"0,1": 1, "1,1": 2}}, "flat": {"n": {"1,2,3": 2}}}
+        grown = {"slots": 4, "packs": {"a": {"0,1": 1, "1,1": 2}, "b": {"0,1": 3}}, "flat": {"n": {"1,2,3": 2}}}
+        shifted = {"slots": 4, "packs": {"a": {"0,1": 1, "1,1": 3}, "b": {"0,1": 2}}, "flat": {"n": {"1,2,3": 3}}}
+        self.assertEqual(palette.moved_swatches(old, grown), [])
+        self.assertEqual(palette.moved_swatches(old, shifted), ["a 1,1", "n 1,2,3"])

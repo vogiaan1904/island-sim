@@ -21,7 +21,8 @@ look before bulk processing").
   (ignored by git, so they may be gone; rebuild them from this procedure).
 
 To change the look later: edit `look`, run `pnpm blender palette`, `pnpm blender icons all`, and re-render the review.
-The layout never changes with the look, so shipped models need no rebuild.
+The layout never changes with the look (the palette command refuses any slot move), so shipped models need no
+rebuild.
 
 ## Contents
 

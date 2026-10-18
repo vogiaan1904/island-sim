@@ -13,10 +13,23 @@ def reset_scene() -> None:
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
-def cmd_palette() -> None:
-    look = conventions.load()["look"]
-    flat = {pack: palette.glb_colors(folder) for pack, folder in paths.flat_packs().items()}
-    result = palette.build_palette(paths.colormaps(), paths.PALETTE_PNG, paths.PALETTE_MAP, look, flat)
+def cmd_palette(*args: str) -> None:
+    """Builds palette.png and its map from the packs in conventions.json; refuses to move a swatch the committed map
+    already places (every shipped model points at it) unless called as `palette relayout`, after which every model
+    and icon must be rebuilt."""
+    rules = conventions.load()
+    packs = rules["palettePacks"]
+    flat = {pack: palette.glb_colors(folder) for pack, folder in paths.flat_packs(packs["flat"]).items()}
+    previous = json.loads(paths.PALETTE_MAP.read_text()) if paths.PALETTE_MAP.exists() else None
+    staged = paths.BUILD / "palette-candidate.json"
+    result = palette.build_palette(paths.colormaps(packs["colormap"]), paths.BUILD / "palette-candidate.png", staged,
+                                   rules["look"], flat)
+    moved = palette.moved_swatches(previous, result) if previous else []
+    if moved and args != ("relayout",):
+        raise SystemExit(f"the palette would move {len(moved)} shipped swatches (first: {moved[0]}); run "
+                         "`pnpm blender palette relayout` and rebuild every model and icon if that is meant")
+    (paths.BUILD / "palette-candidate.png").replace(paths.PALETTE_PNG)
+    staged.replace(paths.PALETTE_MAP)
     print(f"palette {paths.PALETTE_PNG} {result['slots']} slots")
 
 

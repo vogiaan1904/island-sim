@@ -7,6 +7,26 @@ import { pack } from './pack.ts';
 const rules = testRules();
 const cottage = { size: [1.8, 2.5, 1.8] as [number, number, number] };
 
+/** A .glb whose JSON also lists an extension as used, without using it (enough for the checker to see it). */
+function withExtensionUsed(glb: Uint8Array, name: string): Uint8Array {
+  const view = new DataView(glb.buffer, glb.byteOffset, glb.byteLength);
+  const length = view.getUint32(12, true);
+  const json = JSON.parse(new TextDecoder().decode(glb.subarray(20, 20 + length)));
+  json.extensionsUsed = [...(json.extensionsUsed ?? []), name];
+  let text = JSON.stringify(json);
+  while (text.length % 4) text += ' ';
+  const chunk = new TextEncoder().encode(text);
+  const rest = glb.subarray(20 + length);
+  const out = new Uint8Array(20 + chunk.length + rest.length);
+  out.set(glb.subarray(0, 20));
+  out.set(chunk, 20);
+  out.set(rest, 20 + chunk.length);
+  const header = new DataView(out.buffer);
+  header.setUint32(8, out.length, true);
+  header.setUint32(12, chunk.length, true);
+  return out;
+}
+
 async function check(file: string, staging: Promise<Uint8Array>, ruleSet = rules): Promise<string[]> {
   return checkModel(file, await pack(await staging), ruleSet, content);
 }
@@ -97,6 +117,20 @@ describe('checkModel', () => {
     expect(await check('character_female_a.glb', characterGlb({ weight: 0.5 }))).toContain('vertex 0 follows more than one joint');
   });
 
+  it('refuses a character whose joints disagree on its rest pose or whose rest pose leaves the ground', async () => {
+    // the rest position is jointWorld x inverse bind x POSITION, the same for every joint; meshopt keeps the real
+    // units there, so this is how the client finds the character's size and ground
+    expect(await check('character_female_a.glb', characterGlb({ bindOffset: [0, 0.3, 0] }))).toContain(
+      'the joints disagree on the rest pose (jointWorld x inverse bind)',
+    );
+    expect(await check('character_female_a.glb', characterGlb({ lift: 0.5 }))).toContain('the rest pose stands at 0.500, not 0');
+  });
+
+  it('refuses Draco compression', async () => {
+    const packed = withExtensionUsed(await pack(await boxGlb(cottage)), 'KHR_draco_mesh_compression');
+    expect(await checkModel('building_cottage_a.glb', packed, rules, content)).toContain('uses Draco: meshopt only');
+  });
+
   it('refuses clips on anything but a character', async () => {
     expect(await check('prop_bag_a.glb', characterGlb())).toContain('only characters carry skins or clips');
   });
@@ -120,7 +154,7 @@ describe('checkAnimation', () => {
   function baked(frames: number[], variants: string[][]) {
     let first = 0;
     const clips = rules.character.clips.map((clip, i) => {
-      const row = { name: clip.name, layer: clip.layer, firstRow: first, frames: frames[i]! };
+      const row = { name: clip.name, layer: clip.layer, loop: clip.loop, firstRow: first, frames: frames[i]! };
       first += frames[i]!;
       return row;
     });
@@ -150,6 +184,12 @@ describe('checkAnimation', () => {
     ]);
     new Float32Array(bin.buffer)[5] = Number.NaN;
     expect(checkAnimation(manifest, bin, rules, ['female-a'])).toEqual(['the texture holds a value that is not a finite number']);
+  });
+
+  it('refuses a clip whose looping differs from conventions', () => {
+    const { manifest, bin } = baked([21, 6], [['female-a', 'female-c']]);
+    manifest.clips[0]!.loop = false;
+    expect(checkAnimation(manifest, bin, rules, characters)).toContain('clips differ from the kept list or its order');
   });
 
   it('refuses clips out of the kept order', () => {

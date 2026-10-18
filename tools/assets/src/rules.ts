@@ -20,7 +20,7 @@ export interface Rules {
   character: {
     joints: readonly string[];
     layers: { legs: readonly string[]; arms: readonly string[] };
-    clips: ReadonlyArray<{ name: string; layer: 'legs' | 'arms' | 'full' }>;
+    clips: ReadonlyArray<{ name: string; layer: 'legs' | 'arms' | 'full'; loop: boolean }>;
   };
 }
 

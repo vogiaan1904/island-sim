@@ -16,8 +16,8 @@ export function testRules(overrides: Partial<Rules> = {}): Rules {
       joints: ['root', 'arm-left'],
       layers: { legs: ['root'], arms: ['arm-left'] },
       clips: [
-        { name: 'walk', layer: 'legs' },
-        { name: 'holding-both', layer: 'arms' },
+        { name: 'walk', layer: 'legs', loop: true },
+        { name: 'holding-both', layer: 'arms', loop: false },
       ],
     },
     ...overrides,
@@ -80,6 +80,10 @@ export interface CharacterOptions {
   clips?: string[];
   /** The first skin weight of every vertex; 1 means rigid. */
   weight?: number;
+  /** A translation in the second joint's inverse bind matrix, so the joints disagree on the rest pose. */
+  bindOffset?: [number, number, number];
+  /** Raises the rest pose off the ground. */
+  lift?: number;
 }
 
 /** An uncompressed .glb with one skinned box on a two-joint rig and named one-key clips. */
@@ -88,11 +92,13 @@ export async function characterGlb(options: CharacterOptions = {}): Promise<Uint
   const buffer = document.createBuffer();
   const joints = (options.joints ?? ['root', 'arm-left']).map((name) => document.createNode(name));
   joints[0]!.addChild(joints[1]!);
+  const [ox, oy, oz] = options.bindOffset ?? [0, 0, 0];
   const ibm = document.createAccessor().setType('MAT4').setBuffer(buffer)
-    .setArray(new Float32Array(joints.flatMap(() => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])));
+    .setArray(new Float32Array(joints.flatMap((_, i) => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, i ? ox : 0, i ? oy : 0, i ? oz : 0, 1])));
   const skin = document.createSkin('rig').setInverseBindMatrices(ibm);
   for (const joint of joints) skin.addJoint(joint);
-  const positions = new Float32Array([-0.2, 0, 0, 0.2, 0, 0, 0, 0.8, 0]);
+  const lift = options.lift ?? 0;
+  const positions = new Float32Array([-0.2, lift, 0, 0.2, lift, 0, 0, 0.8 + lift, 0]);
   const weight = options.weight ?? 1;
   const primitive = document.createPrimitive()
     .setAttribute('POSITION', document.createAccessor().setType('VEC3').setArray(positions).setBuffer(buffer))

@@ -6,11 +6,11 @@ from mathutils import Matrix, Vector
 from island_blender import bake, characters, cli
 
 CLIPS = [
-    {"name": "idle", "layer": "legs"},
-    {"name": "walk", "layer": "legs"},
-    {"name": "holding-both", "layer": "arms"},
-    {"name": "sit", "layer": "full"},
-    {"name": "wheelchair-move-forward", "layer": "full"},
+    {"name": "idle", "layer": "legs", "loop": True},
+    {"name": "walk", "layer": "legs", "loop": True},
+    {"name": "holding-both", "layer": "arms", "loop": False},
+    {"name": "sit", "layer": "full", "loop": False},
+    {"name": "wheelchair-move-forward", "layer": "full", "loop": True},
 ]
 SCALE = 2.0
 
@@ -71,6 +71,25 @@ class BakeTest(unittest.TestCase):
         self.assertEqual([c["name"] for c in info["clips"]], [c["name"] for c in CLIPS])
         self.assertEqual(info["clips"][1]["frames"], 21)  # walk: 0.667 s at 30 fps, both ends included
         self.assertEqual(info["joints"], ["root", "leg-left", "leg-right", "torso", "arm-left", "arm-right", "head"])
+        self.assertEqual(info["parents"], [None, "root", "root", "root", "torso", "torso", "torso"])
+        self.assertEqual([c["loop"] for c in info["clips"]], [c["loop"] for c in CLIPS])
+
+    def test_an_arms_clip_keeps_every_other_joint_at_rest(self):
+        # the client poses arms as legs-layer torso x arms-layer arm, which is exact only if the arms clip leaves the
+        # torso (and every other non-arm joint) at rest in every frame
+        cli.reset_scene()
+        state = {}
+        rig, mesh, actions = characters.prepare("female-c", [c["name"] for c in CLIPS], SCALE)
+        bake.add_character(state, "female-c", rig, actions, CLIPS)
+        rows, width = state["variants"][0]["rows"], len(state["joints"]) * 3
+        first = sum(state["counts"][:2])
+        for frame in range(state["counts"][2]):  # holding-both
+            for joint, name in enumerate(state["joints"]):
+                if name.startswith("arm-"):
+                    continue
+                m = baked_matrix(rows, first + frame, joint, width)
+                worst = max(abs(m[r][c] - (1.0 if r == c else 0.0)) for r in range(4) for c in range(4))
+                self.assertLess(worst, 1e-5, f"{name} frame {frame}")
 
     def test_joints_a_clip_does_not_key_stay_at_rest(self):
         cli.reset_scene()

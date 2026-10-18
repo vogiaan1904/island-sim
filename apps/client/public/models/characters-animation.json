@@ -12,6 +12,15 @@
   "arm-right",
   "head"
  ],
+ "parents": [
+  null,
+  "root",
+  "root",
+  "root",
+  "torso",
+  "torso",
+  "torso"
+ ],
  "layers": {
   "legs": [
    "root",
@@ -53,102 +62,119 @@
   {
    "name": "idle",
    "layer": "legs",
+   "loop": true,
    "firstRow": 0,
    "frames": 41
   },
   {
    "name": "walk",
    "layer": "legs",
+   "loop": true,
    "firstRow": 41,
    "frames": 21
   },
   {
    "name": "holding-both",
    "layer": "arms",
+   "loop": false,
    "firstRow": 62,
    "frames": 6
   },
   {
    "name": "sprint",
    "layer": "full",
+   "loop": true,
    "firstRow": 68,
    "frames": 16
   },
   {
    "name": "sit",
    "layer": "full",
+   "loop": false,
    "firstRow": 84,
    "frames": 6
   },
   {
    "name": "drive",
    "layer": "full",
+   "loop": false,
    "firstRow": 90,
    "frames": 6
   },
   {
    "name": "pick-up",
    "layer": "full",
+   "loop": false,
    "firstRow": 96,
    "frames": 11
   },
   {
    "name": "interact-left",
    "layer": "full",
+   "loop": false,
    "firstRow": 107,
    "frames": 21
   },
   {
    "name": "interact-right",
    "layer": "full",
+   "loop": false,
    "firstRow": 128,
    "frames": 21
   },
   {
    "name": "emote-yes",
    "layer": "full",
+   "loop": false,
    "firstRow": 149,
    "frames": 21
   },
   {
    "name": "wheelchair-sit",
    "layer": "full",
+   "loop": false,
    "firstRow": 170,
    "frames": 6
   },
   {
    "name": "wheelchair-look-left",
    "layer": "full",
+   "loop": false,
    "firstRow": 176,
    "frames": 11
   },
   {
    "name": "wheelchair-look-right",
    "layer": "full",
+   "loop": false,
    "firstRow": 187,
    "frames": 11
   },
   {
    "name": "wheelchair-move-forward",
    "layer": "full",
+   "loop": true,
    "firstRow": 198,
    "frames": 16
   },
   {
    "name": "wheelchair-move-back",
    "layer": "full",
+   "loop": true,
    "firstRow": 214,
    "frames": 16
   },
   {
    "name": "wheelchair-move-left",
    "layer": "full",
+   "loop": true,
    "firstRow": 230,
    "frames": 16
   },
   {
    "name": "wheelchair-move-right",
    "layer": "full",
+   "loop": true,
    "firstRow": 246,
    "frames": 16
   }

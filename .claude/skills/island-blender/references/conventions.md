@@ -26,7 +26,8 @@ pipeline and the Node checker read it); change them there first, then here. Deci
 | The catalog | `tools/assets/src/catalog.ts` lists every shipped file; the folders must hold exactly that list (checked in `pnpm check`) |
 | Recipes (which pack files build each model) | `tools/blender/island_blender/recipes/`, one function per model, pack files named in its docstring |
 | Packs | zips in `assets/packs/`, extracted to `assets/raw/<zip base name>/`; both ignored by git |
-| Intermediates | `assets/build/` (ignored): `staging/` uncompressed exports, `palette-map.json`, review renders and working scripts |
+| Intermediates | `assets/build/` (ignored): `staging/` uncompressed exports, review renders and working scripts |
+| Palette map | `tools/blender/palette-map.json` (committed with `palette.png`): the slot of every pack swatch |
 | Working `.blend` files | none are kept: every model is rebuilt from its recipe |
 
 Name check (the checker's `parseName`): `^(category)_([a-z0-9]+(-[a-z0-9]+)*)_([a-z0-9]+(-[a-z0-9]+)*)\.(glb|png)$`.
@@ -50,7 +51,7 @@ Name check (the checker's `parseName`): `^(category)_([a-z0-9]+(-[a-z0-9]+)*)_([
 | Rule | Value |
 |---|---|
 | Material | exactly one, named `palette`, on every model including characters; no image in any `.glb` |
-| The palette | `palette.png`, 1024 x 1024: 32 x 8 slots of 32 x 128 px, built from every extracted pack's colormap swatches (deduplicated, exact colors) plus one flat swatch per color of a material-color pack (`paths.FLAT_PACKS`, the Nature Kit). 229 of 256 slots used |
+| The palette | `palette.png`, 1024 x 1024: 32 x 8 slots of 32 x 128 px, built from the colormap swatches of the packs in `palettePacks.colormap` (deduplicated, exact colors, packs in name order) plus one flat swatch per color of each `palettePacks.flat` pack (the Nature Kit). 229 of 256 slots used. Adding a pack can shift later slots, which the palette command refuses: list a new pack, run `pnpm blender palette relayout`, then rebuild every model and icon |
 | The look | recolors the palette image only (never the UVs): `look` in `conventions.json`, "golden": saturation 1.1, lightness 1.0, warmth 0.06; sun color [1.0, 0.85, 0.68] linear, energy 3.2, elevation 30, azimuth 40; sky [0.62, 0.62, 0.7]; water [0.1, 0.32, 0.45] |
 | Windows | slot 0 (`palette.WINDOW_SLOT`, color 226, 238, 255): pack glass moves there automatically; a pane drawn in a swatch moves with `palette.move_slot`. The client lights it at night |
 | Compression | meshopt (`EXT_meshopt_compression`) by glTF Transform in `pnpm assets pack`; never Draco |

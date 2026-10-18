@@ -46,12 +46,17 @@ the checker refuses a character whose clips differ from it. Layers: `legs` = roo
 
 - RGBA32F, little-endian float32, one row per sampled frame, 3 texels per joint (the top three rows of a 4x4 matrix;
   the fourth is 0 0 0 1). Width = 7 joints x 3 = 21; height 524.
-- The matrix maps the exported glTF POSITION (the rest pose in final units, Y-up) to the posed position, so the rest
-  pose is the identity. A vertex follows its first `JOINTS_0` entry.
+- The matrix maps a vertex's rest position (final units, Y-up: the staging export's POSITION) to the posed position,
+  so the rest pose is the identity. A vertex follows its first `JOINTS_0` entry. In the shipped, meshopt-packed file
+  POSITION is quantized: rest position = jointWorld x inverse bind x POSITION, the same matrix for every joint (the
+  checker refuses a file where the joints disagree, and checks that the rest pose stands at 0).
 - Rows run variant by variant (262 each), clip by clip, frame by frame, at 30 fps with both end keys; a looping clip
   plays frames 0 to frames - 2 and wraps.
-- `characters-animation.json`: `format`, `width`, `height`, `fps`, `joints`, `layers`, `variants` (each with its
-  `characters` and `firstRow`), `clips` (each with `name`, `layer`, `firstRow` within a variant, `frames`).
+- `characters-animation.json`: `format`, `width`, `height`, `fps`, `joints`, `parents` (each joint's parent),
+  `layers`, `variants` (each with its `characters` and `firstRow`), `clips` (each with `name`, `layer`, `loop`,
+  `firstRow` within a variant, `frames`). `loop` comes from `character.clips` in `conventions.json`.
+- Two layers combine as legs-layer torso matrix x arms-layer arm matrix: an `arms` clip keeps every non-arm joint at
+  rest (test `test_an_arms_clip_keeps_every_other_joint_at_rest`).
 - Proof: `test_the_baked_rows_pose_the_mesh_like_blender_does` compares baked rows with Blender's own posing.
 
 ## 5. Accessories (`recipes/accessories.py`)

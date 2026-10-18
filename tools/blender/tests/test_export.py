@@ -6,7 +6,7 @@ from unittest import mock
 
 import bpy
 
-from island_blender import cli, export, kit, palette, paths
+from island_blender import cli, conventions, export, kit, palette, paths
 
 
 def node_names(path) -> list[str]:
@@ -19,7 +19,7 @@ class ExportTest(unittest.TestCase):
     def test_exports_the_model_with_its_markers_and_no_image(self):
         cli.reset_scene()
         scratch = Path(tempfile.mkdtemp())
-        mapping = palette.build_palette(paths.colormaps(), scratch / "palette.png", scratch / "map.json")
+        mapping = palette.build_palette(paths.colormaps(conventions.load()["palettePacks"]["colormap"]), scratch / "palette.png", scratch / "map.json")
         with mock.patch.object(paths, "PALETTE_PNG", scratch / "palette.png"):
             boat = kit.import_piece("kenney_watercraft-pack", "boat-fishing-small", mapping, 1.0)
             model = kit.finish([boat], "ship_test_a")

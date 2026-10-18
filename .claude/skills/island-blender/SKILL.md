@@ -34,7 +34,7 @@ Project rules: `CLAUDE.md`. If this skill and the spec disagree, the spec wins; 
 
 | Command | What it does |
 |---|---|
-| `pnpm blender palette` | Builds `apps/client/public/models/palette.png` (recolored to the look) and `assets/build/palette-map.json` from every extracted pack |
+| `pnpm blender palette` | Builds `apps/client/public/models/palette.png` (recolored to the look) and `tools/blender/palette-map.json` from the packs in `palettePacks`; refuses to move a swatch the committed map places (`pnpm blender palette relayout` allows it, then rebuild every model and icon) |
 | `pnpm blender build [names\|all]` | Builds models from their recipes into `assets/build/staging/<name>.glb` (uncompressed) |
 | `pnpm blender icons [names\|all]` | Renders icons and portraits into `apps/client/public/icons/` |
 | `pnpm blender characters` | Exports the 12 characters and bakes `characters-animation.bin` and `.json` |

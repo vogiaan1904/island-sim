@@ -17,7 +17,7 @@ final file (validate, compress, check).
 ```
 tools/blender/run.py                 headless entry: blender -b --factory-startup --python-exit-code 1 --python run.py -- <command>
 tools/blender/island_blender/
-  paths.py        repo paths; pack_glb(pack, name), pack_models(pack), colormaps(), flat_packs(), FLAT_PACKS
+  paths.py        repo paths; pack_glb(pack, name), pack_models(pack), colormaps(packs), flat_packs(packs), PALETTE_MAP
   conventions.py  load() (tools/assets/conventions.json), pack_scale(pack), tile()
   palette.py      build_palette, remap_uvs, remap_flat, glb_colors, move_slot, slot_uv, recolor, palette_material,
                   WINDOW_SLOT, NEUTRAL_LOOK
@@ -35,8 +35,9 @@ tools/assets/                        Node: conventions.json; src/ rules, glb, pa
 
 ## 2. From pack to shipped file
 
-1. `pnpm blender palette` once per pack change (it reads every extracted pack; a new pack shifts nothing already
-   shipped only if its swatches are new, so rebuild everything after adding one).
+1. `pnpm blender palette` builds the palette from `palettePacks` in `conventions.json` and compares it with the
+   committed `tools/blender/palette-map.json`: it refuses to move any swatch a shipped model points at. A look change
+   moves nothing. Adding a pack usually does: `pnpm blender palette relayout`, then rebuild every model and icon.
 2. `pnpm blender build <name>`: runs the recipe in an empty scene and exports `assets/build/staging/<name>.glb`
    (uncompressed, Y-up, no images, the `palette` material).
 3. `pnpm assets pack <name>`: the Khronos validator reads the staging file (it cannot decode meshopt), then glTF
@@ -94,7 +95,11 @@ sides, the bake matches Blender's posing, joints a clip does not key stay at res
 - Welding leaves slivers whose normals vary run to run: `finish` triangulates and drops them (byte-exact rebuilds).
 - meshopt wraps a mesh with children in an extra node: `pack` moves `marker_*` nodes to the scene root first.
 - The Fantasy Town fountain carries an untextured `Water` material: the pipeline refuses it (avoid or rebuild it).
-- Older packs keep `.glb` under `Models/GLTF format/` (`paths.pack_models`) and use material colors (`FLAT_PACKS`).
+- Older packs keep `.glb` under `Models/GLTF format/` (`paths.pack_models`) and use material colors (`palettePacks.flat`).
+- Fantasy Town `*-window-glass` walls leave the window open: `recipes/buildings.wall` fills it with a pane on the
+  window slot, so the window lights at night.
+- `kit.import_piece` names the piece (`pack/name`) in every palette error; corners are clamped half a texel inside
+  their swatch, so nearest filtering never reads the neighbor.
 - Blender updates `matrix_world` only after `bpy.context.view_layer.update()`; read world positions after it.
 - A model's most used swatch can be the wrong part (the `pillar-wood`'s stone foot): check `swatch_uv` on a render.
 - Fantasy Town roof pieces carry their own gable triangles; `wall-*-slope` walls are for sloping ground, not gables.

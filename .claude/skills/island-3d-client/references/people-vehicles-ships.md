@@ -78,7 +78,12 @@ while carrying works.
   both layers at once (spec 12.5), which is the same as "arms free".
 - The layers (decided in plan 4, `layers` in the manifest): arms = `arm-left`, `arm-right`; legs = `root`,
   `leg-left`, `leg-right`, `torso`, `head`. Each clip has a `layer` (`legs`, `arms` or `full`).
-- Each layer has its own clip and phase per instance; the shader picks the layer by the vertex's joint.
+- Each layer has its own clip and phase per instance. The baked matrices are model-space, so do not just pick a
+  layer by joint: legs-layer joints use the legs clip's matrix; an arm joint uses **legs-layer torso matrix x
+  arms-layer arm matrix** (the arms are children of the torso, `parents` in the manifest). That is exact because an
+  `arms` clip keeps every non-arm joint at rest (test `test_an_arms_clip_keeps_every_other_joint_at_rest`); otherwise
+  carried goods would float at the rest torso while the body bobs (up to about 10 cm in `walk`). A `full` clip plays
+  on both layers as is.
 
 ## 4. The joint-animation texture in the shader
 
@@ -87,13 +92,15 @@ own clip and timing (spec 6.2). Hundreds of people then cost a few draw calls, a
 
 - **The contract** (plan 4, `island-blender` `references/characters.md`): `characters-animation.bin` is RGBA32F
   little-endian, width 21 (7 joints x 3 texels), height 524. Texel `3j + r` of a row is row `r` of joint `j`'s 4x4
-  matrix (the fourth row is 0 0 0 1). The matrix maps the vertex's glTF POSITION (rest pose, final units) to its
-  posed position, so the rest pose is the identity; a vertex follows its first `JOINTS_0` joint (weights are rigid).
-  `characters-animation.json` gives `joints`, `layers`, `fps` (30), `variants` (the characters of each rig variant
-  and its `firstRow`) and `clips` (`name`, `layer`, `firstRow` inside a variant, `frames`). Row of a frame =
+  matrix (the fourth row is 0 0 0 1). The matrix maps the vertex's **rest position** to its posed position, so the
+  rest pose is the identity; a vertex follows its first `JOINTS_0` joint (weights are rigid). The shipped POSITION is
+  quantized (normalized int16): rest position = D x POSITION, where D = the joint node's world matrix x its inverse
+  bind matrix, the same D for every joint of a file (the checker refuses a file where they differ) but different per
+  character file. So posed = baked matrix x (D x POSITION).
+  `characters-animation.json` gives `joints`, `parents`, `layers`, `fps` (30), `variants` (the characters of each rig variant
+  and its `firstRow`) and `clips` (`name`, `layer`, `loop`, `firstRow` inside a variant, `frames`). Row of a frame =
   variant.firstRow + clip.firstRow + frame. A looping clip plays frames 0 to frames - 2 (its last key repeats the
-  first); a one-shot clip holds its last frame. The loop set is not in the manifest yet: idle, walk, sprint and the
-  wheelchair moves loop.
+  first); a clip with `loop: false` holds its last frame (idle, walk, sprint and the wheelchair moves loop).
 - **Per-instance data**: character mesh and rig variant, legs clip and phase, arms clip and phase, playback
   speed, scale (children), tint, accessory or prop. Instance matrices place the person; the clip data poses them.
 - **Sampling**: WebGL2 can sample float textures with nearest filtering and `texelFetch`. Linear filtering of 32-bit

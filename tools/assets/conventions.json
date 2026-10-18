@@ -29,6 +29,14 @@
     "good": 400
   },
   "iconSize": 256,
+  "palettePacks": {
+    "colormap": [
+      "kenney_building-kit", "kenney_city-kit-roads", "kenney_coaster-kit", "kenney_fantasy-town-kit", "kenney_food-kit",
+      "kenney_mini-characters", "kenney_minigolf-kit", "kenney_pirate-kit", "kenney_survival-kit", "kenney_toy-car-kit",
+      "kenney_train-kit", "kenney_watercraft-pack"
+    ],
+    "flat": ["kenney_nature-kit"]
+  },
   "accessories": { "bag": "arm-right", "wheelchair": "root" },
   "look": {
     "saturation": 1.1,
@@ -45,23 +53,23 @@
       "arms": ["arm-left", "arm-right"]
     },
     "clips": [
-      { "name": "idle", "layer": "legs" },
-      { "name": "walk", "layer": "legs" },
-      { "name": "holding-both", "layer": "arms" },
-      { "name": "sprint", "layer": "full" },
-      { "name": "sit", "layer": "full" },
-      { "name": "drive", "layer": "full" },
-      { "name": "pick-up", "layer": "full" },
-      { "name": "interact-left", "layer": "full" },
-      { "name": "interact-right", "layer": "full" },
-      { "name": "emote-yes", "layer": "full" },
-      { "name": "wheelchair-sit", "layer": "full" },
-      { "name": "wheelchair-look-left", "layer": "full" },
-      { "name": "wheelchair-look-right", "layer": "full" },
-      { "name": "wheelchair-move-forward", "layer": "full" },
-      { "name": "wheelchair-move-back", "layer": "full" },
-      { "name": "wheelchair-move-left", "layer": "full" },
-      { "name": "wheelchair-move-right", "layer": "full" }
+      { "name": "idle", "layer": "legs", "loop": true },
+      { "name": "walk", "layer": "legs", "loop": true },
+      { "name": "holding-both", "layer": "arms", "loop": false },
+      { "name": "sprint", "layer": "full", "loop": true },
+      { "name": "sit", "layer": "full", "loop": false },
+      { "name": "drive", "layer": "full", "loop": false },
+      { "name": "pick-up", "layer": "full", "loop": false },
+      { "name": "interact-left", "layer": "full", "loop": false },
+      { "name": "interact-right", "layer": "full", "loop": false },
+      { "name": "emote-yes", "layer": "full", "loop": false },
+      { "name": "wheelchair-sit", "layer": "full", "loop": false },
+      { "name": "wheelchair-look-left", "layer": "full", "loop": false },
+      { "name": "wheelchair-look-right", "layer": "full", "loop": false },
+      { "name": "wheelchair-move-forward", "layer": "full", "loop": true },
+      { "name": "wheelchair-move-back", "layer": "full", "loop": true },
+      { "name": "wheelchair-move-left", "layer": "full", "loop": true },
+      { "name": "wheelchair-move-right", "layer": "full", "loop": true }
     ]
   }
 }
