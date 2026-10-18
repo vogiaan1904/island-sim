@@ -40,5 +40,5 @@ export function ModelInstances({ file, instances }: { file: string; instances: r
     target.computeBoundingSphere();
   }, [instances]);
 
-  return <instancedMesh key={capacity} ref={mesh} args={[geometry, material, capacity]} />;
+  return <instancedMesh key={capacity} ref={mesh} args={[geometry, material, capacity]} castShadow receiveShadow />;
 }

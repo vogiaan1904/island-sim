@@ -140,6 +140,15 @@ Spec 12.5:
   - Zoomed out to the whole island, a near-camera shadow map covers little; whether shadows fade out at that zoom is
     open.
 
+**As built (slice 1, ticket 10):** `render/daylight.ts` (`daylightAt(ticks, rules, into?)`, pure: sun, sky, fill and the
+night strength from the rules' sunrise and sunset, 30 minutes of twilight each side, moonlight at night), `render/quality.ts`
+(pixel ratio cap per tier: Low 1, Medium 1.5, High 2, never above 2; shadow map Low off, Medium 1024, High 2048; the
+device guess; the 2 s frame probe that steps down once), `render/shadow.ts` (shadow center on the ground point the camera
+looks at, snapped to texels in light space). In the scene: `DayNight` (frame priority -1) fills `daylight` and `toSun`
+in `scene/Sun.tsx`, `windowGlow` in `scene/palette.ts` makes slot 0 glow in the shared material, `useFrameLoop`
+sets the canvas frameloop to `never` while hidden. The shadow map still updates every frame; skipping updates when nothing
+moved, and lighting windows per building (occupied homes only, staggered), are open.
+
 ## 9. Construction, effects and world anchors
 
 **Construction** (spec 12.5): a frame or scaffold with workers using the interact clip, and the building rises in

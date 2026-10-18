@@ -1,5 +1,6 @@
 import { createCamera, type CameraState } from '../camera/controller.ts';
 import { ISLAND_LIMITS } from '../camera/limits.ts';
+import type { Quality } from '../render/quality.ts';
 
 /**
  * What the player chose about how they look at the island. It lives beside the island mirror, never inside it, so a
@@ -9,8 +10,11 @@ import { ISLAND_LIMITS } from '../camera/limits.ts';
 export interface ViewState {
   /** 'free' is the player's own camera; 'watch' arrives with watch mode (slice1-alive). */
   cameraMode: 'free' | 'watch';
-  /** Picked by a quick check at start and changeable in Settings (ticket 10); null until picked. */
-  quality: 'low' | 'medium' | 'high' | null;
+  /**
+   * The quality tier: picked for the device by a quick check at start (the scene writes it) and changeable in Settings
+   * (ticket 18); null until picked. A tier the player sets is never overridden by the check.
+   */
+  quality: Quality | null;
   /**
    * The camera: where it is asked to be (the real camera glides toward it). Anything may change it through the store's
    * `cameraGesture`: the input binding, the compass, "Show me" and Fix flights. Only the pure controller computes it.

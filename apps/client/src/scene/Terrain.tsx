@@ -26,7 +26,7 @@ export function Terrain({ terrain, size }: { terrain: string; size: number }) {
   return (
     <group>
       {geometries.map((geometry, i) => (
-        <mesh key={i} geometry={geometry} material={material} />
+        <mesh key={i} geometry={geometry} material={material} receiveShadow />
       ))}
       {/* The sea floor beyond the island's grid, so open water never shows the sky through it. */}
       <mesh material={seabed} position={[middle, SEA_FLOOR_HEIGHT - 0.01, middle]} rotation={[-Math.PI / 2, 0, 0]}>

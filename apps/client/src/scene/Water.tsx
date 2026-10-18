@@ -4,6 +4,7 @@ import { Color, ShaderMaterial, Vector3 } from 'three';
 import { useGame } from '../session/game.tsx';
 import { LOOK, TILE_SIZE, sunDirection } from '../render/look.ts';
 import { WATER_LEVEL } from '../render/terrain.ts';
+import { daylight, toSun } from './Sun.tsx';
 
 // One water surface around the island with a cheap wave in its vertex shader. Its time is the gliding game clock
 // (in ticks), the single animation time source, so a pinned clock gives the same water.
@@ -70,8 +71,12 @@ export function Water({ size }: { size: number }) {
     [],
   );
   useFrame(() => {
-    const time = material.uniforms.uTime;
-    if (time !== undefined) time.value = clock.ticksAt(performance.now());
+    const { uTime, uSky, uSunColor, uSunDirection } = material.uniforms;
+    if (uTime !== undefined) uTime.value = clock.ticksAt(performance.now());
+    // The water takes the light of the moment (the day-night state is written before this frame callback runs).
+    (uSky?.value as Color | undefined)?.setRGB(...daylight.fill);
+    (uSunColor?.value as Color | undefined)?.setRGB(...daylight.sun.color).multiplyScalar(daylight.sun.energy / LOOK.sun.energy);
+    (uSunDirection?.value as Vector3 | undefined)?.copy(toSun);
   });
 
   const middle = (size * TILE_SIZE) / 2;
