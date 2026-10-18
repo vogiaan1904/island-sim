@@ -15,7 +15,8 @@ export type LedgerReason =
   | 'rent'
   | 'sale'
   | 'materials-purchase'
-  | 'reward';
+  | 'reward'
+  | 'mainland-help';
 
 export type GoodsReason = 'produced' | 'eaten' | 'sold' | 'bought' | 'used-in-construction';
 

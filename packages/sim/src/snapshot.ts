@@ -1,6 +1,6 @@
 import type { Content } from '@island/content';
 import { canonicalJson } from './hash.ts';
-import { migrateV1 } from './migrations.ts';
+import { migrateV1, migrateV2, migrateV3 } from './migrations.ts';
 import type { WorldState } from './state.ts';
 import { validateWorld } from './validate.ts';
 import { SIM_VERSION } from './version.ts';
@@ -29,7 +29,7 @@ export class SnapshotError extends Error {
 export type Migration = (data: Record<string, unknown>, content: Content) => Record<string, unknown>;
 
 /** Key: the version a migration upgrades from. */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: migrateV1 };
+export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: migrateV1, 2: migrateV2, 3: migrateV3 };
 
 export function serializeWorld(world: WorldState): string {
   return canonicalJson(world);

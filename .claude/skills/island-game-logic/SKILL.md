@@ -183,8 +183,7 @@ plan, record the answer in the matching reference file, and remove it here.
   in spec 2.1 (`island-testing`). Change numbers there, never in the sim, and rerun it.
 - The grid tile size in metres and asset conventions (slice 1 step 1, with `island-blender`). The sim works in whole
   tiles and does not need metres.
-- The known gaps at the end of `references/slice1-rules.md` (an island with no coins and no income; the landmark
-  lock in the placement preview).
+- The known gaps at the end of `references/slice1-rules.md` (the landmark lock in the placement preview).
 
 Each reference file ends with its own list of open points.
 

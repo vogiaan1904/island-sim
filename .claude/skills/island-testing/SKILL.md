@@ -31,7 +31,8 @@ test*. The rules under test belong to the domain skills listed at the end.
   snapshots record their last sequence) and `replay(snapshot, log, untilTick)` rebuilds a world from them.
 - Determinism and replay: `packages/sim/test/determinism.test.ts`. Golden scenarios: `packages/sim/test/golden.test.ts`
   with scripts in `scenarios.ts`: "first buildings" (seed 42, 600 ticks) and "Outpost to Settlement" (seed 42,
-  the pacing bot's 25 commands, Settlement at tick 14,465).
+  the pacing bot's 25 commands, Settlement at tick 14,465) and "a stuck island recovers" (seed 42, 25 commands that
+  spend every coin; the Mainland grant on the first morning ferry, 12 residents by tick 2,880).
 - `packages/sim/test/away.test.ts`: a real day away (34,560 ticks, no commands) leaves a new Settlement no worse,
   with every invariant checked every tick (the chill rule).
 - Change sets: `packages/sim/src/changes.test.ts` keeps a mirror equal to the world through commands and ticks.

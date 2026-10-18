@@ -118,6 +118,19 @@ describe('content data', () => {
     }
   });
 
+  it('gives the Mainland help grant a whole amount that pays at least one commuter a day', () => {
+    const { mainlandHelpCents, commuterWagePerDayCents } = content.rules;
+    expect(isWhole(mainlandHelpCents)).toBe(true);
+    expect(mainlandHelpCents).toBeGreaterThanOrEqual(commuterWagePerDayCents);
+  });
+
+  it('gives a building waiting for money a reduced but running output', () => {
+    const { waitingOutputPermille } = content.rules;
+    expect(isWhole(waitingOutputPermille)).toBe(true);
+    expect(waitingOutputPermille).toBeGreaterThan(0);
+    expect(waitingOutputPermille).toBeLessThan(1_000);
+  });
+
   it('gives event types an importance from 0 to 100', () => {
     for (const e of content.eventTypes) {
       expect(isWhole(e.importance) && e.importance >= 0 && e.importance <= 100, e.id).toBe(true);

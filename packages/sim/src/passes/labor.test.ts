@@ -78,14 +78,14 @@ describe('the labor pass', () => {
     expect(work(world, 3)).toMatchObject({ residents: 0, commuters: 4 });
   });
 
-  it('skips buildings under construction or waiting for money', () => {
+  it('skips buildings under construction but staffs one waiting for money like any other', () => {
     const world = village(430);
     buildingOf(world, 2).constructionLeft = 5;
     buildingOf(world, 3).upkeepDue = true;
     islandOf(world, 0).commuters.present = 4;
     tickWorld(world, SMALL);
-    expect(work(world, 2)).toMatchObject({ residents: 0, commuters: 0 });
-    expect(work(world, 3)).toMatchObject({ residents: 0, commuters: 0 });
+    expect(work(world, 2)).toMatchObject({ residents: 0, commuters: 0, ratePermille: 0 });
+    expect(work(world, 3)).toMatchObject({ residents: 3, commuters: 1, ratePermille: 1000 });
   });
 
   it('sends everyone home outside the day shift, and waits between slow passes', () => {
