@@ -66,6 +66,7 @@ def join(objects: list, name: str):
 
 def place(piece, x: float = 0.0, y: float = 0.0, z: float = 0.0, turns: int = 0):
     """Moves a piece in world units and turns it by quarter turns around the up axis (counterclockwise from above)."""
+    piece.rotation_mode = "XYZ"  # the glTF importer leaves objects in quaternion mode, which ignores rotation_euler
     piece.rotation_euler = (0.0, 0.0, turns * 1.5707963267948966)
     piece.location = (x, y, z)
     return piece
