@@ -3,6 +3,12 @@ import { ISLAND_LIMITS } from '../camera/limits.ts';
 import type { Quality } from '../render/quality.ts';
 
 /**
+ * The panels the HUD opens over the island, one at a time: the four bottom buttons and the gear. A ticket that fills a
+ * panel registers its body in `ui/panels.ts`; nothing else about opening and closing is its job.
+ */
+export type PanelId = 'staff' | 'trade' | 'build' | 'log' | 'settings';
+
+/**
  * What the player chose about how they look at the island. It lives beside the island mirror, never inside it, so a
  * new full state (a reconnect, a visit) never wipes it. Later tickets add their fields here (the placement draft,
  * the open card) with a default in `initialView`.
@@ -26,6 +32,11 @@ export interface ViewState {
   controlsDetected: 'trackpad' | 'mouse';
   /** The building the last tap landed on, at once, for the card (ticket 14); null after a tap on open ground. */
   tappedBuilding: number | null;
+  /**
+   * The panel open over the island, or null. The HUD's bottom buttons and gear set it (`togglePanel`), and any code
+   * may open or close one with `setView({ openPanel })`: opening one replaces the one before.
+   */
+  openPanel: PanelId | null;
 }
 
 export function initialView(): ViewState {
@@ -36,5 +47,6 @@ export function initialView(): ViewState {
     controlsChoice: 'auto',
     controlsDetected: 'mouse',
     tappedBuilding: null,
+    openPanel: null,
   };
 }

@@ -1,0 +1,90 @@
+/* The open panel. Narrow (tall screens): a card up from the bottom, over the bottom bar. Wide: the same card on the right,
+   full height, so the island stays visible (island-ui, layout-and-input.md). The breakpoint is --wide in Hud.css. */
+.panel {
+  position: fixed;
+  z-index: 8;
+  left: max(8px, env(safe-area-inset-left));
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 0 4px 0 var(--shadow);
+  padding: 0.75rem;
+  color: var(--ink);
+  /* Touches on the card are its own: they never move the camera. */
+  touch-action: pan-y;
+  animation: panel-in 180ms ease-out;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.panel-close {
+  /* Drawn small, but the hit area is the full 44 px. */
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -0.25rem -0.25rem -0.25rem 0;
+  padding: 0;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.panel-close:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.panel-body:empty {
+  display: none;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (min-aspect-ratio: 5/4) {
+  .panel {
+    left: auto;
+    top: max(12px, env(safe-area-inset-top));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    right: max(12px, env(safe-area-inset-right));
+    width: min(22rem, 42vw);
+    max-height: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}

@@ -1,0 +1,319 @@
+/* The HUD: style A "Cozy and bright" (island-ui). Colors come from styles/tokens.css. Real CSS px, not the mockup's scale:
+   touch targets are at least 44 px and clear of the notch. Wide layout (phone sideways, tablet, desktop) is chosen by
+   screen shape: aspect ratio at least 5 to 4, the same media query PanelHost.css uses. */
+:root {
+  --hud-gap: 8px;
+  --hud-panel-width: min(22rem, 42vw);
+}
+
+.hud {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  /* The empty overlay lets touches through to the island; each control turns them back on. */
+  pointer-events: none;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  font-family: var(--font);
+  color: var(--ink);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.hud button {
+  font-family: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.hud button:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 3px;
+}
+
+/* ---- stage badge, top left ---- */
+.hud-badge {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+}
+
+.hud-ring {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 4rem;
+  height: 4rem;
+  background: var(--surface);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2.5px var(--ink),
+    0 4px 0 2.5px var(--shadow);
+}
+
+.hud-ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.hud-ring circle {
+  fill: none;
+  stroke-width: 6;
+}
+
+.hud-ring-track {
+  stroke: var(--track);
+}
+
+.hud-ring-fill {
+  stroke: var(--teal);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 600ms ease-out;
+}
+
+/* The landmark phase is told apart by its icon and color together, never by color alone. */
+.hud-ring[data-phase='landmark'] .hud-ring-fill {
+  stroke: var(--build-bottom);
+}
+
+.hud-ring[data-phase='complete'] .hud-ring-fill {
+  stroke: var(--green);
+}
+
+.hud-disc {
+  position: absolute;
+  inset: 11px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, #63d8c8, var(--teal));
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+.hud-ring[data-phase='landmark'] .hud-disc {
+  background: radial-gradient(circle at 35% 30%, var(--build-top), var(--build-bottom));
+  color: var(--ink);
+}
+
+.hud-stage-name {
+  margin-left: -12px;
+  padding: 0.15rem 0.85rem 0.15rem 1.1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 0 14px 14px 0;
+  box-shadow: 0 3px 0 var(--shadow);
+}
+
+/* ---- counters, gear and compass, top right ---- */
+.hud-right {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--hud-gap);
+}
+
+.hud-counters {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.hud-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 2.5rem;
+  padding: 2px 14px 2px 6px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 3px 0 var(--shadow);
+}
+
+.hud-pill-icon {
+  display: grid;
+  place-items: center;
+  color: var(--teal);
+}
+
+.hud-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hud-gear {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  color: var(--ink);
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 0 3px 0 var(--shadow);
+}
+
+.hud-gear[aria-pressed='true'] {
+  background: var(--yellow);
+}
+
+.hud-gear:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+
+/* ---- goal icons, left edge under the badge ---- */
+.hud-goals {
+  position: absolute;
+  top: calc(max(12px, env(safe-area-inset-top)) + 4rem + 18px);
+  left: max(12px, env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hud-goal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  padding-bottom: 6px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 0 3px 0 var(--shadow);
+}
+
+.hud-goal img {
+  display: block;
+  object-fit: contain;
+}
+
+.hud-goal[data-kind='need'] {
+  background: var(--problem-bg);
+  border-color: var(--problem-border);
+  box-shadow: 0 3px 0 var(--shadow);
+}
+
+.hud-goal-bar {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: 4px;
+  height: 5px;
+  overflow: hidden;
+  background: var(--track);
+  border-radius: 3px;
+}
+
+.hud-goal-bar i {
+  display: block;
+  height: 100%;
+  background: var(--green);
+  border-radius: 3px;
+  transition: width 600ms ease-out;
+}
+
+/* ---- the round bottom buttons ---- */
+.hud-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.hud-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 56px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--ink);
+}
+
+.hud-btn-disc {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 0 4px 0 var(--shadow);
+  transition: transform 120ms ease-out;
+}
+
+.hud-btn-build .hud-btn-disc {
+  width: 4.75rem;
+  height: 4.75rem;
+  background: radial-gradient(circle at 35% 30%, var(--build-top), var(--build-bottom));
+}
+
+.hud-btn[aria-pressed='true'] .hud-btn-disc {
+  background: var(--yellow);
+}
+
+.hud-btn:active .hud-btn-disc {
+  /* A small bounce on touch. */
+  transform: translateY(3px) scale(0.96);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+
+.hud-btn-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.75),
+    0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ---- wide: the panel sits on the right, so counters and the bar move left of it ---- */
+@media (min-aspect-ratio: 5/4) {
+  .hud[data-panel-open='true'] .hud-right {
+    right: calc(var(--hud-panel-width) + 24px + env(safe-area-inset-right));
+  }
+
+  .hud[data-panel-open='true'] .hud-bar {
+    right: calc(var(--hud-panel-width) + 24px + env(safe-area-inset-right));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-ring-fill,
+  .hud-goal-bar i,
+  .hud-btn-disc {
+    transition: none;
+  }
+}

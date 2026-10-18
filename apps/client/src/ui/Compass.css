@@ -1,9 +1,5 @@
 .compass {
-  position: fixed;
-  z-index: 5;
-  /* Under the notch and clear of the HUD's top-right pills; the HUD ticket moves it if they collide. */
-  top: calc(max(12px, env(safe-area-inset-top)) + 96px);
-  right: max(12px, env(safe-area-inset-right));
+  /* Placed by the HUD (its right column, beside the gear); standalone it sits where it is put. */
   width: 3rem;
   height: 3rem;
   display: grid;
@@ -16,6 +12,7 @@
   cursor: pointer;
   /* Taps on it are its own: they never reach the camera gestures on the canvas below. */
   touch-action: manipulation;
+  pointer-events: auto;
 }
 
 .compass:active {

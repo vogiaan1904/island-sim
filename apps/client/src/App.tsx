@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { GameProvider, useGame, useGameState, type Game } from './session/game.tsx';
 import { CalmStatus, RESTING_LINE } from './ui/CalmStates.tsx';
-import { Compass } from './ui/Compass.tsx';
+import { Hud } from './ui/hud/Hud.tsx';
 import { LoadingScreen } from './ui/LoadingScreen.tsx';
 import { LoginScreen } from './ui/LoginScreen.tsx';
 import { NoticeScreen } from './ui/NoticeScreen.tsx';
@@ -87,7 +87,7 @@ function IslandScreen() {
       <Suspense fallback={null}>
         <IslandCanvas onReady={() => setReady(true)} />
       </Suspense>
-      <Compass />
+      <Hud />
       <CalmStatus />
       {!ready && (
         <div className="screen-overlay">

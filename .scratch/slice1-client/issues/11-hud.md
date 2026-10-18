@@ -7,12 +7,12 @@ stories 38 to 41.
 
 **Blocked by:** 07.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The SVG line-icon set is chosen (license recorded) and every icon-only button has an accessible name.
-- [ ] Money shows as whole coins (cents divided by 100, rounded down).
-- [ ] The stage ring shows residents toward 10, then the landmark, from the mirror.
-- [ ] Narrow and wide layouts follow `island-ui`; touch targets meet its size rule.
-- [ ] Testing Library tests: values from a store state, the commuter counter only during Outpost, counters after the
+- [x] The SVG line-icon set is chosen (license recorded) and every icon-only button has an accessible name.
+- [x] Money shows as whole coins (cents divided by 100, rounded down).
+- [x] The stage ring shows residents toward 10, then the landmark, from the mirror.
+- [x] Narrow and wide layouts follow `island-ui`; touch targets meet its size rule.
+- [x] Testing Library tests: values from a store state, the commuter counter only during Outpost, counters after the
       glide (fake timers), Views and Watch absent, no player title, no-emoji check.
-- [ ] The buttons open empty panels for now; tickets 12, 16, 17 and 18 fill them.
+- [x] The buttons open empty panels for now; tickets 12, 16, 17 and 18 fill them.

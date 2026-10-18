@@ -19,7 +19,7 @@ Spec 6.1 "Layouts". The game is played mostly on phones (D12); desktop is also s
 - An open card stays open when the phone rotates; it just moves.
 - **Android's back button closes the open card first** (spec 12.5), then any open panel or mode, and only then
   leaves the game. The installed app avoids Safari's swipe-back.
-- The exact breakpoint is **not decided; set it in slice 1 and record it here.**
+- The breakpoint (set in slice 1, ticket 11): **wide is aspect ratio at least 5 to 4** (`@media (min-aspect-ratio: 5/4)`, in `Hud.css` and `PanelHost.css`); everything else is narrow.
 - The first draft's three-height bottom sheet (peek, half, full, drag to resize) was superseded. Don't build it by
   default.
 

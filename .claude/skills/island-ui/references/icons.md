@@ -17,7 +17,7 @@ Two reasons it matters beyond taste:
 
 | Family | What | Source | Where it's used |
 |---|---|---|---|
-| **UI chrome icons** | SVG line icons | An icon library, **to be decided in slice 1; update this skill then**. The mockups used Lucide-style icons. | Bottom buttons, compass, Watch, close, rotate, check on Place, eye on Show me, statuses, hints, Views options, arrows in recipes |
+| **UI chrome icons** | SVG line icons | **Lucide** (ISC license), as path data in the one module `apps/client/src/ui/icons.tsx` (`<Icon name size />`; add an icon by adding a key to `LINE_ICONS`). License text: `apps/client/src/ui/icons.LICENSE.md`. | Bottom buttons, compass, Watch, close, rotate, check on Place, eye on Show me, statuses, hints, Views options, arrows in recipes |
 | **Building and goods pictures** | Small renders of the real 3D models from a fixed angle | Rendered in Blender by the asset pipeline (`island-blender`), shipped in `apps/client/public/icons/` (listed in `tools/assets/src/catalog.ts`) | Build picker, building card picture, recipe tiles, goods in bubbles, trade, Goods flow legend |
 | **Key staff portraits** | Renders of the Mini Characters (spec 12.4), head and upper body: `portrait_<name>_a.png` | Rendered in Blender (`island-blender`) | News, Log, Staff panel, manager slots |
 

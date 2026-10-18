@@ -3,7 +3,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { applyGesture, step, type Gesture } from '../camera/controller.ts';
 import { ISLAND_LIMITS } from '../camera/limits.ts';
 import { applyMessage, commandSent, commandsLost, initialClientState, type ClientState } from './mirror.ts';
-import type { ViewState } from './view.ts';
+import type { PanelId, ViewState } from './view.ts';
 
 /**
  * Where the player is on the way to their island. 'checking' asks /api/me; 'opening' has a socket and waits for the
@@ -35,6 +35,8 @@ export interface GameActions {
   /** The connection dropped: commands still waiting for a result will never get one, so they are forgotten. */
   commandsLost(): void;
   setView(patch: Partial<ViewState>): void;
+  /** A HUD button: opens this panel in place of any other, or closes it when it is already the open one. */
+  togglePanel(panel: PanelId): void;
   /** One camera gesture through the pure controller: input, the compass, "Show me" flights (`{ kind: 'fly-to', ... }`). */
   cameraGesture(gesture: Gesture): void;
   /** Momentum for `dt` seconds; the camera rig calls it every frame, and it does nothing at rest. */
@@ -55,6 +57,8 @@ export function createGameStore(): GameStore {
     clearIsland: () => set({ island: null, commands: {} }),
     commandsLost: () => set((state) => commandsLost(state)),
     setView: (patch) => set((state) => ({ view: { ...state.view, ...patch } })),
+    togglePanel: (panel) =>
+      set((state) => ({ view: { ...state.view, openPanel: state.view.openPanel === panel ? null : panel } })),
     cameraGesture: (gesture) =>
       set((state) => ({ view: { ...state.view, camera: applyGesture(state.view.camera, gesture, ISLAND_LIMITS) } })),
     cameraStep: (dt) =>

@@ -35,3 +35,7 @@ Verify all checksums: `cd assets/packs && shasum -a 256 *.zip`
 1. Put the zip in `assets/packs/`.
 2. Add a row above: file, pack name and version (from its `License.txt`), download page, license, `shasum -a 256` output.
 3. Extract it into its own new folder `assets/raw/<pack>/`. Treat the contents as untrusted and never run code from them.
+
+## UI icons
+
+The UI line icons (`apps/client/src/ui/icons.tsx`) are Lucide shapes, ISC license; the notice is in `apps/client/src/ui/icons.LICENSE.md`.
