@@ -10,12 +10,22 @@ export interface CameraInputOptions {
   store: GameStore;
   /** A single tap or click on the island at a position relative to the element, once, as soon as it is known. Returns true when it hit open ground (so a second tap may zoom). */
   onTap(x: number, y: number): boolean;
+  /**
+   * While a building is being placed (`view.placement` in its aiming phase), a one-finger drag, a tap and a mouse hover
+   * aim the ghost with the pointer's position relative to the element, and do not move the camera. A pinch or a second
+   * finger still does.
+   */
+  onAim?(x: number, y: number, pointer: 'touch' | 'mouse'): void;
 }
 
 /** The keys currently held, read by the rig every frame. */
 export type HeldKeys = ReadonlySet<Key>;
 
 const now = () => performance.now();
+
+function pointerOf(event: unknown): 'touch' | 'mouse' {
+  return (event as { pointerType?: string }).pointerType === 'mouse' ? 'mouse' : 'touch';
+}
 
 function typingInField(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -30,13 +40,13 @@ function typingInField(target: EventTarget | null): boolean {
  * Browser zoom, pull-to-refresh and the context menu are switched off here and in CSS (`touch-action: none` on the
  * canvas, `overscroll-behavior: none` on the page).
  */
-export function useCameraInput({ element, store, onTap }: CameraInputOptions): HeldKeys {
+export function useCameraInput({ element, store, onTap, onAim }: CameraInputOptions): HeldKeys {
   const held = useRef<Set<Key>>(new Set());
   const state = useRef({
     tracker: createPinchTracker(),
     taps: createDoubleTap(),
     /** 'drag', 'orbit' or 'ignore' for the pointer gesture in progress. */
-    dragMode: 'ignore' as 'drag' | 'orbit' | 'ignore',
+    dragMode: 'ignore' as 'drag' | 'orbit' | 'aim' | 'ignore',
     /** Set once a second finger joined the gesture: the rest of this drag is ignored. */
     suppressed: false,
     pinching: false,
@@ -44,6 +54,9 @@ export function useCameraInput({ element, store, onTap }: CameraInputOptions): H
   });
   const tapRef = useRef(onTap);
   tapRef.current = onTap;
+  const aimRef = useRef(onAim);
+  aimRef.current = onAim;
+  const aiming = () => aimRef.current !== undefined && store.getState().view.placement?.phase === 'aiming';
 
   const send = (gesture: Gesture) => store.getState().cameraGesture(gesture);
   const viewportOf = (): { viewport: Viewport; left: number; top: number } => {
@@ -57,17 +70,25 @@ export function useCameraInput({ element, store, onTap }: CameraInputOptions): H
         const s = state.current;
         const { viewport, left, top } = viewportOf();
         const time = now();
-        if (g.first) {
-          s.dragMode = (g.buttons & 2) !== 0 ? 'orbit' : 'drag';
+        // A tap never crosses the gesture library's movement threshold, so it arrives once, on release, with `tap` set and
+        // `first` and `last` left as they were: treat it as a whole gesture of its own.
+        const ending = g.last || g.tap;
+        if (g.first || g.tap) {
+          s.dragMode = (g.buttons & 2) !== 0 ? 'orbit' : aiming() && g.touches <= 1 ? 'aim' : 'drag';
           s.suppressed = false;
           s.lastMove = time;
-          send({ kind: 'stop' });
+          if (s.dragMode !== 'aim') send({ kind: 'stop' });
         }
         if (g.touches > 1 || s.pinching) s.suppressed = true;
         const [dx, dy] = g.delta;
         const x = g.xy[0] - left;
         const y = g.xy[1] - top;
-        if (g.last) {
+        if (ending) {
+          if (s.dragMode === 'aim') {
+            if (g.tap && !s.suppressed) aimRef.current?.(x, y, pointerOf(g.event));
+            s.suppressed = false;
+            return;
+          }
           if (g.tap && !s.suppressed) {
             const onGround = tapRef.current(x, y);
             if (s.taps.tap({ x, y, time, onGround })) send({ kind: 'double-tap', x, y, viewport });
@@ -78,6 +99,10 @@ export function useCameraInput({ element, store, onTap }: CameraInputOptions): H
         }
         if (s.suppressed) return;
         if (dx === 0 && dy === 0) return;
+        if (s.dragMode === 'aim') {
+          aimRef.current?.(x, y, pointerOf(g.event));
+          return;
+        }
         if (s.dragMode === 'orbit') send({ kind: 'orbit', dx, dy });
         else send({ kind: 'drag', x, y, dx, dy, dt: (time - s.lastMove) / 1000, viewport });
         s.lastMove = time;
@@ -104,6 +129,13 @@ export function useCameraInput({ element, store, onTap }: CameraInputOptions): H
         );
         s.lastMove = time;
         send(gesture);
+      },
+      onMove: (g) => {
+        // A mouse with no button down: the ghost sits under the cursor.
+        const event = g.event as PointerEvent;
+        if (event.pointerType !== 'mouse' || event.buttons !== 0 || !aiming()) return;
+        const { left, top } = viewportOf();
+        aimRef.current?.(g.xy[0] - left, g.xy[1] - top, 'mouse');
       },
       onWheel: (g) => {
         const event = g.event as WheelEvent;

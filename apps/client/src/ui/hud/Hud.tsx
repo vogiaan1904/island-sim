@@ -19,6 +19,8 @@ import './Hud.css';
 export function Hud() {
   const island = useGameState((state) => state.island);
   const panelOpen = useGameState((state) => state.view.openPanel !== null);
+  // The placement panel takes the bottom bar's place while the player places something (ticket 12).
+  const placing = useGameState((state) => state.view.placement !== null);
   const model = useMemo(() => (island === null ? null : hudModel(island.state, content)), [island?.state]);
   if (island === null || model === null) return null;
   const glideKey = `${island.world}/${island.slot}`;
@@ -31,7 +33,7 @@ export function Hud() {
           <SideButtons />
         </div>
         {island.own && <Goals tiles={model.goals} />}
-        {island.own && <BottomBar />}
+        {island.own && !placing && <BottomBar />}
       </div>
       <PanelHost bodies={PANEL_BODIES} />
     </>

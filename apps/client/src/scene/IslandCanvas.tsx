@@ -8,6 +8,7 @@ import { useGame, useGameState } from '../session/game.tsx';
 import { Buildings } from './Buildings.tsx';
 import { CameraRig } from './CameraRig.tsx';
 import { useFrameLoop } from './frameLoop.ts';
+import { PlacementGhost } from './PlacementGhost.tsx';
 import { QualityProbe } from './QualityProbe.tsx';
 import { DayNight, Sun } from './Sun.tsx';
 import { Terrain } from './Terrain.tsx';
@@ -61,6 +62,10 @@ export default function IslandCanvas({ onReady }: { onReady: () => void }) {
           {island !== null && <Buildings island={island} />}
           <Ready onReady={onReady} />
           <QualityProbe guessed={guessed} />
+        </Suspense>
+        {/* Its own boundary, so a model that is still loading never hides the island. */}
+        <Suspense fallback={null}>
+          <PlacementGhost />
         </Suspense>
       </Canvas>
     </div>
