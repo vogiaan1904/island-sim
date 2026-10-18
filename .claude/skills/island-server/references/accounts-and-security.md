@@ -1,11 +1,47 @@
 # Accounts and security
 
-Planned design for `apps/server`; no code exists yet. Source: spec 5.3, 5.4, 12.3; decision D21 (username and password,
-chosen because it works the same on phone, desktop and an installed iPhone PWA, which has its own storage).
-Rejected: browser token plus recovery code, Discord, email magic link.
+The design for `apps/server`, built in slice 1 plan 3; "As built" gives the code and the numbers. Source: spec 5.3, 5.4,
+12.3; decision D21 (username and password, chosen because it works the same on phone, desktop and an installed iPhone
+PWA, which has its own storage). Rejected: browser token plus recovery code, Discord, email magic link.
 
-Contents: usernames and passwords - sessions and cookies - the WebSocket upgrade - registration and invite codes -
-password reset - rate limits - HTTPS - security checklist for every server change.
+Contents: as built - usernames and passwords - sessions and cookies - the WebSocket upgrade - registration and
+invite codes - password reset - rate limits - HTTPS - security checklist for every server change.
+
+## As built (plan 3)
+
+- **Fields** (`packages/protocol/src/http.ts`): usernames 3 to 24 of `A-Z a-z 0-9 - _`; passwords 8 to 128
+  characters; island names 2 to 24 of letters, digits, spaces, "-" and "'" (the sim's claim checks the rule); codes
+  typed in any case, spaces and dashes ignored. Login only bounds its fields, so a malformed name gets the same
+  `bad-credentials` as a wrong password; an unknown name is checked against a dummy hash so it takes as long.
+- **Hashing** (`accounts/passwords.ts`): argon2id through `@node-rs/argon2`, `m=19456,t=2,p=1` (OWASP), asynchronous.
+- **Sessions** (`accounts/accounts.ts`): a 32-byte random token in the `island_session` cookie (`HttpOnly`,
+  `SameSite=Strict`, `Secure` unless `ISLAND_SECURE_COOKIES=0`, `Max-Age` 90 days), stored as its SHA-256 hash. Each
+  use moves the expiry 90 days ahead (at most once an hour); `GET /api/me` renews the cookie too.
+- **Ending sessions:** logout ends this device; a password change ends every other device; a reset ends all. Open
+  sockets of those sessions close with 4003 (`Accounts.onSessionsEnded`).
+- **Codes:** invite codes 10 and reset codes 12 characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`; reset codes last
+  24 hours, work once, and are stored hashed.
+- **Endpoints** (`http/api.ts`): `POST /api/register`, `/api/login`, `/api/logout`, `/api/password`,
+  `/api/password-reset`, `/api/worlds` (create), `/api/worlds/join`, `/api/worlds/invite` (creator only); `GET
+  /api/me`. Every POST needs the game's Origin (`bad-origin`). Bodies are JSON up to 4 KiB (`too-large`). Errors are
+  `{ error: ApiReason }` with an HTTP status.
+- **Registration** checks, hashes, then checks everything again (the world may have changed while hashing) and
+  creates the account inside the claim's transaction: a full or resting world creates nothing (`world-full`,
+  `world-resting`).
+- **The upgrade** (`sync/gateway.ts`): `/ws` only, the Origin must equal `ISLAND_ORIGIN`, the cookie must hold a live
+  session; otherwise 403, 401 or 404 and no socket.
+
+| Rate limit | Limit |
+|---|---|
+| Login per username / per IP | 10 / 30 per 15 minutes |
+| Registration per IP | 10 per hour |
+| Reset code per username / per IP | 5 / 20 per 15 minutes |
+| Password change, joining, invite codes per account | 20 per 15 minutes each |
+| Creating worlds per account | 5 per hour |
+| Commands / other messages per connection | 30 / 60 per 10 seconds |
+
+The client address is the socket's, or the last `X-Forwarded-For` entry when `ISLAND_TRUST_PROXY=1` (only behind a
+reverse proxy you run).
 
 ## Usernames and passwords
 

@@ -1,10 +1,47 @@
 # Sync protocol: packages/protocol and the WebSocket connection
 
-Planned design; no code exists yet. Source: spec 3, 5.3, 6.2 (client state), 12.2, 12.3; brainstorm Section 3.
-Message names and shapes are **still open**: choose them in slice 1 and record them here.
+The design, built in slice 1 plan 3; "As built" gives the real messages. Source: spec 3, 5.3, 6.2 (client state),
+12.2, 12.3; brainstorm Section 3.
 
-Contents: the protocol package - transport - connection lifecycle - message kinds - full state and per-tick
-changes - visiting - phones and reconnects - validation - versioning - illustrative schema.
+Contents: as built - the protocol package - transport - connection lifecycle - message kinds - full state and
+per-tick changes - visiting - phones and reconnects - validation - versioning - illustrative schema.
+
+## As built (plan 3)
+
+`packages/protocol/src/messages.ts` and `apps/server/src/sync/`. `PROTOCOL_VERSION` is 1.
+
+| Direction | Message | Carries |
+|---|---|---|
+| client -> server | `hello` | `protocolVersion`; the first message, within 5 s (`helloTimeoutMs`) |
+| client -> server | `open-island` | `world`, `slot`: an island of a world the account has an island in |
+| client -> server | `close-island` | nothing |
+| client -> server | `command` | `requestId`, `command` (a `PlayerCommand`, checked on its own) |
+| client -> server | `mark-seen` | `key` (tick, source, index): the news was seen up to there |
+| server -> client | `welcome` / `update-required` | the account / the server's version, then close 4001 |
+| server -> client | `island` | world, slot, `own`, tick, status, `entities` (the island's and the market), `summary`, `news` |
+| server -> client | `update` | world, tick, `source` (0 a tick, else the command's sequence), `changed`, `removed`, `events`, `summary` when it changed |
+| server -> client | `status` | world, `running`, `paused` or `catching-up` |
+| server -> client | `result` | `requestId`, ok with the sim's `data`, or a `Reason` and `shortfallCents` |
+| server -> client | `error` | a `Reason`, for a refused message that is not a command |
+
+- **Close codes** (`CLOSE_CODES`): 1001 server stopping, 4001 update required, 4002 no hello or a bad first message,
+  4003 session ended, 4005 not JSON. A connection with more than 1 MB waiting to be sent, or that did not answer the
+  last ping (every 30 s), is dropped without a close frame (1006 on the client) and reconnects.
+- **Unknown or malformed messages** are refused with `error` / `bad-message` and the connection stays open; only
+  text that is not JSON closes it. So a new client message always needs a version bump.
+- **Command changes are sent at once:** the update with the command's sequence goes to every open copy of the island
+  before the sender's `result`.
+- **Every tick sends an update** to each open island, even an empty one: it carries the tick the client's clock and
+  day and night follow. The summary (claimed islands: slot, name, owner's username, stage, residents) comes with
+  `island` and with an update only when it changed; prices travel in the `market` entity.
+- **News:** only when opening your own island: that island's newest 100 events after the account's marker, oldest
+  first. Visitors get `news: []` but the visited island's events in every update (watch mode).
+- **Catch-up:** open islands get `status` `catching-up`, no updates, then `status` `running` and a fresh `island`.
+  The same `island` resend follows a rebuild.
+- **The client mirror** applies `island.entities`, then each update with the sim's `applyChanges`; the server test
+  client (`apps/server/test/player.ts`) does exactly this, and plan 5's store should use the same function.
+- **Sizes:** client messages up to 16 KiB (`maxPayload`); a road command up to 1,024 tiles by schema (the sim's own
+  limit answers `too-many-tiles`).
 
 ## The protocol package
 

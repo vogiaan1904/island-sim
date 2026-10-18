@@ -243,7 +243,8 @@ Copy this list into the task and tick it off.
       services, reach for services, Mainland price, floor price and color for goods, first-guess numbers labeled.
 - [ ] Retune safety: a change that lowers a bound `validateWorld` checks (prices, `constructionLeft`, storage, jobs,
       recipe cycle, home capacity, ferry seats) or adds a good has a `SIM_VERSION` bump and a clamping or filling
-      migration (`island-game-logic`, `references/determinism.md`); otherwise saved worlds fail to load.
+      migration (`island-game-logic`, `references/determinism.md`); otherwise saved worlds fail to load. Any retune
+      changes the content hash: deploy it after a graceful shutdown, or the server refuses to replay the log.
 - [ ] Sim tests written before the rules, passing: unit, invariants on the ledger, determinism, replay, golden
       scenarios; snapshot migration added for new state fields.
 - [ ] New event types (each with an importance) and stage goal definitions added for any new watch moments, news

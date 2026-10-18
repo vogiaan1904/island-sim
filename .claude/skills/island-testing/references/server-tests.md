@@ -1,12 +1,12 @@
 # Server integration tests
 
-Planned home: `apps/server` (test folder to be decided in slice 1). The protocol, persistence, accounts and tick loop
-being tested are described in `island-server`; this file says what the tests must prove and how to keep them fast
-and stable.
+Home: `apps/server/test/` for integration tests, next to the code for unit tests (built in slice 1 plan 3). The
+protocol, persistence, accounts and tick loop being tested are described in `island-server`; this file says what the
+tests must prove and how to keep them fast and stable.
 
-Contents: principles - what the tests need from the server - accounts - worlds and invite codes - protocol and
+Contents: principles - the harness - accounts - worlds and invite codes - protocol and
 commands - sync and the client mirror - reconnect - persistence, crash recovery and catch-up - events and news -
-paused worlds and fault isolation - backups - an illustrative test.
+paused worlds and fault isolation - backups - an example from the suite.
 
 ## Principles
 
@@ -19,22 +19,33 @@ paused worlds and fault isolation - backups - an illustrative test.
   that the server applies sim results faithfully, saves them and syncs them.
 - **No fixed sleeps.** Wait for a specific message or condition with a timeout, and on timeout fail with what was
   received. A test that sleeps 3 seconds "for a tick" is slow and flaky at once.
-- **Crash tests use a child process,** so the server can really be killed.
+- **Kill for real at least once:** a child process killed with SIGKILL proves the log is durable; in-process restarts
+  prove recovery is exact, quickly.
 
-## What the tests need from the server
+## The harness (plan 3)
 
-These are testing requirements on the design. Until they exist, do not write tests that sleep through real 2.5 s
-ticks or real 5-minute snapshot intervals.
+Unit tests sit next to the code (`apps/server/src/**/*.test.ts`); integration tests are in `apps/server/test/`.
 
-- **Snapshot interval:** every 5 real minutes in production and configurable for tests (spec 12.3). Tests set it short
-  or, where they need a snapshot at an exact point, force one (the forcing mechanism is to be decided in slice 1).
-- **Tick control** (to be decided in slice 1 with `island-server`): run ticks on demand or at a very short interval.
-  The interval is only the scheduler's setting (spec 4.1), so this changes no results.
-- **Clock control** (to be decided): catch-up after downtime and 90-day sessions need the wall clock to jump. The
-  server owns real time (an `island-server` rule), so it needs an injectable clock for tests.
-- **Reading server state** (to be decided): the mirror and recovery tests compare the server's per-island state hash
-  (spec 12.2) with the client's, through a test-only hook or admin command.
-- **Fault injection** (to be decided): a way to make one world's tick, or one command, throw.
+- **Time:** `ManualClock` (`test/support.ts`) is the server's clock; it moves only when the test moves it. Servers
+  start with `autoTick: false`, so no timer ticks: move the clock by `TICK_MS` and call `worlds.runDue()` (or
+  `runtime.runDue()`), one tick at a time for live ticks with updates, or many at once to catch up (await the
+  promise it returns). 90-day sessions and reset-code expiry use the same clock.
+- **Worlds without the network:** `worldDeps()` (an in-memory database with accounts `id-alice`, `id-bob`,
+  `id-carol`) and `aliceWorld()` (alice's world on seed 42, her dock at 12,26) build a `Worlds` registry directly;
+  `runTicks(runtime, clock, n)` runs live ticks.
+- **A real server:** `startTestServer(overrides, clock)` (`test/server.ts`) listens on free ports with an in-memory
+  database (or `tempDatabase()` for restarts) and `ORIGIN` as the game's origin. `addAccount` adds an account as the
+  host would. `Browser` sends the game's Origin and keeps the session cookie; `server.store` reads the logs.
+- **A real socket:** `Player.connect(server, browser)` (`test/player.ts`) with `hello()`, `open()`, `command()` and
+  `next(type, match)`, which waits for a message instead of sleeping. It keeps `mirror` the way the client will: the
+  full state, then each update applied with the sim's `applyChanges`.
+- **Reading state:** compare `stateHash(Object.fromEntries(player.mirror))` with the same over
+  `islandEntities(runtime.world, slot)` (`src/sync/views.ts`).
+- **Fault injection:** a shipment to a building that does not exist makes the next tick throw; all-water terrain on a
+  free slot makes the next claim throw.
+- **Crashes:** in process, `server.close({ snapshot: false })` stops without the shutdown snapshot, then a new server
+  on the same file recovers (exactness by state hash). For a real kill, `test/main.test.ts` runs `pnpm server` as a
+  child process and sends SIGKILL.
 
 ## Accounts (spec 5.4, 12.3)
 
@@ -60,7 +71,8 @@ ticks or real 5-minute snapshot intervals.
   while the device that changed it stays logged in.
 - Password reset: the admin command issues a one-time code; it works once and fails the second time.
 - Login rate limits per username and per IP: after the limit, even the correct password is refused until the window
-  passes; a second username from the same IP still hits the IP limit. Numbers to be decided in slice 1.
+  passes; a second username from the same IP still hits the IP limit. The numbers are in `island-server`
+  (accounts-and-security.md).
 
 ## Worlds and invite codes (spec 5.1, 12.3)
 
@@ -107,8 +119,8 @@ sim and has its own sim test (`sim-tests.md`), so this test proves the server se
   ~10-tick labor and transport cadence.
 - Run it with two clients at once, the owner and a visiting friend: visitors get the same island state (spec 12.3),
   so both mirrors must match the server and each other.
-- Use the client's real mirror code (the store's apply functions from `apps/client`, or a shared function, to be
-  decided in slice 1), not a copy written for the test, or the test proves nothing about the client.
+- Use the client's real mirror code, the sim's `applyChanges`, which `test/player.ts` uses and plan 5's store must
+  use too; a copy written for the test proves nothing about the client.
 - Changes are sent only while an island is on screen: a client that has left the island, or closed, receives none.
 - Each per-tick message also carries the world summary (other islands, market prices) and new events; check they
   arrive and parse.
@@ -171,21 +183,19 @@ The server copies the SQLite file daily with SQLite's online backup. Test that a
 ticking opens cleanly, and that a server started from the copy rebuilds the same per-island hashes as the source had
 at the time of the backup.
 
-## Illustrative test
+## An example from the suite
+
+`apps/server/test/sync.test.ts`, shortened: the owner's mirror equals the server after commands and 700 ticks.
 
 ```ts
-// Illustrative only: startTestServer, connectAs, runTicks and islandHashOf are placeholders.
-test('the client mirror equals the server after 30 ticks with commands in between', async () => {
-  const server = await startTestServer({ db: tempDbFile(), tickControl: 'manual' });
-  const host = await connectAs(server, await server.adminCreateAccount('host'));
-  const { worldId, islandId } = await host.createWorld(); // creating a world also claims the creator's island
-  await host.openIsland(islandId); // full state arrives first
-
-  await host.sendCommand({ type: 'place', building: 'farm', at: [12, 7] }); // expects ok
-  await server.runTicks(worldId, 30);
-  await host.waitForTick(worldId, 30);
-
-  expect(host.mirrorHash(islandId)).toBe(await server.islandHashOf(worldId, islandId));
-  await server.stop();
+it("keeps the client's mirror equal to the server's state through commands and ticks (spec 9)", async () => {
+  const { browsers, connect, runtime, tick } = await friends(); // a test server, alice's world on seed 42
+  const alice = await connect(browsers.alice);
+  await alice.hello();
+  await alice.open(runtime.id, 0); // the full state comes first
+  for (const command of OUTPOST_START) expect((await alice.command(command)).ok).toBe(true);
+  tick(700); // move the clock one tick at a time and run each
+  await alice.next('update', (m) => m.tick === 700);
+  expect(hash(alice.mirror)).toBe(hash(islandEntities(runtime.world, 0).map(({ key, value }) => [key, value])));
 });
 ```

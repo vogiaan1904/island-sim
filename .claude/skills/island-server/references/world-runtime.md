@@ -1,10 +1,35 @@
 # World runtime: lifecycle, tick loop, paused worlds, catch-up, shutdown
 
-Planned design for `apps/server`; no code exists yet. Sources: spec 4.1, 5.1, 5.2, 12.2, 12.3; brainstorm Section 3.
-Names in examples are illustrative, not real APIs.
+The design for `apps/server`, built in slice 1 plan 3; "As built" gives the code. Sources: spec 4.1, 5.1, 5.2, 12.2,
+12.3; brainstorm Section 3.
 
-Contents: time from the server's side - world lifecycle - the tick cycle - commands between ticks - paused worlds -
-catch-up after downtime - startup and shutdown - keeping one process healthy.
+Contents: as built - time from the server's side - world lifecycle - the tick cycle - commands between ticks - paused
+worlds - catch-up after downtime - startup and shutdown - keeping one process healthy.
+
+## As built (plan 3)
+
+- `WorldRuntime` (`apps/server/src/worlds/runtime.ts`) runs one world; `Worlds` (`registry.ts`) holds them all.
+- **Anchor:** the world record's `anchorTick` and `anchorMs`. Tick T is due at `anchorMs + (T - anchorTick) * tickMs`.
+  The anchor stays fixed while a world runs; it moves only when a catch-up is capped. After a crash, the recovered
+  world is behind its anchor and catches up to where it would have been.
+- **`runDue()`:** at most 8 due ticks run live (`LIVE_TICKS`), each with an update to listeners; more starts
+  `catchUp()`, which returns a promise. Tests move a `ManualClock` and call `runDue()` themselves (`autoTick: false`).
+- **Timers:** `start()` schedules a `setTimeout` for the next due tick, then reschedules; a paused world's timer stops
+  and `resume()` restarts it. `stop()` ends timers and catch-up batches for shutdown.
+- **Catch-up:** batches of 500 ticks (`CATCH_UP_BATCH`) in one transaction each, `setImmediate` between batches, the
+  cap from `catchUpCapTicks` (34,560); status `catching-up` meanwhile; then a snapshot, status `running`, and a
+  `resync` so open islands get their full state.
+- **Failure:** `fail()` logs `world paused` (world, tick or command, tick, stack), rebuilds with
+  `recoverWorld(store, id, lastGoodTick)`, stores the reason and tick (`pausedReason`, `pausedTick`) and tells
+  listeners. A world that fails to rebuild stays paused. `resume()` rebuilds again, clears the pause, catches up.
+- **Check-in:** applied when the owner opens their island, at most once per game hour (`CHECK_IN_EVERY_TICKS` in
+  `sync/connection.ts`): a phone that reconnects often does not fill the log.
+- **Listeners:** a world nobody watches is never diffed (its capture is dropped); a listener that throws is logged
+  (`listener failed`) and skipped.
+- **Startup:** `Worlds.loadAll()` recovers every world (a paused one to its paused tick); a world that cannot be
+  recovered goes to `Worlds.failed` with the reason and is not run. `start()` then lets each world catch up on its
+  own timer. **Shutdown** (`close()` in `server.ts`): close the sockets (1001), stop the worlds, snapshot each that
+  is not paused, close the listeners and the database.
 
 ## Time from the server's side
 

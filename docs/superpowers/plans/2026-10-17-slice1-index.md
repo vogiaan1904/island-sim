@@ -14,7 +14,7 @@ the islands keep running while you're away, and you can watch each other's islan
 |---|---|---|---|---|
 | 1 | Workspace and simulation kernel | pnpm monorepo, `packages/content`, `packages/sim`: seeded worlds, claiming, check-in, buildings and roads paid up front, construction, ledger, events, snapshots, determinism, replay and golden tests | nothing | done: `2026-10-17-slice1-plan1-sim-kernel.md` |
 | 2 | Simulation: Outpost to Settlement | The gameplay of the first stage, headless and tested | plan 1 | done: `2026-10-17-slice1-plan2-outpost-gameplay.md` |
-| 3 | Protocol and server | `packages/protocol`, `apps/server`: the always-running worlds behind accounts and invite codes | plans 1-2 | written: `2026-10-18-slice1-plan3-protocol-server.md` |
+| 3 | Protocol and server | `packages/protocol`, `apps/server`: the always-running worlds behind accounts and invite codes | plans 1-2 | done: `2026-10-18-slice1-plan3-protocol-server.md` |
 | 4 | Art direction and asset pipeline | The chosen look, the conventions, and every slice 1 model and icon | the user and Blender (can run beside plans 1-3) | not written |
 | 5 | Client | `apps/client`: the 3D island and the style A UI on phones | plans 1-3; plan 4 for final models | not written |
 | 6 | Ship slice 1 | Installable app, two-player end-to-end test, deployment, phone performance check | plans 1-5 | not written |
@@ -37,17 +37,19 @@ the islands keep running while you're away, and you can watch each other's islan
 - Per-tick change sets for the server; the golden "Outpost to Settlement" scenario; the pacing harness in `tools/`
   checking the pace targets (first residents within about an hour, Settlement within the first day).
 
-**Carried over from plan 2** (found by its final review; nothing here blocks plan 3 unless it says so)
+**Carried over** (found by the final reviews of plans 2 and 3)
 - Soft lock (plan 2 decision 15): an island with no coins, no residents and nothing to sell cannot pay commuters and
-  stays stuck. A gentle way out must land within slice 1, before the plan 5 client is playtested. Wages are paid before
-  upkeep, so an island just short of money pays its commuters, who then idle at workplaces left unpaid by upkeep.
-- Plan 3: the load policy for retuned content. `validateWorld` bounds saved state by content numbers, so lowering a
-  bound or adding a good makes old snapshots fail to load (`invalid-data`). Decide between a migration per retune and
-  clamping the content-bounded fields on load.
-- Plan 3, when it touches snapshots: harden `validateWorld` so cargo must be addressed to an unbuilt landmark site that
-  still needs that good, and a shipment's destination must be a store, market or site.
-- Plan 3: the change-set diff re-serializes the terrain and road strings every tick; compare the strings directly.
-- Pacing report header: add the sim version and a content or git hash, as `pacing-harness.md` requires.
+  stays stuck. A gentle way out must land in plan 5, before its client is playtested. Wages are paid before upkeep,
+  so an island just short of money pays its commuters, who then idle at workplaces left unpaid by upkeep.
+- Plan 5: serve the built client from the game server (one origin for the page, `/api` and `/ws`), with a safe path
+  lookup; during development the client's dev server proxies `/api` and `/ws` to `pnpm server`.
+- Plan 5: the client's store applies `island` and `update` messages with the sim's `applyChanges`, exactly as the
+  server's test client does (`apps/server/test/player.ts`).
+- Plan 6: the hosting provider, TLS, process supervision, deploy steps and the backup's second location; then update
+  `island-server` (operations.md).
+- Settled in plan 3: the load policy for retuned content (a `SIM_VERSION` bump with a migration, no clamping; the
+  content hash refuses replay across a retune), the stricter `validateWorld` goods checks, comparing terrain and road
+  strings directly in change sets, and the sim version and content hash in the pacing report header.
 
 **Plan 3, protocol and server** (spec 5, 12.3)
 - `packages/protocol`: Valibot schemas around the sim's commands, changes and events; the protocol version.

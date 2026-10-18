@@ -1,10 +1,35 @@
 # Persistence: SQLite, snapshots, command log, event log, replay, backups
 
-Planned design for `apps/server`; no code exists yet. Sources: spec 4.6, 5.2, 12.2, 12.3. Record and column names are
-illustrative; choose them in slice 1.
+The design for `apps/server`, built in slice 1 plan 3; "As built" gives the code. Sources: spec 4.6, 5.2, 12.2, 12.3.
 
-Contents: why it is built this way - the database - what is stored - command log rules - snapshots - recovery and
-replay - the event log - sim versions and replay - reproducing a bug locally - backups.
+Contents: as built - why it is built this way - the database - what is stored - command log rules - snapshots -
+recovery and replay - the event log - sim versions and replay - reproducing a bug locally - backups.
+
+## As built (plan 3)
+
+- **Schema:** `apps/server/src/db.ts`, migrated by `PRAGMA user_version` (a newer database than the server is
+  refused). Tables: `accounts`, `sessions`, `reset_codes`, `worlds` (seed, creator, invite code, anchor, paused reason
+  and tick), `members`, `snapshots`, `commands`, `events`, `last_seen`. WAL mode, foreign keys on.
+- **Access:** `WorldStore` (`worlds/store.ts`) and `AccountStore` (`accounts/store.ts`), prepared statements only.
+- **Snapshots:** `WorldRuntime.snapshot()` writes tick, last sequence, `SIM_VERSION`, `CONTENT_HASH` and the sim's
+  `serializeWorld`; the newest two per world are kept. Written on world creation, every `snapshotMs`, after each
+  catch-up and on shutdown.
+- **Command log:** every accepted command with its tick, sequence, account (the claimant for claims), sim version,
+  content hash and JSON, in the same transaction as its events and the membership mirror. Kept whole.
+- **Recovery:** `recoverWorld(store, worldId, untilTick)` in `worlds/recovery.ts`: newest snapshot, then each later
+  command after the tick it followed. It refuses (`replay refused: ...`) when a later command was logged by another
+  sim version **or other content**: replaying under different numbers would silently differ from what players saw.
+  It also fails on an unloadable snapshot (`snapshot refused: ...`) or a command the sim no longer accepts
+  (`replay failed: ...`).
+- **Retuned content (decided in plan 3):** no clamping on load. A retune that makes saved state invalid
+  (`validateWorld` bounds) ships with a `SIM_VERSION` bump and a migration; any retune changes `CONTENT_HASH`, so the
+  host always shuts down gracefully before deploying one (an empty replay window, spec 12.2).
+- **Events:** `insertEvents` uses `INSERT OR IGNORE` on (world, tick, source, index); replay writes them again
+  harmlessly. `eventsAfter(world, slot, marker, limit)` reads the news; `markSeen` moves the marker only forward.
+- **Membership:** `WorldRuntime` rewrites the world's `members` rows whenever the island owners in the state differ
+  from the last rows it wrote, and on load: the mirror is always rebuilt from the state.
+- **Backups:** `backupDatabase` (`src/backup.ts`) uses `better-sqlite3`'s online backup into `ISLAND_BACKUP_DIR` daily
+  (and on `pnpm admin backup`), keeping the newest 7. A server starts from a backup file like from the database.
 
 ## Why it is built this way
 

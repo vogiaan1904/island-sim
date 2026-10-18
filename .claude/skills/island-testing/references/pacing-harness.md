@@ -108,3 +108,5 @@ The numbers above are made up to show the layout; they are not results or target
   at 10.0 h (casual) and 9.0 h (keen).
 - To turn a pacing run into a golden scenario, record the accepted commands of `runPacing(...).log` into
   `packages/sim/test/scenarios.ts`, as "Outpost to Settlement" was.
+- The report header names the sim version and the content hash (`sim 2  content <hash>`, plan 3), so two reports
+  can be compared only when both match.

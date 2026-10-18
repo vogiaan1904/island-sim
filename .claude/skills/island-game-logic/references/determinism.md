@@ -94,10 +94,13 @@ pattern for any future outside fact: a logged command, never a lookup.
 
 Spec 12.2:
 
-- Each snapshot stores the **sim version**, and each logged command records the sim version that applied it.
+- Each snapshot stores the **sim version**, and each logged command records the sim version that applied it. The
+  server records the **content hash** (`contentHash(content)`, `version.ts`) beside it: replay is exact only with the
+  same rules and the same numbers.
 - A graceful shutdown always writes a snapshot, so the replay window after a deploy is empty.
 - **An old snapshot with nothing logged after it is simply migrated** (see the next point) and the world carries on.
-- **Only when logged commands written by another sim version still need replaying** (a crash, then a deploy) does
+- **Only when logged commands written by another sim version or other content still need replaying** (a crash, then
+  a deploy) does
   the server refuse, and tell the host to run the previous version once to write a clean snapshot
   (`island-server`). Commands are never replayed under rules other than the ones that applied them.
 - **New state fields get their starting values from versioned snapshot migrations in `packages/sim`.** Loading an
@@ -113,6 +116,9 @@ Spec 12.2:
   fills the affected fields: market prices (within each good's min and max) and the market's per-good lists,
   `constructionLeft` (at most `buildTicks`), stock (at most storage, or the landmark's materials), workers (at most
   jobs), work progress (at most the recipe cycle), residents (at most home capacity), commuters (at most ferry seats).
+- That is the load policy (decided in plan 3): a retune that would make saved state invalid ships with its migration,
+  and nothing is clamped on load, so no saved number ever changes silently. Every retune changes the content hash, so
+  shut the server down gracefully before deploying one: the replay window is then empty.
 
 ## JavaScript traps
 

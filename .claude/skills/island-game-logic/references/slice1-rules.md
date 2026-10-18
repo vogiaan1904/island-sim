@@ -76,6 +76,10 @@ Claimed islands in slot order, each running these passes in this order, then the
   source.
 - Moving goods inside an island writes no ledger entry; the goods invariant counts every building, every shipment
   and the cargo hold (`goodsHeld`).
+- `validateWorld` refuses goods addressed where they could not go: cargo only to an unbuilt landmark site that needs
+  that good; a shipment only to a built store, a built service that sells the good (the market: fish and
+  vegetables), or a site that needs it; and never more of a material held for a site (on site, on the roads and in
+  the hold together) than the landmark needs.
 
 ## The Mainland (`mainland.ts`, `passes/market.ts`)
 
@@ -133,7 +137,8 @@ Claimed islands in slot order, each running these passes in this order, then the
 - The world is keyed entities: `island/<slot>` (no terrain, roads, buildings or shipments), `terrain/<slot>`,
   `roads/<slot>`, `building/<slot>/<id>`, `transit/<slot>/<id>`, `market`. `captureEntities` before, then
   `diffEntities(capture, world)` after a tick or command gives the changed entities (whole copies) and removed keys,
-  plus the capture for next time. `applyChanges` applies them to a mirror.
+  plus the capture for next time. `applyChanges` applies them to a mirror. The capture keeps the terrain and road
+  strings as they are and compares them directly; everything else as canonical JSON.
 
 ## Known gaps
 
@@ -142,6 +147,4 @@ Claimed islands in slot order, each running these passes in this order, then the
   way out (for example the port master advancing a day's wages) is open: it must land within slice 1, before the
   plan 5 client is playtested. Wages are paid before upkeep, so an island just short of money pays its commuters, who
   then idle at workplaces that upkeep left unpaid.
-- The load policy for retuned content is decided in plan 3: a migration per retune, or clamping the content-bounded
-  fields on load (`validateWorld` rejects state that a lowered bound or a new good leaves out of range).
 - Placement checks do not include the landmark lock; the client checks `unlockedLandmarks` itself for the preview.

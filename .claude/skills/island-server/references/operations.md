@@ -1,9 +1,27 @@
 # Operations: hosting, deploying, backups, admin commands, logging, push notifications
 
-Planned design; no code exists yet and no host is chosen. Source: spec 5.2, 5.4, 5.5, 8.2, 12.2, 12.3; brainstorm
-Section 3.
+Running the server is built (slice 1 plan 3); no host is chosen yet (plan 6). Source: spec 5.2, 5.4, 5.5, 8.2, 12.2,
+12.3; brainstorm Section 3.
 
-Contents: hosting - deploying a new version - backups - admin commands - logging - push notifications (later).
+Contents: as built - hosting - deploying a new version - backups - admin commands - logging - push notifications
+(later).
+
+## As built (plan 3)
+
+- **Run:** `pnpm server` (`apps/server/src/main.ts`). SIGINT or SIGTERM shuts down gracefully with a snapshot of
+  every world; an exception that escapes every handler ends the process without one (Node's default), and the
+  supervisor restarts it.
+- **Settings** (`configFromEnv`): `ISLAND_HOST` (127.0.0.1), `ISLAND_PORT` (8787), `ISLAND_ADMIN_PORT` (8788),
+  `ISLAND_ORIGIN` (`http://localhost:8787`; set it to the public `https://` origin), `ISLAND_DB`
+  (`data/island.sqlite`), `ISLAND_BACKUP_DIR` (`data/backups`; empty turns backups off), `ISLAND_SECURE_COOKIES=0`
+  for plain-HTTP development, `ISLAND_TRUST_PROXY=1` behind your reverse proxy. Timings are fixed by the game.
+- **Admin:** the admin interface listens on 127.0.0.1 only and refuses any request with an Origin header (a web page
+  on the host's browser is not the host). `pnpm admin <command>`: `worlds`, `create-account <username>` (prints a
+  made-up password once), `reset-code <username>`, `invite-code <world-id>`, `resume <world-id>`, `backup`.
+- **Backups:** daily into `ISLAND_BACKUP_DIR`, the newest 7 kept; point it at another disk on the host.
+- **Logs:** one JSON line per entry, info to stdout and warnings and errors to stderr (`src/log.ts`): server
+  started and stopped, world created, account registered, world paused, world not loaded, world resumed, catching up,
+  catch-up capped, command refused, backup written or failed.
 
 ## Hosting
 
