@@ -6,14 +6,14 @@ me"; reaching Settlement plays a small celebration. Mainland help appears as new
 
 **Blocked by:** 01, 11.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The news picks by each event type's importance from content data, groups, takes the top five; Done sends
+- [x] The news picks by each event type's importance from content data, groups, takes the top five; Done sends
       `mark-seen` for the last one shown.
-- [ ] "Show me" flies the camera to the event's place (ticket 07's fly-to).
-- [ ] Log: newest first, a picture, one sentence and "Show me" per item; friendly items, never a table.
-- [ ] The stage celebration: badge pop with the new stage name, short sparkle, a line from the port master; it does not
+- [x] "Show me" flies the camera to the event's place (ticket 07's fly-to).
+- [x] Log: newest first, a picture, one sentence and "Show me" per item; friendly items, never a table.
+- [x] The stage celebration: badge pop with the new stage name, short sparkle, a line from the port master; it does not
       block play.
-- [ ] One sentence in words for every event type in content data, including `mainland-help`; a test fails if a type
+- [x] One sentence in words for every event type in content data, including `mainland-help`; a test fails if a type
       has none.
-- [ ] Testing Library tests for the top-five pick, Show me, the Log and the celebration; no-emoji.
+- [x] Testing Library tests for the top-five pick, Show me, the Log and the celebration; no-emoji.

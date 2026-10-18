@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { LogPanel } from '../news/LogPanel.tsx';
 import type { PanelId } from '../store/view.ts';
 
 // The hook for the panels the HUD opens (ticket 11). The bottom buttons and the gear set `view.openPanel`; the panel
@@ -21,4 +22,6 @@ export const PANEL_TITLES: Record<PanelId, string> = {
 
 export type PanelBodies = Partial<Record<PanelId, ComponentType>>;
 
-export const PANEL_BODIES: PanelBodies = {};
+export const PANEL_BODIES: PanelBodies = {
+  log: LogPanel,
+};

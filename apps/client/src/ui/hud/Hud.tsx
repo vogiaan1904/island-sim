@@ -1,5 +1,7 @@
 import { content } from '@island/content';
 import { useMemo } from 'react';
+import { NewsCard } from '../../news/NewsCard.tsx';
+import { StageCelebration } from '../../news/StageCelebration.tsx';
 import { useGame, useGameState } from '../../session/game.tsx';
 import type { PanelId } from '../../store/view.ts';
 import { Compass } from '../Compass.tsx';
@@ -32,7 +34,9 @@ export function Hud() {
         </div>
         {island.own && <Goals tiles={model.goals} />}
         {island.own && <BottomBar />}
+        <NewsCard />
       </div>
+      <StageCelebration />
       <PanelHost bodies={PANEL_BODIES} />
     </>
   );

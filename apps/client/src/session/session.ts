@@ -1,4 +1,4 @@
-import { CLOSE_CODES, type PlayerCommand, type RegisterRequest, type ServerMessage, type WorldInfo } from '@island/protocol';
+import { CLOSE_CODES, type EventKey, type PlayerCommand, type RegisterRequest, type ServerMessage, type WorldInfo } from '@island/protocol';
 import type { Api, ClientApiReason } from '../connection/api.ts';
 import { connectGame, type ConnectResult, type GameConnection, type OpenSocket } from '../connection/socket.ts';
 import type { GameClock } from '../glide/clock.ts';
@@ -56,6 +56,8 @@ export interface Session {
   logOut(): Promise<ClientApiReason | null>;
   /** Sends a command for the own open island and returns its request id; null when no own island is open. */
   command(command: PlayerCommand): number | null;
+  /** Tells the server the news up to this event was seen (the port master's Done); nothing happens with no own island open. */
+  markSeen(key: EventKey): void;
   stop(): void;
 }
 
@@ -342,6 +344,11 @@ export function createSession(store: GameStore, clock: GameClock, services: Sess
       nextRequestId = requestId + 1;
       state.commandSent(requestId, command);
       return requestId;
+    },
+    markSeen(key) {
+      const island = store.getState().island;
+      if (connection === null || island === null || !island.own) return;
+      connection.markSeen(key);
     },
     stop() {
       stopped = true;

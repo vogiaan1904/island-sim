@@ -1,4 +1,4 @@
-import { CLOSE_CODES, PROTOCOL_VERSION, type AccountInfo, type ClientMessage, type PlayerCommand, type ServerMessage } from '@island/protocol';
+import { CLOSE_CODES, PROTOCOL_VERSION, type AccountInfo, type ClientMessage, type EventKey, type PlayerCommand, type ServerMessage } from '@island/protocol';
 import { parseServerMessage } from './messages.ts';
 
 /** Opens the one WebSocket to /ws. A page passes `(url) => new WebSocket(url)`; the browser adds the Origin and cookie. */
@@ -17,6 +17,8 @@ export interface GameConnection {
   open(world: string, slot: number): void;
   /** Sends a command for the own open island and returns its request id; the `result` carries the same id. */
   command(command: PlayerCommand): number;
+  /** Tells the server the news up to this event was seen, so the next visit brings only what is newer. */
+  markSeen(key: EventKey): void;
   close(): void;
 }
 
@@ -66,6 +68,7 @@ export function connectGame(options: ConnectOptions): Promise<ConnectResult> {
           send({ type: 'command', requestId, command });
           return requestId;
         },
+        markSeen: (key) => send({ type: 'mark-seen', key }),
         close: () => socket.close(1000),
       };
       resolve({ ok: true, connection });
