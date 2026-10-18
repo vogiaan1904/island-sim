@@ -53,7 +53,7 @@ describe('recoverWorld', () => {
     deps.store.insertCommand(runtime.id, { ...logged, sequence: 2, simVersion: SIM_VERSION - 1, contentHash: CONTENT_HASH }, 0);
     expect(recoverWorld(deps.store, runtime.id, null)).toEqual({
       ok: false,
-      reason: expect.stringMatching(/^replay refused: command 2 and later were applied by sim version 1 /),
+      reason: expect.stringMatching(new RegExp(`^replay refused: command 2 and later were applied by sim version ${SIM_VERSION - 1} `)),
     });
 
     const other = aliceWorld();

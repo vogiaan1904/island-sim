@@ -11,37 +11,50 @@ const USAGE = `Usage: pnpm admin <command> [argument]
   resume <world-id>           resume a paused world; it catches up the paused time
   backup                      write a backup of the database now`;
 
-const base = `http://127.0.0.1:${configFromEnv(process.env).adminPort}`;
-const [command, argument] = process.argv.slice(2);
+const [command, ...args] = process.argv.slice(2);
 
-const requests: Record<string, [method: string, path: string, body?: (argument: string) => unknown]> = {
-  worlds: ['GET', '/admin/worlds'],
-  'create-account': ['POST', '/admin/accounts', (username) => ({ username })],
-  'reset-code': ['POST', '/admin/reset-codes', (username) => ({ username })],
-  'invite-code': ['POST', '/admin/invite-codes', (world) => ({ world })],
-  resume: ['POST', '/admin/resume', (world) => ({ world })],
-  backup: ['POST', '/admin/backup', () => ({})],
+/** Each command's request, and how many arguments it takes. */
+const requests: Record<string, { method: string; path: string; arguments: 0 | 1; body?: (argument: string) => unknown }> = {
+  worlds: { method: 'GET', path: '/admin/worlds', arguments: 0 },
+  'create-account': { method: 'POST', path: '/admin/accounts', arguments: 1, body: (username) => ({ username }) },
+  'reset-code': { method: 'POST', path: '/admin/reset-codes', arguments: 1, body: (username) => ({ username }) },
+  'invite-code': { method: 'POST', path: '/admin/invite-codes', arguments: 1, body: (world) => ({ world }) },
+  resume: { method: 'POST', path: '/admin/resume', arguments: 1, body: (world) => ({ world }) },
+  backup: { method: 'POST', path: '/admin/backup', arguments: 0, body: () => ({}) },
 };
 
 const request = command === undefined ? undefined : requests[command];
-const needsArgument = request?.[2] !== undefined && command !== 'backup';
-if (!request || (needsArgument && argument === undefined)) {
+if (!request || args.length !== request.arguments) {
   console.error(USAGE);
   process.exit(2);
 }
 
-const [method, path, body] = request;
 try {
-  const init: RequestInit = { method, headers: { 'content-type': 'application/json' } };
-  if (body) init.body = JSON.stringify(body(argument ?? ''));
-  const response = await fetch(base + path, init);
-  const result: unknown = await response.json();
+  const base = `http://127.0.0.1:${configFromEnv(process.env).adminPort}`;
+  const init: RequestInit = { method: request.method, headers: { 'content-type': 'application/json' } };
+  if (request.body) init.body = JSON.stringify(request.body(args[0] ?? ''));
+  let response: Response;
+  try {
+    response = await fetch(base + request.path, init);
+  } catch (error) {
+    console.error(`admin ${command}: no server answered at ${base} (${error instanceof Error ? error.message : String(error)})`);
+    process.exit(1);
+  }
+  let result: unknown;
+  try {
+    result = await response.json();
+  } catch {
+    console.error(`admin ${command}: the server at ${base} answered something unexpected (${response.status}, not JSON)`);
+    process.exit(1);
+  }
   if (!response.ok) {
     console.error(`admin ${command} failed (${response.status}): ${JSON.stringify(result)}`);
+    // A 400 means the argument was not accepted: show what each command takes.
+    if (response.status === 400) console.error(USAGE);
     process.exit(1);
   }
   console.log(JSON.stringify(result, null, 2));
 } catch (error) {
-  console.error(`admin ${command}: no server answered at ${base} (${error instanceof Error ? error.message : String(error)})`);
+  console.error(`admin ${command}: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 }
