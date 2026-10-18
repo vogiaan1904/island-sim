@@ -150,12 +150,12 @@ export function createApi(deps: ApiDeps): (req: IncomingMessage, res: ServerResp
     'POST /api/register': async (req, res) => {
       limit(limits.registerByIp, clientIp(req, config.trustProxy));
       const body = await parse(req, RegisterRequest);
-      if (accounts.store.accountByUsername(body.username)) throw new Failure('username-taken');
       invitedWorld(body.inviteCode);
+      if (accounts.store.accountByUsername(body.username)) throw new Failure('username-taken');
       const passwordHash = await hashPassword(body.password);
       // Synchronous from here on; the password took a while to hash, so everything is checked again.
-      if (accounts.store.accountByUsername(body.username)) throw new Failure('username-taken');
       const runtime = invitedWorld(body.inviteCode);
+      if (accounts.store.accountByUsername(body.username)) throw new Failure('username-taken');
       const account = accounts.newAccount(body.username, passwordHash);
       const { slot } = claimed(worlds.claim(runtime, account.id, body.islandName, () => accounts.store.insertAccount(account)));
       const token = accounts.startSession(account.id);
@@ -247,7 +247,8 @@ export function createApi(deps: ApiDeps): (req: IncomingMessage, res: ServerResp
   return async (req, res) => {
     try {
       if (deps.closing()) throw new Failure('shutting-down');
-      const route = routes[`${req.method ?? ''} ${new URL(req.url ?? '/', 'http://host').pathname}`];
+      // Not URL parsing: Node accepts request targets such as "//" that `new URL` throws on.
+      const route = routes[`${req.method ?? ''} ${(req.url ?? '/').split('?')[0]}`];
       if (!route) throw new Failure('not-found');
       if (req.method !== 'GET' && !fromOrigin(req, config.origin)) throw new Failure('bad-origin');
       await route(req, res);

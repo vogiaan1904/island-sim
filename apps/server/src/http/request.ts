@@ -13,11 +13,16 @@ export type Body = { ok: true; value: unknown } | { ok: false; reason: 'too-larg
 export async function readJson(req: IncomingMessage): Promise<Body> {
   const chunks: Buffer[] = [];
   let size = 0;
-  for await (const chunk of req) {
-    const buffer = chunk as Buffer;
-    size += buffer.length;
-    if (size > MAX_BODY_BYTES) return { ok: false, reason: 'too-large' };
-    chunks.push(buffer);
+  try {
+    for await (const chunk of req) {
+      const buffer = chunk as Buffer;
+      size += buffer.length;
+      if (size > MAX_BODY_BYTES) return { ok: false, reason: 'too-large' };
+      chunks.push(buffer);
+    }
+  } catch {
+    // The client went away mid-body: nobody is left to answer, and it is not a server error.
+    return { ok: false, reason: 'bad-request' };
   }
   try {
     return { ok: true, value: JSON.parse(Buffer.concat(chunks).toString('utf8')) };

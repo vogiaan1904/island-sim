@@ -34,6 +34,20 @@ describe('the admin interface', () => {
     expect(new URL(server.adminUrl).hostname).toBe('127.0.0.1');
   });
 
+  it('answers a request target new URL() cannot parse like any unknown path', async () => {
+    const { server } = await adminServer();
+    const status = await new Promise<number>((resolve, reject) => {
+      const url = new URL(server.adminUrl);
+      const req = request({ host: url.hostname, port: url.port, path: '//', method: 'GET' }, (res) => {
+        res.resume();
+        resolve(res.statusCode ?? 0);
+      });
+      req.on('error', reject);
+      req.end();
+    });
+    expect(status).toBe(404);
+  });
+
   it('creates the first account, with a made-up password shown once', async () => {
     const { server } = await adminServer();
     const created = await admin(server, 'POST', '/admin/accounts', { username: 'Host' });

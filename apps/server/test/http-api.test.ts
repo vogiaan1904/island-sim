@@ -1,3 +1,4 @@
+import { request } from 'node:http';
 import type { JoinedResponse, MeResponse } from '@island/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { IslandServer } from '../src/server.ts';
@@ -65,6 +66,15 @@ describe('registering', () => {
     });
   });
 
+  it('checks the invite code before the username, so names cannot be probed without a code', async () => {
+    const { server } = await aliceWithWorld();
+    const bob = new Browser(server.url);
+    expect(await bob.post('/api/register', { ...bobSignsUp('ZZZZZZZZZZ'), username: 'alice' })).toMatchObject({
+      status: 404,
+      body: { error: 'bad-invite-code' },
+    });
+  });
+
   it('refuses a resting world', async () => {
     const { server, clock, inviteCode, world } = await aliceWithWorld();
     const runtime = server.worlds.get(world.id);
@@ -76,6 +86,23 @@ describe('registering', () => {
     expect(runtime.status).toBe('paused');
     const bob = new Browser(server.url);
     expect(await bob.post('/api/register', bobSignsUp(inviteCode))).toMatchObject({ status: 503, body: { error: 'world-resting' } });
+  });
+});
+
+describe('a malformed request', () => {
+  it('answers a request target new URL() cannot parse like any unknown path', async () => {
+    const { server } = await aliceWithWorld();
+    const answer = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+      const url = new URL(server.url);
+      const req = request({ host: url.hostname, port: url.port, path: '//', method: 'GET' }, (res) => {
+        let body = '';
+        res.on('data', (chunk: Buffer) => (body += chunk.toString()));
+        res.on('end', () => resolve({ status: res.statusCode ?? 0, body }));
+      });
+      req.on('error', reject);
+      req.end();
+    });
+    expect(answer).toEqual({ status: 404, body: '{"error":"not-found"}' });
   });
 });
 

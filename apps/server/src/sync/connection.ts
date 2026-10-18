@@ -117,6 +117,12 @@ export class Connection {
       this.close(CLOSE_CODES.badData);
       return;
     }
+    if (!this.greeted && isOtherVersionHello(json)) {
+      // Before the strict parse: a newer client's hello may carry fields this version does not know, and it must
+      // still learn here that it must update, not get a bad-hello close.
+      this.hello(json.protocolVersion);
+      return;
+    }
     const parsed = v.safeParse(ClientMessage, json);
     if (!this.greeted) {
       if (!parsed.success || parsed.output.type !== 'hello') this.close(CLOSE_CODES.badHello);
@@ -170,6 +176,11 @@ export class Connection {
    */
   private openIsland(worldId: string, slot: number): void {
     const runtime = this.deps.worlds.get(worldId);
+    if (!runtime && this.deps.worlds.failed.has(worldId) && this.deps.worlds.membershipsOf(this.account.id).some((m) => m.worldId === worldId)) {
+      // A world that could not be loaded rests like a paused one until the host acts.
+      this.error('world-paused');
+      return;
+    }
     if (!runtime || runtime.slotOf(this.account.id) === null) {
       this.error('not-a-member');
       return;
@@ -232,8 +243,10 @@ export class Connection {
   }
 
   /**
-   * The command pipeline (island-server): schema, rate limit, access (your own island, open), then the sim through
-   * the world, which logs an accepted command before this reply. Refusals go to the server log only.
+   * The command pipeline (island-server): the message envelope (receive), access (your own island, open), the rate
+   * limit, the command schema, then the sim through the world, which logs an accepted command before this reply.
+   * Access comes before the command schema, so any payload gets a fixed no-island-open or not-your-island answer.
+   * Refusals go to the server log only.
    */
   private command(requestId: number, raw: unknown): void {
     const refuse = (reason: ServerReason) => this.send({ type: 'result', requestId, ok: false, reason, shortfallCents: 0 });
@@ -283,4 +296,11 @@ export class Connection {
     clearTimeout(this.helloTimer);
     this.leave();
   }
+}
+
+/** A hello of another protocol version, whatever else it carries. */
+function isOtherVersionHello(json: unknown): json is { type: 'hello'; protocolVersion: number } {
+  if (typeof json !== 'object' || json === null) return false;
+  const { type, protocolVersion } = json as { type?: unknown; protocolVersion?: unknown };
+  return type === 'hello' && typeof protocolVersion === 'number' && protocolVersion !== PROTOCOL_VERSION;
 }

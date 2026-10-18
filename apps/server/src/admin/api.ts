@@ -122,7 +122,8 @@ export function createAdminApi(deps: AdminDeps): (req: IncomingMessage, res: Ser
       ) {
         throw new AdminError(403, 'forbidden');
       }
-      const route = routes[`${req.method ?? ''} ${new URL(req.url ?? '/', 'http://host').pathname}`];
+      // Not URL parsing: Node accepts request targets such as "//" that `new URL` throws on.
+      const route = routes[`${req.method ?? ''} ${(req.url ?? '/').split('?')[0]}`];
       if (!route) throw new AdminError(404, 'not-found');
       await route(req, res);
     } catch (error) {

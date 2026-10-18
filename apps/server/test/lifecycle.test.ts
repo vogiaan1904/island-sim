@@ -5,6 +5,7 @@ import type { ServerConfig } from '../src/config.ts';
 import type { IslandServer } from '../src/server.ts';
 import { CONTENT_HASH } from '../src/worlds/recovery.ts';
 import { openDatabase } from '../src/db.ts';
+import { Player } from './player.ts';
 import { Browser, addAccount, startTestServer, tempDatabase } from './server.ts';
 import { ManualClock, TICK_MS } from './support.ts';
 
@@ -102,7 +103,7 @@ describe('after a deploy', () => {
 
     const { server: restarted, log } = await serverOn(databasePath, clock);
     expect(restarted.worlds.get(runtime.id)).toBeUndefined();
-    expect(restarted.worlds.failed.get(runtime.id)).toMatch(/^replay refused: command 99 and later were applied by sim version 1 /);
+    expect(restarted.worlds.failed.get(runtime.id)).toMatch(new RegExp(`^replay refused: command 99 and later were applied by sim version ${SIM_VERSION - 1} `));
     expect(log.entries.find((entry) => entry.message === 'world not loaded')?.fields).toMatchObject({ world: runtime.id });
     expect(restarted.worlds.get(other.runtime.id)?.status).toBe('running');
     const alice = new Browser(restarted.url);
@@ -112,6 +113,17 @@ describe('after a deploy', () => {
       [runtime.id, 'paused'],
       [other.runtime.id, 'running'],
     ]);
+    // Over the socket it rests like a paused world too, not "not a member".
+    const player = await Player.connect(restarted, alice);
+    try {
+      await player.hello();
+      player.send({ type: 'open-island', world: runtime.id, slot: 0 });
+      expect(await player.next('error')).toEqual({ type: 'error', reason: 'world-paused' });
+      player.send({ type: 'open-island', world: 'no-such-world', slot: 0 });
+      expect(await player.next('error')).toEqual({ type: 'error', reason: 'not-a-member' });
+    } finally {
+      player.socket.terminate();
+    }
   });
 });
 

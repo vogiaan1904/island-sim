@@ -79,6 +79,11 @@ describe('connecting', () => {
     old.send({ type: 'hello', protocolVersion: PROTOCOL_VERSION + 1 });
     expect(await old.next('update-required')).toEqual({ type: 'update-required', protocolVersion: PROTOCOL_VERSION });
     expect(await old.closed).toEqual({ code: CLOSE_CODES.updateRequired });
+    // A later version may add fields to hello: the version still decides first.
+    const newer = await connect(browsers.alice);
+    newer.send({ type: 'hello', protocolVersion: PROTOCOL_VERSION + 1, clientBuild: 'abc123' });
+    expect(await newer.next('update-required')).toEqual({ type: 'update-required', protocolVersion: PROTOCOL_VERSION });
+    expect(await newer.closed).toEqual({ code: CLOSE_CODES.updateRequired });
     const rude = await connect(browsers.alice);
     rude.send({ type: 'close-island' });
     expect(await rude.closed).toEqual({ code: CLOSE_CODES.badHello });
