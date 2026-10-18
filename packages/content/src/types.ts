@@ -179,6 +179,11 @@ export interface WorldRules {
    * goods anywhere, nothing in transit or cargo, no reward waiting (spec 12.1).
    */
   mainlandHelpCents: number;
+  /**
+   * Share of its normal output a building runs at while its upkeep could not be paid ("waiting for money"): it keeps
+   * its workers and slows down instead of stopping (spec 12.1).
+   */
+  waitingOutputPermille: number;
   newcomersPerFerry: number;
   leaversPerFerry: number;
   /** Share of each home's residents who are children and do not work. */

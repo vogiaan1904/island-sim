@@ -2,7 +2,7 @@ import type { Content } from '@island/content';
 import { stateHash } from './hash.ts';
 
 /** Version of the sim's rules and state shape. Bump it when saved state changes shape, with a migration (spec 12.2). */
-export const SIM_VERSION = 3;
+export const SIM_VERSION = 4;
 
 /**
  * Names the content numbers the rules run on. Replay is exact only with the same sim version and the same content, so

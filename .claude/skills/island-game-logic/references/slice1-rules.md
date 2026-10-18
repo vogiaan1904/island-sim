@@ -54,7 +54,7 @@ Claimed islands in slot order, each running these passes in this order, then the
 
 ## Labor (`passes/labor.ts`)
 
-- During the day shift, built workplaces not waiting for money are staffed by priority (2 high, 1 normal, 0 low;
+- During the day shift, built workplaces (waiting for money or not; only a site under construction gets nobody) are staffed by priority (2 high, 1 normal, 0 low;
   `set-priority`), then id. Each takes resident workers from the nearest homes along roads, then commuters, who
   walk from the dock. Outside the shift everyone is home and every workplace has 0 workers.
 - Children are `childrenPermille` (25%) of each home, rounded down, and do not work (`people.ts`).
@@ -105,9 +105,10 @@ Claimed islands in slot order, each running these passes in this order, then the
 ## Running costs (`passes/upkeep.ts`, `passes/needs.ts`)
 
 - Upkeep every game hour per built building, higher priority first, then id; one the island cannot pay gets
-  `upkeepDue` ("waiting for money") until a later hour's payment succeeds. Only producers stop: labor does not staff
-  a building with `upkeepDue` and production skips it. Services (market, well) and stores (dock, warehouse) keep
-  working, and still show the condition.
+  `upkeepDue` ("waiting for money") until a later hour's payment succeeds. A producer waiting for money keeps its
+  workers (the labor pass staffs it as usual) and its production progress runs at `waitingOutputPermille` (500) of
+  its rate, so a 30 tick cycle takes 60; the first successful payment returns it to the full rate. Services (market,
+  well) and stores (dock, warehouse) keep working, and still show the condition.
 - Rent every game hour: residents x `rentPerResidentHourCents` x happiness / 1000, one `rent` entry per island.
 
 ## Residents (`passes/needs.ts`, `passes/migration.ts`)

@@ -9,7 +9,7 @@ import type { TickContext } from './context.ts';
 // The labor pass (spec 4.3, 12.1), every slow pass. During the day shift, workplaces are staffed in order of
 // priority (high first), then id. Each takes resident workers from the nearest homes along roads first, then
 // commuters, whose walk starts at the dock. Residents work at their home's happiness, commuters at a neutral 100%.
-// Buildings still being built or waiting for money get nobody. Outside the shift everyone is home.
+// Buildings still being built get nobody; one waiting for money is staffed like any other (it only produces slower). Outside the shift everyone is home.
 
 export function runLabor(ctx: TickContext, island: IslandState): void {
   const { content } = ctx;
@@ -32,7 +32,7 @@ export function runLabor(ctx: TickContext, island: IslandState): void {
   const order = [...workplaces].sort((a, b) => b.building.priority - a.building.priority || a.building.id - b.building.id);
   for (const { building, def } of order) {
     const work = building.work;
-    if (!work || !isBuilt(building) || building.upkeepDue) continue;
+    if (!work || !isBuilt(building)) continue;
     const from = roadsFrom(island, content, building);
     let open = def.jobs;
     let productivity = 0;

@@ -181,6 +181,7 @@ export const content: Content = {
     ferryCargoHold: 60,
     commuterWagePerDayCents: 1_500,
     mainlandHelpCents: 10_000,
+    waitingOutputPermille: 500,
     newcomersPerFerry: 8,
     leaversPerFerry: 4,
     childrenPermille: 250,

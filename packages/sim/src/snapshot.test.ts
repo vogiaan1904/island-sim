@@ -155,6 +155,15 @@ describe('migration from sim version 2', () => {
     const v2 = { ...v3, simVersion: 2 };
     const world = loadWorld(JSON.stringify(v2), content);
     expect(world).toEqual({ ...v3, simVersion: SIM_VERSION });
-    expect(SIM_VERSION).toBe(3);
+  });
+});
+
+describe('migration from sim version 3', () => {
+  it('changes nothing but the version: waiting for money slows a building down, a rule and no state', () => {
+    const v4 = JSON.parse(serializeWorld(claimedWorld())) as Record<string, unknown>;
+    const v3 = { ...v4, simVersion: 3 };
+    const world = loadWorld(JSON.stringify(v3), content);
+    expect(world).toEqual({ ...v4, simVersion: SIM_VERSION });
+    expect(SIM_VERSION).toBe(4);
   });
 });

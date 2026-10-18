@@ -28,7 +28,7 @@ describe('golden scenario: first buildings', () => {
     expect(palmCove.buildings.every((b) => b.constructionLeft === 0)).toBe(true);
     expect(palmCove.rewards).toEqual(['first-farm']);
     expect(islandOf(world, 1).owner).toBe('bob');
-    expect(stateHash(world)).toBe('011c850de29d0a');
+    expect(stateHash(world)).toBe('0cfd5199ca57f1');
   });
 });
 
@@ -45,7 +45,7 @@ describe('golden scenario: Outpost to Settlement', () => {
     const { events } = tickWorld(world, content);
     expect(events.map((e) => e.type)).toEqual(['construction-finished', 'stage-reached']);
     expect(isle.stage).toBe('settlement');
-    expect(stateHash(world)).toBe('1cbfe10e49d636');
+    expect(stateHash(world)).toBe('15d0814b88f486');
   }, 60_000);
 });
 
@@ -71,6 +71,6 @@ describe('golden scenario: a stuck island recovers', () => {
     const isle = islandOf(world, 0);
     expect(residentsOf(isle)).toBe(12);
     expect(isle.coinsCents).toBeGreaterThan(15_000);
-    expect(stateHash(world)).toBe('01045c38c04220');
+    expect(stateHash(world)).toBe('05650f9d1a0a35');
   }, 60_000);
 });
