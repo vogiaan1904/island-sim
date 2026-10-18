@@ -33,6 +33,7 @@ export type EventTypeId =
   | 'newcomers-arrived'
   | 'residents-left'
   | 'commuters-stayed-home'
+  | 'mainland-help'
   | 'cargo-arrived'
   | 'goal-completed';
 
@@ -173,6 +174,11 @@ export interface WorldRules {
   ferryCargoHold: number;
   /** Paid for each commuter who boards the morning ferry. */
   commuterWagePerDayCents: number;
+  /**
+   * The Mainland's grant on a morning ferry to a stuck island: no residents, coins below one commuter's day wage, no
+   * goods anywhere, nothing in transit or cargo, no reward waiting (spec 12.1).
+   */
+  mainlandHelpCents: number;
   newcomersPerFerry: number;
   leaversPerFerry: number;
   /** Share of each home's residents who are children and do not work. */

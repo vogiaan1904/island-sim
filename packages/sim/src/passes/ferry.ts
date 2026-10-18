@@ -1,6 +1,8 @@
 import { emit } from '../events.ts';
-import { pay } from '../ledger.ts';
+import { credit, pay } from '../ledger.ts';
+import { residentsOf } from '../people.ts';
 import type { IslandState } from '../state.ts';
+import { goodsHeld } from '../stock.ts';
 import { unloadCargo } from './cargo.ts';
 import type { TickContext } from './context.ts';
 import { moveInNewcomers, moveOutUnhappy } from './migration.ts';
@@ -13,6 +15,7 @@ import { moveInNewcomers, moveOutUnhappy } from './migration.ts';
 export function runFerry(ctx: TickContext, island: IslandState): void {
   const rules = ctx.content.rules;
   if (ctx.minute === rules.shiftStartMinute) {
+    giveMainlandHelp(ctx, island);
     const newcomers = moveInNewcomers(ctx, island, rules.ferrySeats);
     boardCommuters(ctx, island, rules.ferrySeats - newcomers);
     unloadCargo(ctx, island);
@@ -43,4 +46,20 @@ function boardCommuters(ctx: TickContext, island: IslandState, seats: number): v
       short: affordable < bySeats ? 'money' : 'seats',
     });
   }
+}
+
+/**
+ * An island that spent every coin before it had residents or anything to sell cannot pay commuters, so it could never
+ * start again: the Mainland credits a small grant on the morning ferry, before commuters board (spec 12.1). Stuck is
+ * exact: no residents, coins below one commuter's day wage, no goods in any building, on the roads or in the cargo
+ * hold, and no reward waiting to be collected. Checked only on the morning ferry, so at most once a day.
+ */
+function giveMainlandHelp(ctx: TickContext, island: IslandState): void {
+  const rules = ctx.content.rules;
+  if (residentsOf(island) > 0) return;
+  if (island.coinsCents >= rules.commuterWagePerDayCents) return;
+  if (island.rewards.length > 0) return;
+  for (const good of ctx.content.goods) if (goodsHeld(island, good.id) > 0) return;
+  credit(island, rules.mainlandHelpCents, 'mainland-help', ctx.ledger);
+  emit(ctx.sink, 'mainland-help', island.slot, { cents: rules.mainlandHelpCents, hired: island.commuters.hired });
 }

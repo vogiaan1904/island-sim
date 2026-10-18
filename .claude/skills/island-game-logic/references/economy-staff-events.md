@@ -151,4 +151,3 @@ from the needs in content; their numbers come from the pacing harness.
 ## Open points
 
 - The evaluation order and cadence of several automation rules (slice 2 brings more templates).
-- A gentle way out for an island with no coins, no residents and no income (`slice1-rules.md`, known gaps).

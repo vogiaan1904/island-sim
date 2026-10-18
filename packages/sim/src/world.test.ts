@@ -34,7 +34,7 @@ function connectedLandCount(island: IslandState): number {
 
 describe('createWorld', () => {
   it('is deterministic for a seed', () => {
-    expect(stateHash(createWorld(42, content))).toBe('19374e5e948106');
+    expect(stateHash(createWorld(42, content))).toBe('12bf923ffc1d18');
     expect(stateHash(createWorld(42, content))).toBe(stateHash(createWorld(42, content)));
   });
 

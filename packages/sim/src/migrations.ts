@@ -46,3 +46,11 @@ export function migrateV1(data: Data, content: Content): Data {
   });
   return { ...data, nextId, islands, market: newMarket(content) };
 }
+
+/**
+ * Version 2 to 3 (slice 1, client ticket 01): Mainland help is a new rule on the morning ferry. It adds no state, so
+ * the data is returned as it is and only the version moves.
+ */
+export function migrateV2(data: Data): Data {
+  return data;
+}

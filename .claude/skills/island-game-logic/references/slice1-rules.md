@@ -39,6 +39,12 @@ Claimed islands in slot order, each running these passes in this order, then the
 ## Commuters and the ferry
 
 - `hire-commuters` sets how many are hired, 0 to `ferrySeats` (12). Nobody moves until the next morning ferry.
+- Mainland help (`passes/ferry.ts`, `giveMainlandHelp`), first thing on the morning ferry, before newcomers and
+  commuters: a stuck island is credited `mainlandHelpCents` (10,000, ledger reason `mainland-help`) and a
+  `mainland-help` event (importance 65) says `cents` and how many are `hired` (zero hired means: tell the player to
+  hire). Stuck is exact: no residents, coins below one commuter's day wage, no unit of any good in a building, on the
+  roads or in the cargo hold, and no reward waiting to be collected. Checked only on the morning ferry, so at most
+  once a day. The grant is paid before the wages, so commuters hired that morning board with it.
 - Morning ferry: newcomers board first, then commuters in the seats left, as many as the island can pay a day's
   wage for (`commuterWagePerDayCents`, paid as they board, `wages`). Short of seats or money, the rest stay home
   and a `commuters-stayed-home` event says why (`short`: `seats` or `money`).
@@ -142,9 +148,6 @@ Claimed islands in slot order, each running these passes in this order, then the
 
 ## Known gaps
 
-- An island that spends every coin before it earns anything, with no residents, cannot pay commuters and so cannot
-  produce; only a reward still waiting to be collected gets it going again. The pacing bot never does this. A gentle
-  way out (for example the port master advancing a day's wages) is open: it must land within slice 1, before the
-  plan 5 client is playtested. Wages are paid before upkeep, so an island just short of money pays its commuters, who
-  then idle at workplaces that upkeep left unpaid.
+- Wages are paid before upkeep, so an island just short of money pays its commuters, who then idle at workplaces
+  that upkeep left unpaid. (The stuck island with no coins and no residents is closed by Mainland help.)
 - Placement checks do not include the landmark lock; the client checks `unlockedLandmarks` itself for the preview.

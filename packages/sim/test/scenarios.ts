@@ -67,3 +67,38 @@ export const OUTPOST_TO_SETTLEMENT: readonly ScriptStep[] = [
   { afterTick: 11520, command: { type: 'place-building', slot: 0, building: 'island-hall', x: 15, y: 20, rotation: 0 } },
   { afterTick: 11630, command: { type: 'buy-materials', slot: 0, buildingId: 427 } },
 ];
+
+/** Ten cottages along the street at row 15, on the row above it. */
+const STUCK_COTTAGES: ScriptStep[] = [];
+for (const x of [8, 9, 10, 11, 12, 13, 15, 16, 17, 18]) {
+  STUCK_COTTAGES.push({
+    afterTick: 0,
+    command: { type: 'place-building', slot: 0, building: 'cottage', x, y: 14, rotation: 0 },
+  });
+}
+
+/**
+ * "A stuck island recovers", on seed 42: the player lays the pacing bot's roads, places its nine starting buildings
+ * and ten more cottages until the island has exactly 0 coins, then hires 4 commuters. The island has no residents
+ * and nothing to sell, so it cannot pay anyone: the Mainland's grant comes on the first morning ferry (tick 60) and
+ * pays the commuters, the farm, the fishing hut and the lumber camp start producing, the first newcomers arrive on
+ * the evening ferry and the island earns again. Not a sim path the pacing bot takes.
+ */
+export const STUCK_ISLAND: readonly ScriptStep[] = [
+  { afterTick: 0, command: { type: 'claim-island', owner: 'stuck-player', name: 'Stuck Isle' } },
+  { afterTick: 0, command: { type: 'place-road', slot: 0, tiles: OUTPOST_ROAD } },
+  { afterTick: 0, command: { type: 'place-building', slot: 0, building: 'fishing-hut', x: 15, y: 26, rotation: 1 } },
+  { afterTick: 0, command: { type: 'place-building', slot: 0, building: 'farm', x: 11, y: 24, rotation: 0 } },
+  { afterTick: 0, command: { type: 'place-building', slot: 0, building: 'market', x: 12, y: 21, rotation: 0 } },
+  { afterTick: 0, command: { type: 'place-building', slot: 0, building: 'well', x: 10, y: 24, rotation: 0 } },
+  { afterTick: 0, command: { type: 'place-building', slot: 0, building: 'cottage', x: 15, y: 25, rotation: 0 } },
+  { afterTick: 0, command: { type: 'place-building', slot: 0, building: 'cottage', x: 11, y: 22, rotation: 0 } },
+  { afterTick: 0, command: { type: 'place-building', slot: 0, building: 'cottage', x: 9, y: 24, rotation: 0 } },
+  { afterTick: 0, command: { type: 'place-building', slot: 0, building: 'lumber-camp', x: 16, y: 24, rotation: 0 } },
+  { afterTick: 0, command: { type: 'place-building', slot: 0, building: 'warehouse', x: 10, y: 20, rotation: 0 } },
+  ...STUCK_COTTAGES,
+  { afterTick: 0, command: { type: 'hire-commuters', slot: 0, count: 4 } },
+  { afterTick: 0, command: { type: 'set-auto-sell', slot: 0, good: 'wood', keep: 0 } },
+  { afterTick: 0, command: { type: 'set-auto-sell', slot: 0, good: 'fish', keep: 0 } },
+  { afterTick: 0, command: { type: 'set-auto-sell', slot: 0, good: 'vegetables', keep: 0 } },
+];

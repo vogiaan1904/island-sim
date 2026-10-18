@@ -148,3 +148,13 @@ describe('migration from sim version 1', () => {
     expect(codeOf(() => loadWorld('{"simVersion":1}', content))).toBe('migration-failed');
   });
 });
+
+describe('migration from sim version 2', () => {
+  it('changes nothing but the version: Mainland help adds a rule, not state', () => {
+    const v3 = JSON.parse(serializeWorld(claimedWorld())) as Record<string, unknown>;
+    const v2 = { ...v3, simVersion: 2 };
+    const world = loadWorld(JSON.stringify(v2), content);
+    expect(world).toEqual({ ...v3, simVersion: SIM_VERSION });
+    expect(SIM_VERSION).toBe(3);
+  });
+});
