@@ -1,19 +1,25 @@
 import type { AccountInfo, PlayerCommand, ServerMessage, WorldInfo } from '@island/protocol';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import { applyMessage, commandSent, initialClientState, type ClientState } from './mirror.ts';
+import { applyMessage, commandSent, commandsLost, initialClientState, type ClientState } from './mirror.ts';
 import type { ViewState } from './view.ts';
 
 /**
  * Where the player is on the way to their island. 'checking' asks /api/me; 'opening' has a socket and waits for the
  * island's full state; 'playing' shows it; 'worlds' is the world screen (pick, create or join a world, share the invite
- * code), shown when the player has no island or several worlds, and when they ask for it. Later tickets add phases here.
+ * code), shown when the player has no island or several worlds, and when they ask for it; 'resting' is a world that
+ * could not be loaded (it is opened again by itself until it is back). Later tickets add phases here.
  */
-export type SessionPhase = 'checking' | 'signed-out' | 'worlds' | 'opening' | 'playing' | 'update-required';
+export type SessionPhase = 'checking' | 'signed-out' | 'worlds' | 'opening' | 'playing' | 'update-required' | 'resting';
 
 export interface SessionState {
   phase: SessionPhase;
   account: AccountInfo | null;
   worlds: readonly WorldInfo[];
+  /**
+   * True from a dropped connection until the new full state arrives. The island stays in the mirror and on screen
+   * meanwhile; the UI only adds a small calm line and sends no commands.
+   */
+  reconnecting: boolean;
 }
 
 /** The store's actions. Island data changes only through `receive`; nothing else writes the mirror. */
@@ -24,6 +30,8 @@ export interface GameActions {
   commandSent(requestId: number, command: PlayerCommand): void;
   /** The player left the island (to the world screen or out of the game): no mirror, no pending commands. */
   clearIsland(): void;
+  /** The connection dropped: commands still waiting for a result will never get one, so they are forgotten. */
+  commandsLost(): void;
   setView(patch: Partial<ViewState>): void;
   setSession(patch: Partial<SessionState>): void;
 }
@@ -35,10 +43,11 @@ export type GameStore = StoreApi<GameState>;
 export function createGameStore(): GameStore {
   return createStore<GameState>()((set) => ({
     ...initialClientState(),
-    session: { phase: 'checking', account: null, worlds: [] },
+    session: { phase: 'checking', account: null, worlds: [], reconnecting: false },
     receive: (message) => set((state) => applyMessage(state, message)),
     commandSent: (requestId, command) => set((state) => commandSent(state, requestId, command)),
     clearIsland: () => set({ island: null, commands: {} }),
+    commandsLost: () => set((state) => commandsLost(state)),
     setView: (patch) => set((state) => ({ view: { ...state.view, ...patch } })),
     setSession: (patch) => set((state) => ({ session: { ...state.session, ...patch } })),
   }));

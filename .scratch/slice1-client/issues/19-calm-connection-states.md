@@ -7,11 +7,11 @@ resting, back soon"; an old client is told to reload; a device without WebGL2 ge
 
 **Blocked by:** 05.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Reconnect with backoff on close and on the page becoming visible again; every reconnect reopens the island and
+- [x] Reconnect with backoff on close and on the page becoming visible again; every reconnect reopens the island and
       replaces the mirror; view state survives (store test).
-- [ ] The resting line, exactly as written, on a paused world and while catching up; commands are not sent meanwhile.
-- [ ] Update required: one calm line with a reload button.
-- [ ] No WebGL2: one friendly sentence, no technical words.
-- [ ] Tests for each state, including a reconnect against a real in-process server that is closed and reopened.
+- [x] The resting line, exactly as written, on a paused world and while catching up; commands are not sent meanwhile.
+- [x] Update required: one calm line with a reload button.
+- [x] No WebGL2: one friendly sentence, no technical words.
+- [x] Tests for each state, including a reconnect against a real in-process server that is closed and reopened.

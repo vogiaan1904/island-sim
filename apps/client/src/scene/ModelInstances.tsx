@@ -8,7 +8,7 @@ const matrix = new Matrix4();
 const place = new Vector3();
 const turn = new Quaternion();
 const euler = new Euler();
-const unit = new Vector3(1, 1, 1);
+const scale = new Vector3(1, 1, 1);
 
 /** Room to grow before the instance buffer has to be made again. */
 function capacityFor(count: number): number {
@@ -29,9 +29,11 @@ export function ModelInstances({ file, instances }: { file: string; instances: r
     const target = mesh.current;
     if (target === null) return;
     instances.forEach((instance, i) => {
-      place.set(instance.x, 0, instance.z);
+      place.set(instance.x, instance.y ?? 0, instance.z);
       turn.setFromEuler(euler.set(0, instance.rotationY, 0));
-      target.setMatrixAt(i, matrix.compose(place, turn, unit));
+      // A site rises in steps: its height is scaled to the share of the building that shows.
+      scale.set(1, instance.rise ?? 1, 1);
+      target.setMatrixAt(i, matrix.compose(place, turn, scale));
     });
     target.count = instances.length;
     target.instanceMatrix.needsUpdate = true;
