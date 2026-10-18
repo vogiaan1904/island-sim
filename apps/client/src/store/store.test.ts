@@ -73,9 +73,29 @@ describe('the game store', () => {
     expect(store.getState().commands[7]).toMatchObject({ status: 'ok', data: { hired: 2 } });
   });
 
+  it('drops the island and its commands when the player leaves it, keeping the view and the session', () => {
+    const store = createGameStore();
+    store.getState().setView({ quality: 'high' });
+    store.getState().setSession({ phase: 'playing' });
+    store.getState().receive(islandMessage(aliceWorld()));
+    store.getState().commandSent(1, { type: 'hire-commuters', count: 2 });
+    store.getState().clearIsland();
+    expect(store.getState()).toMatchObject({ island: null, commands: {}, view: { quality: 'high' }, session: { phase: 'playing' } });
+  });
+
   it('keeps the session phase and account apart from the island', () => {
     const store = createGameStore();
     store.getState().setSession({ phase: 'signed-out' });
-    expect(store.getState().session).toEqual({ phase: 'signed-out', account: null, worlds: [] });
+    expect(store.getState().session).toEqual({ phase: 'signed-out', account: null, worlds: [], reconnecting: false });
+  });
+
+  it('forgets pending commands when the connection drops but keeps the settled ones', () => {
+    const store = createGameStore();
+    store.getState().commandSent(1, { type: 'hire-commuters', count: 1 });
+    store.getState().commandSent(2, { type: 'hire-commuters', count: 2 });
+    store.getState().receive({ type: 'result', requestId: 1, ok: true, data: {} });
+    store.getState().commandsLost();
+    expect(store.getState().commands[2]).toBeUndefined();
+    expect(store.getState().commands[1]?.status).toBe('ok');
   });
 });

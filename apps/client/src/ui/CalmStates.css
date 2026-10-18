@@ -1,0 +1,50 @@
+.calm-status {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: calc(100vw - 32px);
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--shadow);
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: calm-in 250ms ease-out;
+}
+
+.calm-dot {
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  animation: calm-breathe 1.8s ease-in-out infinite;
+}
+
+@keyframes calm-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes calm-breathe {
+  50% {
+    transform: scale(0.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calm-status,
+  .calm-dot {
+    animation: none;
+  }
+}
