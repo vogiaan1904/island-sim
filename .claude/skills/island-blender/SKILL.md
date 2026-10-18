@@ -1,183 +1,125 @@
 ---
 name: island-blender
-description: Island Sim asset pipeline through Blender MCP. Turns the Kenney packs in assets/packs into the optimized .glb models and rendered icons the game loads from apps/client/public/models and apps/client/public/icons. Use it for any task that touches Blender or a Blender MCP tool (execute_blender_code, look, get_scene_info, import_asset), adding, extracting or inventorying an asset pack, editing assets/SOURCES.md, assembling or normalizing a model (grid scale, origin, facing), the shared palette texture, meshopt compression, model file naming, rendering building, goods or key staff portrait icons, the Kenney Mini Characters (clips, joint-animation texture bake, crowd version, bags), triangle budgets, the .glb export checks, and the art-direction task (Q10, tile size). Use it even for casual asks like "make a model for the bakery" or "why does the farm float". Not for how the client loads, instances or animates models (island-3d-client), SVG UI icons (island-ui), or content data (island-content).
+description: Island Sim asset pipeline in Blender. Turns the Kenney packs in assets/packs into the meshopt .glb models and rendered icons the game loads from apps/client/public/models and apps/client/public/icons, with the recipes in tools/blender and the checker in tools/assets. Use it for any task that touches Blender or a Blender MCP tool (execute_blender_code, look, get_scene_info, import_asset), pnpm blender or pnpm assets, adding, extracting or inventorying an asset pack, editing assets/SOURCES.md, writing or changing a model recipe (assembling, scale, origin, facing), the shared palette and the look, the asset catalog, model file naming, rendering building, goods or portrait icons, the Kenney Mini Characters (clips, joint-animation texture bake, accessories), triangle budgets, and the .glb checks. Use it even for casual asks like "make a model for the bakery". Not for how the client loads, instances or animates models (island-3d-client), SVG UI icons (island-ui), or content data (island-content).
 ---
 
 # Island Blender: the asset pipeline
 
-> **Status (2026-10-16): design phase.** No product code, no pipeline scripts and no exported models exist yet.
-> Every path under `apps/` and `tools/` in this skill is **planned**. Anything marked **"to be decided in slice 1;
-> update this skill then"** is still open: do not invent a value for it. Ask the user, or use a clearly marked
-> placeholder that the export checks will flag.
+> **Status (2026-10-18): built in slice 1 plan 4.** Every slice 1 model, icon, portrait and character animation is
+> rebuilt from the packs by `pnpm blender` and checked by `pnpm assets check`. Plan:
+> `docs/superpowers/plans/2026-10-18-slice1-plan4-art-assets.md` (its "Decisions" section is the why behind the
+> rules below).
 
-Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md`, especially 6.2, 7, 8.1 step 1, 11 and
-**12 "Resolved details"** (12.6 is the asset section; 12.4 and 12.5 also touch assets). Decision history:
-`docs/brainstorm/2026-10-15-island-sim-brainstorm.md` (decisions 8, 13, 17, 22, 26 and the "Asset pipeline"
-section). Project rules: `CLAUDE.md`. If this skill and the spec disagree, the spec wins; tell the user about the
-mismatch instead of silently picking one.
+Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md` (6.2, 7, 8.1 step 1, 11, 12.4 to 12.6).
+Project rules: `CLAUDE.md`. If this skill and the spec disagree, the spec wins; tell the user.
 
 ## What this skill owns
 
 - Getting packs into the project safely (`assets/packs/`, `assets/raw/`, `assets/SOURCES.md`).
-- Driving Blender through Blender MCP: inspect, assemble, normalize, optimize, export and compress `.glb` files.
-- Rendering building and goods icons and key staff portraits from the 3D models.
-- People: preparing the Kenney Mini Characters, baking their clips into the joint-animation texture, making the
-  simplified crowd version, accessories and bags.
-- Small Blender-made props and looks the spec asks for: bags, the construction frame or scaffold, the damaged look
-  (smoke, missing planks), building level variants (an extra floor or a side building, spec 12.1), gap fillers. The
-  exact damaged and level looks are decided in the art-direction task.
-- The automatic export checks a `.glb` must pass.
-- The art-direction task (open question Q10) and the asset conventions it fixes.
-
-Sibling skills own the rest. Point to them instead of repeating them:
+- The Python pipeline in `tools/blender/` (runs inside Blender, headless or through MCP) and the Node checker in
+  `tools/assets/` (compression, checks, catalog).
+- One recipe per shipped model in `tools/blender/island_blender/recipes/`, its icon, and the review renders.
+- The shared palette and the chosen look; the conventions file `tools/assets/conventions.json`.
+- The Mini Characters: the kept clips, the joint-animation texture, the accessories.
 
 | Need | Skill |
 |---|---|
-| How the client loads, instances, switches detail by zoom, layers clips, scales children, and reads the joint-animation texture in a shader | `island-3d-client` |
-| UI style, SVG line icons for UI chrome, how rendered icons and portraits are shown | `island-ui` |
-| Adding a building or good end to end (brief, model, content data, sim, 3D, UI, checks). This skill is its "model" step | `island-content` |
-| Footprints, goods colors and other content data the assets must match | `island-game-logic` |
-| Running the asset checks in tests and CI | `island-testing` |
+| How the client loads models, binds the palette, lights windows, reads the animation texture, attaches accessories | `island-3d-client` |
+| UI style, SVG line icons, how rendered icons and portraits are shown | `island-ui` |
+| Adding a building or good end to end; this skill is its "model" step | `island-content` |
+| Footprints and goods in content data | `island-game-logic` |
+| When the asset checks run | `island-testing` |
 
-## Before the first Blender MCP call
+## Commands
 
-1. **Connection.** The Blender tools only work while Blender is open, the "MCP for Blender" add-on is enabled, and
-   "Start MCP Server" was clicked (3D viewport, press N, "MCP for Blender" tab). Call `get_addon_status` first. If
-   it cannot connect, stop and ask the user to check those three things. Do not try to start Blender or edit the
-   add-on yourself.
-2. **Save first.** `execute_blender_code` runs arbitrary Python inside the user's live Blender. Ask the user to save
-   their Blender work before the first call, and never discard or overwrite their open file without asking.
-3. **The socket has no authentication.** The add-on listens on `localhost:9876` with no password. Never expose that
-   port: no port forwarding, no tunnels, no binding to another interface, no sharing it with a container or VM.
-4. **Telemetry stays off.** `.mcp.json` sets `DISABLE_TELEMETRY=true`. Do not turn it on or change it.
-5. Then call `get_scene_info` to see what is already in the scene.
+| Command | What it does |
+|---|---|
+| `pnpm blender palette` | Builds `apps/client/public/models/palette.png` (recolored to the look) and `assets/build/palette-map.json` from every extracted pack |
+| `pnpm blender build [names\|all]` | Builds models from their recipes into `assets/build/staging/<name>.glb` (uncompressed) |
+| `pnpm blender icons [names\|all]` | Renders icons and portraits into `apps/client/public/icons/` |
+| `pnpm blender characters` | Exports the 12 characters and bakes `characters-animation.bin` and `.json` |
+| `pnpm blender test [pattern]` | The Blender unit tests in `tools/blender/tests/` (needs Blender; not part of `pnpm check`) |
+| `pnpm assets pack [names]` | Validates a staging file with the Khronos validator and writes the meshopt `.glb` to the models folder |
+| `pnpm assets check` | Checks every shipped file against `conventions.json`, content data and the catalog |
 
-Scripting rules for someone else's Blender (details and illustrative snippets in `references/blender-mcp.md`):
+Blender is `/Applications/Blender.app` (5.2.2 LTS); the `BLENDER` environment variable overrides it. Pipeline Python
+runs only inside Blender, never with a system Python. Builds are byte-exact: the same recipe gives the same file.
 
-- Look shader nodes up **by type, never by name** (names are localized): `n.type == "BSDF_PRINCIPLED"`.
-- **Never hardcode enum identifiers**: read them from `bl_rna` (they change between Blender versions). For the render
-  engine, read the current value and assign inside `try/except TypeError`, whose message lists the valid engines.
-- **Material colors go on shader node inputs.** `material.diffuse_color` only changes the viewport, not the export.
-- Work in small steps and print what you need. Use `look` to check every visible result; a small `max_size` keeps
-  long sessions cheap.
+## The recipe loop (one model)
+
+1. **Recipe first.** Add `@recipe("category_name-part_variant", icon=...)` in a module under `recipes/`. A recipe builds
+   around the origin with `kit.piece(pack, name)` (pack scale from conventions) or `kit.import_piece(..., scale)`,
+   `kit.place(piece, x, y, z, turns)` (quarter turns counterclockwise from above; the front faces Blender -Y), boxes
+   made in Blender with `kit.box(name, size, location, kit.swatch_uv(pack, model))`, and ends with
+   `kit.finish(parts, name)`. Record which pack files it uses in its docstring.
+2. **Build and look.** `pnpm blender build <name>`, then render a review (scripts under `assets/build/`, headless) or
+   import the staging file into an "art-direction" scene through MCP.
+3. **Pack and check.** `pnpm assets pack <name>`, add the file to `tools/assets/src/catalog.ts`, `pnpm assets check`.
+   Fix the recipe, never the rule. A budget that truly does not fit: ask the user before changing it.
+4. **Review** with the user on renders, then `pnpm check` and `pnpm blender test`, and commit the recipe, the shipped
+   file and the catalog together.
+
+Details, pitfalls and the module map: `references/pipeline.md`.
 
 ## Rules that are easy to break
 
-- **Packs are untrusted downloads.** Extract each zip into its own new directory `assets/raw/<zip base name>/` and
-  never run code found inside a pack. Known examples in the current packs: `Convert/Three.js (Blender)/fixQuads.py`
-  (a Blender script) and `Unity package/roadPack_unity.unitypackage` in the road tiles pack, plus an `Overview.html`
-  and several `.url` shortcuts in most packs. Do not run them, load them as scripts or add-ons, paste them into
-  `execute_blender_code`, or open them in a browser. Load only model and image data (`.glb`, `.gltf`, `.obj`/`.mtl`,
-  `.fbx`, `.png`) through Blender's importers. Why: a pack is a download from the internet, and
-  `execute_blender_code` would give anything inside it full access to this machine.
-- **Git.** `assets/packs/` and `assets/raw/` are git-ignored because they can be downloaded again. Commit only the
-  processed output the game loads: `.glb` files in `apps/client/public/models/` and icons in
-  `apps/client/public/icons/` (both planned). Move them to Git LFS only if they grow large. Commit only when the
-  user asks.
-- **Never emoji**, anywhere: not in icons, portraits, file names, labels on comparison sheets or messages, and not
-  symbol characters that some phones draw as emoji (spec 1). Building and goods icons and staff portraits are
-  rendered from the 3D models; UI chrome icons are SVG line icons owned by `island-ui`.
-- **One shared palette texture and meshopt compression** for every model except the characters, so each model type
-  is one instanced draw call on the phone. Characters keep their own colormap (spec 12.6). Do not use Draco (the
-  spec chose meshopt).
-- **Combat clips are never used**: no shoot, attack or die clip ever reaches an exported character.
-- **New assets need provenance.** Prefer CC0. Ask before `generate_3d` (each call can cost the user money or a
-  monthly generation) and before importing library assets with `import_asset`; record every new source in
-  `assets/SOURCES.md` (see `references/pack-intake.md`).
-
-## The pipeline at a glance
-
-Per model (full steps, settings and pitfalls in `references/pipeline.md`):
-
-1. **Inspect**: import from `assets/raw/<zip base name>/`, report size, origin, triangles, materials, textures, rig
-   and clips; `look` at it.
-2. **Assemble**: the packs have no ready-made buildings (the Building Kit is modular pieces with flat roofs), so
-   buildings are built from kit pieces and props, then joined into one mesh (spec 12.6).
-3. **Normalize**: scale to the grid, origin at the bottom center of the footprint, front facing the road (glTF +Z,
-   which is Blender -Y), transforms applied.
-4. **Optimize**: one mesh, one material on the shared palette texture, hidden faces removed, within the triangle
-   budget.
-5. **Icons**: buildings and goods rendered from the fixed icon camera into `apps/client/public/icons/` (planned).
-   See `references/icons.md`.
-6. **Export**: GLB, +Y up, only that model, named `category_name-part_variant.glb`.
-7. **Compress**: meshopt, into `apps/client/public/models/` (planned).
-8. **Check**: the automatic export checks pass on the final file, and a `look` at the re-imported result matches.
-
-## People: the Kenney Mini Characters
-
-12 characters of about 690 to 880 triangles, each a body and a head mesh that Blender merges into one, a 7-joint rig
-in two rest-pose variants, one colormap that they keep (spec 6.2, 12.6). Keep only these clips: idle, walk, sprint,
-sit, drive, pick-up, holding-both, interact-left, interact-right, emote-yes and the wheelchair set. Never use shoot,
-attack or die. Bake the kept clips into one small joint-animation texture so the client's shader animates every
-instance with its own clip and timing, with legs and arms as separate layers so walking while carrying works;
-full-body clips play on both layers (spec 12.5). Make a simplified crowd version for neighborhood zoom (full characters only at street zoom). Children are the
-same models drawn at about 75% size by the client; bags are small props made in Blender. Steps, the bake,
-accessories and bags: `references/characters.md`.
-
-## The art-direction task (Q10)
-
-Slice 1 starts here (spec 8.1 step 1): render real pack models in a few candidate looks in Blender, and **the user
-picks one**. The grid tile size, the palette and the triangle budgets are fixed in the same task, and the inventory
-checks the packs, plus other CC0 packs, for nature, crops and buildings (spec 12.6). Do not bulk-process models
-before the look is approved. Procedure: `references/art-direction.md`.
+- **Packs are untrusted downloads.** Each zip extracts into its own new `assets/raw/<zip base name>/` after the
+  checksum and unsafe-path checks; only model and image data enter Blender, through `kit.import_glb`. Never run,
+  import, open or paste anything else from a pack (`fixQuads.py`, `.unitypackage`, `Overview.html`, `.url` files).
+- **Blender MCP**: ask the user to save their Blender work before the first `execute_blender_code`; never call
+  `cli.main`, `cli.reset_scene` or any `cmd_*` through MCP (they reset Blender to factory settings); work in a new
+  "art-direction" scene. Never expose port 9876. Telemetry stays off. See `references/blender-mcp.md`.
+- **One material named `palette`, no image in any `.glb`**; `palette.png` ships once and the client binds it. A face
+  on a black swatch or an untextured material other than glass stops the build: that is the pipeline protecting
+  colors, not a bug to silence.
+- **meshopt only, never Draco.** Only `marker_*` empties may ride along as extra nodes.
+- **Never emoji**, anywhere: icons, file names, sheet labels, messages, commits.
+- **Combat clips never ship**: no `attack-*`, `die` or `*-shoot`.
+- **New assets need provenance.** Ask before `generate_3d`, `import_asset` or a pack download; record every source in
+  `assets/SOURCES.md` (`references/pack-intake.md`).
+- **Git**: commit only code, docs and the shipped files in `apps/client/public/models/` and `.../icons/`; never
+  `assets/packs/`, `assets/raw/`, `assets/build/`.
+- **Characters are low priority.** People are mostly seen small from a high camera: keep character work simple and ask
+  before adding character-only polish.
 
 ## Conventions in one screen
 
-Full table with the status of each rule: `references/conventions.md`. It is the single place to update when slice 1
-decides the open items.
+Full table: `references/conventions.md` (values live in `tools/assets/conventions.json`, read by both sides).
 
-**Fixed by the spec:** names `category_name-part_variant.glb` with hyphens inside each part and the variant always
-present; footprints in whole tiles; origin at the bottom center of the footprint; front facing the road, which is
-glTF +Z and Blender -Y; one shared palette texture for everything except the characters, who keep their own
-colormap; meshopt-compressed GLB; icons rendered from a fixed camera angle; key staff portraits rendered from Mini
-Characters with accessories; the character clip list with no combat clips; packs extracted to
-`assets/raw/<zip base name>/`; output in `apps/client/public/models/` and `apps/client/public/icons/`.
-
-**To be decided in slice 1; update this skill then:** the art direction and the exact palette; the grid tile size;
-triangle budgets per category (pack fact: a full character is about 690 to 880); whether the palette image is
-embedded in each `.glb` or shipped once (the slice 1 pipeline task); the category list (draft in
-`references/conventions.md`); icon and portrait camera, size and format; the joint-animation texture layout; the
-crowd version budget and detail-level file names; the meshopt tool and flags; where pipeline scripts and working
-`.blend` files live.
+- Names `category_name-part_variant.glb` / `.png`, lowercase, hyphens inside a part, variant always present.
+  Categories: building, road, nature, prop, vehicle, ship, character, accessory, good, portrait. A building's or
+  good's name part is its content id.
+- Tile size **4 world units** (1 unit is about 1 m). Origin at the footprint's bottom center, lowest point at 0
+  (accessories excepted). Front = glTF +Z = Blender -Y. Footprint `w` along X, `h` along Z.
+- The look is **"golden"**: the packs' palette at saturation 1.1, lightness 1.0, warmth 0.06; one warm low sun.
+- Palette: 1024 x 1024, 32 x 8 slots of 32 x 128 px; slot 0 is window glass (lit at night by the client).
+- Budgets (triangles): building 1800 per footprint tile, road 400, nature 500, prop 1500, ship 500, character 900,
+  accessory 700, good 400.
+- Icons and portraits: 256 x 256 RGBA PNG, orthographic camera 30 degrees down at the front-right corner.
 
 ## Which reference to read
 
 | Task | Read |
 |---|---|
-| Any Blender MCP work; a script fails; connection trouble | `references/blender-mcp.md` |
-| Adding a new pack, extracting a pack, updating `assets/SOURCES.md`, using library or generated assets | `references/pack-intake.md` |
-| Processing, assembling or exporting a model; meshopt; export checks | `references/pipeline.md` |
+| Any Blender MCP work; connection trouble | `references/blender-mcp.md` |
+| Adding or extracting a pack, `assets/SOURCES.md`, library or generated assets | `references/pack-intake.md` |
+| Writing a recipe, the modules, building, packing, checks, pitfalls | `references/pipeline.md` |
 | Naming, scale, origin, facing, palette, budgets, file locations | `references/conventions.md` |
-| Rendering building or goods icons, or key staff portraits | `references/icons.md` |
-| Mini Characters: clips, joint-animation texture, crowd version, accessories, bags, children | `references/characters.md` |
-| The art-direction task (Q10), tile size, fixing conventions | `references/art-direction.md` |
-| What the packs contain, which model to start from, known gaps | `references/pack-inventory.md` |
+| Icons and portraits | `references/icons.md` |
+| Mini Characters: clips, animation texture, accessories | `references/characters.md` |
+| Changing the look, the tile size or the scales | `references/art-direction.md` |
+| What the packs contain, which model to start from | `references/pack-inventory.md` |
 
-## Done checklist for one exported model
+## Done checklist for one shipped model
 
-- [ ] Source file(s) recorded (pack and path inside `assets/raw/<zip base name>/`), and the pack is listed in
-      `assets/SOURCES.md`.
-- [ ] Name matches `category_name-part_variant.glb` (hyphens inside parts, variant present) and a category from
-      `references/conventions.md`.
-- [ ] Origin at the bottom center of the footprint; footprint is whole tiles and matches the content data
-      (`island-game-logic`); front faces glTF +Z (Blender -Y); transforms applied.
-- [ ] One material on the shared palette texture (characters: their own colormap); no stray cameras, lights or
-      empties.
-- [ ] Within the triangle budget for its category (or flagged if budgets are still undecided).
-- [ ] meshopt-compressed; the export checks pass on the final file.
-- [ ] `look` at the re-imported final file: it matches the pre-export model.
-- [ ] Icon rendered if it is a building or a good; no emoji or emoji-like symbols anywhere.
-- [ ] Only `apps/client/public/models/` and `apps/client/public/icons/` output is staged for git (and only if the
-      user asked for a commit).
+- [ ] A recipe in `recipes/` builds it; its docstring names the pack files; the pack is in `assets/SOURCES.md`.
+- [ ] `pnpm assets pack <name>` passes the glTF validator; the file is in `catalog.ts`.
+- [ ] `pnpm assets check`: `assets: no problems` (name, palette material, no image, meshopt, ground, footprint,
+      budget).
+- [ ] An icon rendered if it is a building or a good, and in `catalog.icons`.
+- [ ] Reviewed on a render; `pnpm check` and `pnpm blender test` pass before the commit.
 
 ## Keeping this skill current
 
-Slice 1 step 1 (art direction) and the slice 1 pipeline task decide the open items above. When they do:
-
-1. Replace every "to be decided in slice 1" marker in `references/conventions.md`, `references/icons.md`,
-   `references/characters.md`, `references/pipeline.md` and this file with the decision.
-2. Replace "planned" paths with the real ones once the folders, the asset validator and any pipeline scripts exist,
-   and add real commands and examples.
-3. Update `references/pack-inventory.md` with the inventory results and any packs added.
-4. The spec says each project skill is updated as its domain gets code (spec 8.1 step 10). Propose spec or
-   brainstorm changes to the user; do not edit the spec without their approval.
+When a decision changes (look, tile size, scales, budgets, a new pack), update `conventions.json` first, then the
+matching reference here and in `island-3d-client`, and rebuild every affected file with the commands above.

@@ -10,8 +10,8 @@ they are treated as untrusted data: they may be read as model and image data, ne
 | `assets/packs/*.zip` | Original zips, exactly as downloaded | No (ignored) |
 | `assets/raw/<zip base name>/` | One new directory per extracted pack | No (ignored) |
 | `assets/SOURCES.md` | Provenance: file, pack and version, created date, download page, licence, SHA-256 | Yes |
-| `apps/client/public/models/` (planned) | Processed `.glb` files the game loads | Yes |
-| `apps/client/public/icons/` (planned) | Rendered building and goods icons | Yes |
+| `apps/client/public/models/` | Processed `.glb` files the game loads | Yes |
+| `apps/client/public/icons/` | Rendered building and goods icons | Yes |
 
 Each pack extracts to `assets/raw/<zip base name>/` (spec 12.6): `assets/packs/kenney_mini-characters.zip` goes to
 `assets/raw/kenney_mini-characters/`. As of 2026-10-16 nothing has been extracted by this pipeline yet

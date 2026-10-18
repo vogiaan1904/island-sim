@@ -7,8 +7,9 @@ description: End-to-end recipe and checklist for adding or changing game content
 
 > **Status (slice 1, plans 1 to 3 done):** first written from the design spec on 2026-10-16. The workspace, the sim
 > (`packages/sim`, `packages/content`), the protocol (`packages/protocol`), the server (`apps/server`) and the pacing
-> harness (`tools/pacing`) exist, so those paths are real. The client (`apps/client`), the models and icons
-> (`apps/client/public/models`, `.../icons`) and the asset checks are still PLANNED (plans 4 to 6). Update this
+> harness (`tools/pacing`) exist, so those paths are real. The models, icons and asset checks exist too (plan 4:
+> `tools/blender`, `tools/assets`, `apps/client/public/models`, `.../icons`). The client (`apps/client` code) is still
+> PLANNED (plans 5 and 6). Update this
 > skill during slice 1 (spec 8.1 step 10) with real APIs and a real example as they land.
 > Source of truth: `docs/superpowers/specs/2026-10-16-island-sim-design.md`. Section 12 "Resolved details" holds
 > the current defaults; the user may still change them in spec review. Where this skill and the spec differ, the
@@ -133,7 +134,11 @@ normalize (scale to the grid, origin at the footprint's bottom center, front fac
 palette; compress with meshopt; render the icon from the fixed angle; export `category_name-part_variant.glb`
 (hyphens inside each part, variant always present, for example `building_fishing-hut_a.glb`).
 
-- Planned output: `apps/client/public/models/` (models) and `apps/client/public/icons/` (icons).
+- Commands: write a recipe in `tools/blender/island_blender/recipes/` (the name part is the content id), then
+  `pnpm blender build <name>`, `pnpm assets pack <name>`, `pnpm blender icons <name>`, add both files to
+  `tools/assets/src/catalog.ts`, and `pnpm assets check`. A new footprint size also needs a scaffold
+  (`recipes/scaffolds.py`), a new good an icon recipe (`recipes/goods.py`), a new port master candidate a portrait
+  (`recipes/portraits.py`). Output: `apps/client/public/models/` and `apps/client/public/icons/`.
 - A new pack: add it to `assets/SOURCES.md`, extract it into its own new `assets/raw/<zip base name>/`, never run
   code from it.
 - Key staff portraits are also rendered here, from the Mini Characters with accessories.
@@ -218,9 +223,8 @@ island after 3 to 4 weeks, about a month in total).
 
 ### 9. Asset checks: `island-testing` and `island-blender`
 
-Run the automatic `.glb` checks on everything exported in step 2: glTF validator, naming, scale and origin,
-triangle budget, required clips for characters, and that each building, good and key staff member has its icon or
-portrait.
+Run `pnpm assets check` and `pnpm check` (its `tools/assets/src/content.test.ts` fails until each building has its
+model, icon and scaffold, each good its icon and each port master candidate a portrait).
 
 - Done when: every check passes. Fix the model in Blender and re-export; never patch a `.glb` by hand.
 
@@ -261,7 +265,8 @@ Copy this list into the task and tick it off.
 
 ## Planned file locations
 
-All PLANNED from spec sections 3, 7 and 12; none exist yet. File names inside these folders are not decided.
+From spec sections 3, 7 and 12. Built so far: the packages, the server, the pacing harness, the asset pipeline and
+the shipped models and icons; `apps/client` code is planned.
 
 | What | Where |
 |---|---|
@@ -272,7 +277,7 @@ All PLANNED from spec sections 3, 7 and 12; none exist yet. File names inside th
 | 3D scene and UI (Vite, React, React Three Fiber) | `apps/client/` |
 | Exported models, `category_name-part_variant.glb` | `apps/client/public/models/` |
 | Building and goods icons, key staff portraits rendered in Blender | `apps/client/public/icons/` |
-| Pacing harness (built); asset validator (planned) | `tools/pacing/`; `tools/` |
+| Pacing harness; asset pipeline and checker (built) | `tools/pacing/`; `tools/blender/`, `tools/assets/` |
 | Admin commands (`pnpm admin`) | `apps/server/src/admin/` |
 | Original packs (git-ignored) and their provenance | `assets/packs/`, `assets/raw/<zip base name>/`, `assets/SOURCES.md` |
 

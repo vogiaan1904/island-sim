@@ -15,7 +15,7 @@ the islands keep running while you're away, and you can watch each other's islan
 | 1 | Workspace and simulation kernel | pnpm monorepo, `packages/content`, `packages/sim`: seeded worlds, claiming, check-in, buildings and roads paid up front, construction, ledger, events, snapshots, determinism, replay and golden tests | nothing | done: `2026-10-17-slice1-plan1-sim-kernel.md` |
 | 2 | Simulation: Outpost to Settlement | The gameplay of the first stage, headless and tested | plan 1 | done: `2026-10-17-slice1-plan2-outpost-gameplay.md` |
 | 3 | Protocol and server | `packages/protocol`, `apps/server`: the always-running worlds behind accounts and invite codes | plans 1-2 | done: `2026-10-18-slice1-plan3-protocol-server.md` |
-| 4 | Art direction and asset pipeline | The chosen look, the conventions, and every slice 1 model and icon | the user and Blender (can run beside plans 1-3) | not written |
+| 4 | Art direction and asset pipeline | The chosen look, the conventions, and every slice 1 model and icon | the user and Blender (can run beside plans 1-3) | done: `2026-10-18-slice1-plan4-art-assets.md` |
 | 5 | Client | `apps/client`: the 3D island and the style A UI on phones | plans 1-3; plan 4 for final models | not written |
 | 6 | Ship slice 1 | Installable app, two-player end-to-end test, deployment, phone performance check | plans 1-5 | not written |
 
@@ -37,7 +37,13 @@ the islands keep running while you're away, and you can watch each other's islan
 - Per-tick change sets for the server; the golden "Outpost to Settlement" scenario; the pacing harness in `tools/`
   checking the pace targets (first residents within about an hour, Settlement within the first day).
 
-**Carried over** (found by the final reviews of plans 2 and 3)
+**Carried over** (found by the final reviews of plans 2 and 3, and by plan 4)
+- Plan 5 (from plan 4): the client contract for models is in `island-3d-client` ("The model contract"): bind
+  `palette.png` with nearest filtering, light palette slot 0 at night, read `characters-animation.bin` / `.json`,
+  place `marker_*` nodes, turn road pieces by their neighbors, load only what `tools/assets/src/catalog.ts` lists.
+- Plans 5 and 6 (from plan 4): no crowd level of detail for people ships; if phones need one, decide it on measured
+  performance. The animation manifest does not say which clips loop (idle, walk, sprint and the wheelchair moves do).
+- Later (from plan 4): building level variants and the damaged look; terrain and water colors should follow the look.
 - Soft lock (plan 2 decision 15): an island with no coins, no residents and nothing to sell cannot pay commuters and
   stays stuck. A gentle way out must land in plan 5, before its client is playtested. Wages are paid before upkeep,
   so an island just short of money pays its commuters, who then idle at workplaces left unpaid by upkeep.

@@ -1,15 +1,8 @@
 # Asset conventions
 
-The single place for asset rules. Each rule has a status:
-
-- **Fixed**: decided in the spec (including section 12 "Resolved details") or a brainstorm decision. Follow it.
-- **Draft**: proposed here or in the brainstorm, not yet confirmed. Follow it until slice 1 confirms or changes it,
-  and mention it when it matters.
-- **Open**: to be decided in slice 1; update this skill then. Do not invent a value. Ask the user, or use a clearly
-  marked placeholder the export checks will flag.
-
-Slice 1 step 1 (the art-direction task, `art-direction.md`) and the slice 1 pipeline task are where the Draft and
-Open rows get decided.
+The single place for asset rules. Values that code reads live in `tools/assets/conventions.json` (both the Blender
+pipeline and the Node checker read it); change them there first, then here. Decided in slice 1 plan 4
+(2026-10-18) unless a row says otherwise. Rows marked **Open** are for later slices: do not invent a value.
 
 ## Contents
 
@@ -18,110 +11,89 @@ Open rows get decided.
 3. Geometry and materials
 4. Budgets
 5. Characters, portraits and props
-6. Open items that also involve `island-3d-client`
+6. Still open
 
 ## 1. File names and locations
 
-| Rule | Status |
+| Rule | Value |
 |---|---|
-| Model files are named `category_name-part_variant.glb` | Fixed (spec 7, 12.6) |
-| Lowercase ASCII. The three parts are separated by `_`; words inside a part are joined with `-` (for example `building_fishing-hut_a.glb`, `building_island-hall_a.glb`, `vehicle_truck_cargo.glb`) | Fixed (spec 12.6) |
-| The variant is always present; use `a` when there is only one | Fixed (spec 12.6) |
-| Categories: `building`, `road`, `nature`, `prop`, `vehicle`, `ship`, `character`, `accessory`, `good`, `portrait` | Draft (the spec does not list categories) |
-| Name check: the pattern below | Structure Fixed; category list Draft |
-| The name part should match the building or good id in content data, so one id finds its model and icon | Draft; agree it with `island-content` |
-| Models go to `apps/client/public/models/` | Fixed (spec 7); folder planned |
-| Icons go to `apps/client/public/icons/` | Fixed (spec 7); folder planned |
-| Icon file name = the model's base name with the image extension (for example `building_farm_a.png`); goods icons use the `good` category; staff portraits use `portrait` (for example `portrait_lena_a.png`) | Draft |
-| Uncompressed exports and other intermediates are never committed | Fixed (only processed output is committed, decision 17) |
-| Packs extract to `assets/raw/<zip base name>/` (for example `assets/raw/kenney_mini-characters/`) | Fixed (spec 12.6) |
-| Where pipeline scripts live (suggestion: `tools/blender/`, next to the planned asset validator in `tools/`) and where the record of which pack files built each model lives | Open |
-| Where working `.blend` files live (they are not processed output, so not committed) | Open |
-| Assets load per stage (Outpost first); which files belong to which stage | Fixed principle (spec 6.2); the list is owned by `island-3d-client` and `island-content` |
+| Model and icon names | `category_name-part_variant.glb` / `.png`, lowercase ASCII, `_` between parts, `-` inside a part, the variant always present (`a` when there is one) |
+| Categories | `building`, `road`, `nature`, `prop`, `vehicle`, `ship`, `character`, `accessory`, `good`, `portrait` (`conventions.json`, `categories`) |
+| Building and good names | the name part is the content id: `building_fishing-hut_a.glb`, `good_wood_a.png` |
+| Sized props | the variant is the footprint: `prop_scaffold_3x2.glb` is 3 tiles along X and 2 along Z |
+| Shipped models | `apps/client/public/models/` (`.glb`, `palette.png`, `characters-animation.bin` / `.json`) |
+| Shipped icons | `apps/client/public/icons/` (same base name as the model, `.png`; portraits `portrait_<name>_a.png`) |
+| The catalog | `tools/assets/src/catalog.ts` lists every shipped file; the folders must hold exactly that list (checked in `pnpm check`) |
+| Recipes (which pack files build each model) | `tools/blender/island_blender/recipes/`, one function per model, pack files named in its docstring |
+| Packs | zips in `assets/packs/`, extracted to `assets/raw/<zip base name>/`; both ignored by git |
+| Intermediates | `assets/build/` (ignored): `staging/` uncompressed exports, `palette-map.json`, review renders and working scripts |
+| Working `.blend` files | none are kept: every model is rebuilt from its recipe |
 
-Name pattern (the structure is fixed; the category list is a draft):
-
-```
-^(building|road|nature|prop|vehicle|ship|character|accessory|good|portrait)_[a-z0-9]+(-[a-z0-9]+)*_[a-z0-9]+(-[a-z0-9]+)*\.(glb|png)$
-```
-
-`.png` covers icons and portraits while their format is still Open; narrow the extension once it is decided.
+Name check (the checker's `parseName`): `^(category)_([a-z0-9]+(-[a-z0-9]+)*)_([a-z0-9]+(-[a-z0-9]+)*)\.(glb|png)$`.
 
 ## 2. Units, grid, origin and facing
 
-| Rule | Status |
+| Rule | Value |
 |---|---|
-| 1 Blender unit = 1 metre; scene unit scale 1.0 (check with `get_scene_info(fields=["settings"])`) | Draft |
-| One grid tile = a fixed size in metres (the brainstorm's example was 4 m) | **Open**: to be decided in slice 1; update this skill then |
-| Building footprints are whole tiles (1x1, 2x2, 3x2...) and match the footprint in content data | Fixed (spec 4.2) |
-| Origin at the bottom center of the footprint: the horizontal center of the footprint rectangle (not of the bounding box, if a roof or awning overhangs), at ground-contact height | Fixed (spec 7); the overhang detail is Draft |
-| Up axis: glTF +Y. Blender is Z-up; the glTF exporter converts it (keep its "+Y up" option on) | Standard glTF behavior |
-| The front (door, entrance, the side that meets the road) faces the road | Fixed (spec 7) |
-| Forward is glTF +Z, which is Blender -Y (the side you see in Blender's Front view, numpad 1). Vehicles and ships point forward along the same axis | Fixed (spec 12.6) |
-| Non-square footprints: width along X, depth along the forward axis | Draft |
-| One scale factor per pack (all pieces of a pack share it), measured once against a reference such as a Mini Character next to a doorway; Kenney packs are not all at the same scale (the toy car kit is toy-sized) | Draft; the factors are measured in slice 1 |
-| Transforms applied: the exported root node has no rotation or scale; geometry is in final units | Draft (needed so instancing and placement stay simple) |
-| Road pieces: tile-sized, origin at the tile center, connection sides aligned to the grid axes | Draft; depends on which road pack is chosen (Q10) |
+| Units | 1 Blender unit is 1 m; Building Kit at scale 1.0 is the reference (a wall is 2.4 m) |
+| Tile size | **4.0** world units (`tileSize`) |
+| Pack scales (`packScale`) | Building Kit, Watercraft, Pirate, Train 1.0; Mini Characters 1.7 (adults about 1.32 m); Coaster, Minigolf, Toy Car, Food, Fantasy Town, Survival, Nature 2.0. Road tiles scale to the tile in their recipe |
+| Footprints | whole tiles, from content data; `w` along X, `h` along glTF Z (Blender -Y) at rotation 0 |
+| Origin | the footprint's bottom center; the lowest point at height 0 (`kit.finish`). Accessories keep their rest-pose place instead (`grounded=False`) |
+| Overhang | up to 0.25 tile past the footprint on each side (`overhang`); the model covers at least 60% of it on each axis (`minCover`) |
+| Facing | front (door, the side meeting the road) toward glTF +Z = Blender -Y; ships' bows too |
+| Transforms | applied: no rotation on any mesh node (meshopt adds its own translation and scale, which is fine) |
+| Road pieces | one tile each, open sides at rotation 0: straight +Z and -Z; end +Z; corner +Z and +X; t +Z, +X and -X; cross all; single none (test `test_every_road_piece_opens_exactly_its_sides`) |
 
 ## 3. Geometry and materials
 
-| Rule | Status |
+| Rule | Value |
 |---|---|
-| All models except the characters share **one palette texture**, so each model type is one instanced draw call | Fixed (spec 6.2, 7, 12.6) |
-| The palette itself (colors, size, layout) | **Open**: chosen with the art direction; to be decided in slice 1; update this skill then |
-| Palette image embedded in each `.glb`, or shipped once as one shared file the client loads once | **Open**: decided in the slice 1 pipeline task (spec 12.6), with `island-3d-client`; update this skill then |
-| Buildings are assembled from kit pieces and props, then joined: one mesh and one material per model where possible | Fixed (assemble step, spec 12.6); "one mesh" is Draft |
-| Moving sub-parts (windmill sails, a crane arm): keep as a separate named node; how the client animates them is decided with `island-3d-client` | Open |
-| Hidden faces removed (bottoms below ground, faces buried inside joined kit pieces) | Draft |
-| Smooth or flat shading | Open (part of the art direction) |
-| Compression: meshopt (`EXT_meshopt_compression`), not Draco | Fixed (spec 6.2, 7) |
-| The meshopt tool and its flags (candidates: `gltfpack` from meshoptimizer, `gltf-transform meshopt`) | Open |
-| No cameras, lights or helper empties in an exported file, except marker nodes agreed with `island-3d-client` (for example a driver's seat) | Draft |
-| How a model marks its windows for the night glow (for example a reserved palette area) | Open; a slice 1 decision with `island-3d-client` |
-| Where a driver sits in each vehicle (a named marker node in the `.glb`, or data elsewhere) | Open; a slice 1 decision with `island-3d-client` |
-| Terrain is not a pack model: the client builds it in merged chunks with vertex colors | Fixed (spec 6.2); the colors should match the chosen palette |
-| Goods have a color in content data (used for the Goods flow lines) | Fixed (spec 12.4); it is content data, not an asset. Suggest colors from the palette so lines and icons feel related |
-| Damaged buildings show a simple broken look (smoke, missing planks) | Fixed (spec 12.5); the exact look is decided in the art-direction task. Whether it is a model variant (for example `building_pier_a-damaged`), shared overlay props, or client effects such as smoke sprites is Open, with `island-3d-client` |
-| A higher building level shows on the island (for example an extra floor or a side building); workplaces and services have levels 1 to 3, homes never level up; the first is market level 2 in Settlement (slice 2) | Fixed (spec 12.1); the exact look is decided in the art-direction task |
-| How levels are shipped. Proposal: one whole model per level, built in Blender by adding parts to the level 1 assembly and named with a level suffix on the variant (`building_market_a.glb`, `building_market_a-l2.glb`, `building_market_a-l3.glb`). Why: the client swaps one model for another, each stays one instanced draw call, and nothing needs composing or hiding at runtime. Every level keeps the level 1 footprint and origin, so an upgrade never shifts the building | Draft proposal; confirm in the art-direction task with `island-3d-client` |
+| Material | exactly one, named `palette`, on every model including characters; no image in any `.glb` |
+| The palette | `palette.png`, 1024 x 1024: 32 x 8 slots of 32 x 128 px, built from every extracted pack's colormap swatches (deduplicated, exact colors) plus one flat swatch per color of a material-color pack (`paths.FLAT_PACKS`, the Nature Kit). 229 of 256 slots used |
+| The look | recolors the palette image only (never the UVs): `look` in `conventions.json`, "golden": saturation 1.1, lightness 1.0, warmth 0.06; sun color [1.0, 0.85, 0.68] linear, energy 3.2, elevation 30, azimuth 40; sky [0.62, 0.62, 0.7]; water [0.1, 0.32, 0.45] |
+| Windows | slot 0 (`palette.WINDOW_SLOT`, color 226, 238, 255): pack glass moves there automatically; a pane drawn in a swatch moves with `palette.move_slot`. The client lights it at night |
+| Compression | meshopt (`EXT_meshopt_compression`) by glTF Transform in `pnpm assets pack`; never Draco |
+| Extra nodes | only empties named `marker_*` (the ferry's `marker_deck`, `marker_waterline`; the pier's `marker_deck`); `pack` moves them to the scene root |
+| Geometry clean-up | `kit.finish` welds, triangulates and drops sliver triangles, so rebuilds are byte-exact |
+| Terrain and water | not models: the client builds them (plan 5), colors from the look's palette and `water` |
+| Goods colors | content data (`island-content`), not assets |
 
 ## 4. Budgets
 
-| Rule | Status |
-|---|---|
-| Phone budget the assets must serve: 60 fps on a mid-range phone from about 3 years ago, never below 30; under about 150 draw calls; about 200 full characters on screen at most | Fixed (spec 6.2) |
-| A full Mini Character is about 690 to 880 triangles | Pack fact (spec 6.2) |
-| Triangle budget per category (building by footprint, road, nature, prop, vehicle, ship, crowd character) | **Open**: to be decided in slice 1; update this skill then |
-| File size budget per stage download | Open (the first download should stay small on mobile data, spec 6.2) |
+Triangles (`triangleBudgets`; the checker refuses a model over its budget or in a category without one):
+
+| Category | Budget | Measured basis |
+|---|---|---|
+| building | 1800 per footprint tile | 1.5 x the Fantasy Town cottage (1206 on one tile) |
+| road | 400 | 1.5 x the largest cobble piece |
+| nature | 500 | 1.5 x the Pirate palm (338) |
+| prop | 1500 | the 3x3 scaffold and the pier |
+| ship | 500 | 1.2 x the houseboat ferry (408) |
+| character | 900 | Mini Characters are 690 to 880 |
+| accessory | 700 | the pack's wheelchair is 656 |
+| good | 400 | goods icons' models |
+
+Phone budget the assets serve (spec 6.2): 60 fps on a mid-range phone, under about 150 draw calls. File-size budget per
+stage download: **Open** (plan 6).
 
 ## 5. Characters, portraits and props
 
-| Rule | Status |
+| Rule | Value |
 |---|---|
-| People are the Kenney Mini Characters: 12 characters of about 690 to 880 triangles, each a body and a head mesh merged into one in Blender, a 7-joint rig in two rest-pose variants, one colormap | Fixed (spec 6.2) |
-| Characters keep their own colormap (one extra texture); merging them into the shared palette is optional | Fixed (spec 12.6) |
-| Kept clips: idle, walk, sprint, sit, drive, pick-up, holding-both, interact-left, interact-right, emote-yes, the wheelchair set | Fixed (decision 26, spec 6.2); exact clip names are read from the pack in slice 1 |
-| Never used: shoot, attack, die (any combat clip) | Fixed |
-| Chosen clips are baked into one small joint-animation texture; legs and arms play as two layers | Fixed (spec 6.2, 12.5); layout Open |
-| A simplified Blender-made version for neighborhood zoom | Fixed (spec 6.2) |
-| Children are the same Mini Characters drawn at about 75% size (by the client; no separate child models) | Fixed (spec 12.5) |
-| Bags are small props made in Blender | Fixed (spec 12.5) |
-| Construction shows a frame or scaffold with workers; the building rises in steps | Fixed (spec 12.5); which parts are Blender models is decided with `island-3d-client` |
-| Key staff portraits are rendered in Blender from the Mini Characters with accessories | Fixed (spec 12.4) |
-| Character names (draft): `character_female_a.glb` to `character_female_f.glb`, `character_male_a.glb` to `character_male_f.glb`; bags `accessory_bag_a.glb` (the spec calls bags props; the category is Draft) | Draft |
-| How the crowd version and the animation texture are named (for example `character_female-crowd_a.glb`) | Open |
-| How a character marks its tintable clothing areas (a colormap area or a vertex attribute) | Open; a slice 1 decision with `island-3d-client` |
+| Characters | `character_female_a.glb` to `character_male_f.glb`: the 12 Mini Characters at scale 1.7, on the palette, with exactly the 17 kept clips (`characters.md`) |
+| Animation | `characters-animation.bin` (RGBA32F) and `.json`, layout in `characters.md` |
+| Children | the same models drawn at 0.75 by the client |
+| Accessories | `accessory_bag_a.glb` (made in Blender, follows `arm-right`), `accessory_wheelchair_a.glb` (the pack's, follows `root`); `accessories` in `conventions.json` names each one's joint |
+| Construction | `prop_scaffold_<w>x<h>.glb`, one per footprint: as tall as the tallest building of that footprint plus a quarter tile |
+| Portraits | `portrait_<name>_a.png` for each port master candidate (`icons.md`) |
 
-Details: `characters.md` and `icons.md`.
+## 6. Still open
 
-## 6. Open items that also involve `island-3d-client`
-
-Decide these together with whoever builds the client side, and record the result in both skills:
-
-- Palette embedded per file or shipped once (the slice 1 pipeline task).
-- Joint-animation texture layout, precision, file format and its clip manifest, including how the two rest-pose
-  variants and the legs and arms layers are handled.
-- Naming and loading of detail levels (full character, crowd version).
-- How moving sub-parts are animated, and how a building "rises in steps" during construction.
-- How models mark windows (night glow), where drivers sit in vehicles, and how characters mark tintable clothing.
-- Icon and portrait size and format as displayed by the UI (`island-ui`).
+- Building level variants (slice 2): proposal, one whole model per level named with a level suffix on the variant
+  (`building_market_a-l2.glb`), same footprint and origin.
+- The damaged look (later stages): model variant or client effects, with `island-3d-client`.
+- A crowd level of detail for people: left out of plan 4 (people are seen small; the user asked not to over-invest);
+  decide in plans 5 and 6 if phone performance needs it.
+- Moving sub-parts (windmill sails), vehicles and their drivers' seats: when vehicles arrive.
+- Tintable clothing on characters.

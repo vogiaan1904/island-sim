@@ -1,201 +1,107 @@
-# The per-model pipeline
+# The pipeline: modules, commands and pitfalls
 
-From a pack file in `assets/raw/<zip base name>/` to a checked, meshopt-compressed `.glb` in
-`apps/client/public/models/` (planned). The order comes from spec 7 (and 12.6): inspect,
-assemble, normalize, optimize, render icons, export. Characters add the steps in `characters.md`. Values marked Open
-in `conventions.md` are still undecided; do not make them up.
-
-Snippets here are **illustrative**: no pipeline scripts exist yet. Check names against the running Blender version
-(`blender-mcp.md`, section 4) before relying on any of them.
+Built in slice 1 plan 4. Python runs inside Blender (headless through `pnpm blender`, or through MCP); Node owns the
+final file (validate, compress, check).
 
 ## Contents
 
-0. Before you start
-1. Inspect
-2. Assemble
-3. Normalize
-4. Optimize
-5. Icons
-6. Export
-7. Compress with meshopt
-8. Export checks
-9. Common problems
+1. Module map
+2. From pack to shipped file
+3. Writing a recipe
+4. The checks
+5. Pitfalls already met (and fixed in the pipeline)
+6. Working headless or through MCP
 
-## 0. Before you start
+## 1. Module map
 
-- Blender is connected and the user has saved their work (`blender-mcp.md`).
-- The pack is extracted per `pack-intake.md` and listed in `assets/SOURCES.md`.
-- You know what the model is for: its category, its content id, and for a building its footprint in tiles from
-  content data (`island-game-logic`, `island-content`). If the footprint is not defined yet, ask; do not guess it
-  from the model.
-- Work in a scene or file meant for pipeline work, not in the middle of the user's own scene.
-
-## 1. Inspect
-
-1. Import the source with Blender's glTF importer. Which file to use per pack:
-   - Newer Kenney packs: `Models/GLB format/<name>.glb` (it uses `Models/GLB format/Textures/colormap.png`).
-   - Furniture Kit (2018): `Models/GLTF format/<name>.glb` (no colormap folder next to it; probably plain material
-     colors, verify).
-   - 3D Road Tiles: `Models/gLTF/roadTile_NNN.gltf` (no `.bin` files and no textures in the zip; probably embedded
-     buffers and material colors, verify).
-   - Use OBJ or FBX only if the glTF version is broken; never run anything from the pack.
-2. Report per object, in one compact print:
-   - name, type, parent, world bounding box (size and min corner), origin location, rotation and scale;
-   - triangles (`get_scene_info` with `details` or `topology`, or count `loop_triangles` in a script);
-   - materials, and the image each one uses;
-   - armature, joint names and count, actions or clips with frame ranges (characters);
-   - topology health: non-manifold edges, loose vertices.
-3. `look(mode="angles", target=[name], max_size=384)` to see it from the front, side, top and three-quarter view.
-4. Note anything unusual before changing it: an origin far from the model, several meshes, extra empties, odd scale.
-
-```python
-# Illustrative: compact report for the selected objects
-import bpy
-for ob in bpy.context.selected_objects:
-    line = [ob.name, ob.type, tuple(round(v, 3) for v in ob.dimensions)]
-    if ob.type == "MESH":
-        me = ob.data
-        me.calc_loop_triangles()
-        line += [len(me.loop_triangles), [m.name for m in me.materials if m]]
-    print(line)
+```
+tools/blender/run.py                 headless entry: blender -b --factory-startup --python-exit-code 1 --python run.py -- <command>
+tools/blender/island_blender/
+  paths.py        repo paths; pack_glb(pack, name), pack_models(pack), colormaps(), flat_packs(), FLAT_PACKS
+  conventions.py  load() (tools/assets/conventions.json), pack_scale(pack), tile()
+  palette.py      build_palette, remap_uvs, remap_flat, glb_colors, move_slot, slot_uv, recolor, palette_material,
+                  WINDOW_SLOT, NEUTRAL_LOOK
+  kit.py          import_glb (the only door from a pack into Blender), piece, import_piece, place, join, finish,
+                  box, swatch_uv, use_palette, mapping
+  export.py       export_glb(obj, animations=False) -> assets/build/staging/<name>.glb (with marker_ children)
+  characters.py   prepare, play, freeze, NAMES, PACK, FPS
+  bake.py         skinning_matrices, add_character, manifest (the joint-animation texture)
+  icons.py        use_engine, rig(size, look), frame(camera, objects, focus), render(objects, path, size, look, focus)
+  cli.py          palette | build | icons | characters (each resets Blender to factory settings)
+  recipes/        __init__ (registry, @recipe), roads, nature, ships, buildings, scaffolds, goods, portraits, accessories
+tools/blender/tests/                 unittest suites for pnpm blender test
+tools/assets/                        Node: conventions.json; src/ rules, glb, pack, check, catalog, shipped, cli, blender
 ```
 
-## 2. Assemble
+## 2. From pack to shipped file
 
-Spec 12.6: the packs have no ready-made buildings (the Building Kit is modular pieces with flat roofs), so buildings
-are assembled. The same step covers the Blender-made props the spec asks for: bags (12.5), the construction frame or
-scaffold (12.5), and simple gap fillers such as a well.
+1. `pnpm blender palette` once per pack change (it reads every extracted pack; a new pack shifts nothing already
+   shipped only if its swatches are new, so rebuild everything after adding one).
+2. `pnpm blender build <name>`: runs the recipe in an empty scene and exports `assets/build/staging/<name>.glb`
+   (uncompressed, Y-up, no images, the `palette` material).
+3. `pnpm assets pack <name>`: the Khronos validator reads the staging file (it cannot decode meshopt), then glTF
+   Transform compresses with meshopt into `apps/client/public/models/<name>.glb`.
+4. Add the file to `tools/assets/src/catalog.ts`; `pnpm assets check`.
+5. Icons: `pnpm blender icons <name>` renders from the same recipe (buildings with `icon=True`, goods and portraits
+   with `ship=False`).
+6. Characters: `pnpm blender characters`, then `pnpm assets pack character_...` for the twelve.
 
-1. Start from the brief: the building's footprint in tiles from content data, its role, and the art direction.
-2. Build it from Building Kit pieces snapped to the kit's own module grid (walls, doorways, windows, floors, flat
-   roofs, columns, stairs), add props from other packs (stalls, barrels, cargo piles, log loads, trees), and from an
-   added CC0 pack if the inventory found one (`pack-inventory.md`). If the look calls for pitched roofs or other
-   shapes no pack has, model them simply in Blender in the same low-poly style.
-3. Keep every piece square to the grid and inside the footprint, except small overhangs (roof edges, awnings).
-4. Join everything into one mesh, merge vertices by distance, recalculate normals outward.
-5. `look(mode="angles")` at the result before moving on; landmarks such as the Island Hall should stand out from
-   ordinary buildings.
-6. Record which pack files went into it, so the model can be rebuilt (where that record lives is Open; see
-   `conventions.md`).
-7. **Level variants** (workplaces and services, levels 1 to 3, spec 12.1): build levels 2 and 3 by adding parts to the
-   level 1 assembly (an extra floor, a side building), keeping the same footprint and origin. The proposed shipping
-   format is one whole model per level (`conventions.md`); homes have no levels.
-
-## 3. Normalize
-
-Goal: the model drops onto the grid with no per-model fixes on the client.
-
-1. **Scale** with the pack's scale factor (one factor per pack, measured in slice 1). Do not scale single models by
-   eye. Check the result against the footprint: a 2x2 building fits inside 2 x 2 tiles.
-2. **Face the front.** Rotate so the door or entrance faces glTF +Z, which is Blender -Y (spec 12.6): the side you see
-   in Blender's Front view (numpad 1). Vehicles and ships point forward along the same axis. Keep buildings square
-   to the grid axes (rotations in 90 degree steps), because footprints are whole tiles and the placement Rotate
-   button turns buildings on the grid.
-3. **Apply transforms** (rotation and scale) so the object has none left.
-4. **Set the origin** to the bottom center of the footprint: horizontally at the center of the footprint rectangle
-   (not of the bounding box if a roof or awning overhangs), vertically at ground contact. Then put the object at the
-   world origin.
-5. **Clean up**: delete cameras, lights and helper empties; remove unused materials and image data; name the object
-   with its output base name (for example `building_cottage_a`).
-6. `get_scene_info(query=name, fields=["location", "size", "ground", "rotation", "scale"])` should show the object
-   at the origin, on the ground, with no rotation and scale 1.
+## 3. Writing a recipe
 
 ```python
-# Illustrative: origin to the footprint's bottom center, for a footprint centered on the model's base
-import bpy
-from mathutils import Vector
-ob = bpy.context.active_object
-bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-corners = [ob.matrix_world @ Vector(c) for c in ob.bound_box]
-center = Vector(((min(c.x for c in corners) + max(c.x for c in corners)) / 2,
-                 (min(c.y for c in corners) + max(c.y for c in corners)) / 2,
-                 min(c.z for c in corners)))
-# For an overhanging model, replace center.x and center.y with the footprint center instead.
-bpy.context.scene.cursor.location = center
-bpy.ops.object.origin_set(type="ORIGIN_CURSOR")
-ob.location = (0.0, 0.0, 0.0)
+from .. import kit
+from . import recipe
+
+TOWN = "kenney_fantasy-town-kit"
+
+@recipe("building_well_a", icon=True)
+def well():
+    """What it is, and the pack files it uses (`wall-curved`, `pillar-wood`, ...)."""
+    parts = [kit.place(kit.piece(TOWN, "pillar-wood"), 1.05, 0.0)]
+    ...
+    return kit.finish(parts, "building_well_a")
 ```
 
-`origin_set(type="ORIGIN_CURSOR")` uses an enum identifier: confirm it with
-`bpy.ops.object.origin_set.get_rna_type().properties["type"].enum_items` in this Blender version.
+- `kit.piece(pack, name)` imports at the pack's scale; `kit.import_piece(pack, name, kit.mapping(), scale)` at
+  another (road stones at the tile size, a barrel at 1.0). A non-uniform stretch: set `obj.scale` before `finish`.
+- `kit.place(piece, x, y, z, turns)`: Blender coordinates, quarter turns counterclockwise from above.
+- Made in Blender: `kit.box(name, size, location, uv)` with `uv = kit.swatch_uv(pack, model)` (the most used swatch
+  of a pack model; pick a model that is one color, for example the Fantasy Town `planks` for wood).
+- A recipe may build other recipes to measure them (the scaffolds build the buildings of their footprint).
+- Fantasy Town helpers in `recipes/buildings.py`: `wall(name, cx, cy, side)` puts a wall on an edge of a 2 m module
+  (its walls stand on the cell's +X edge; `SIDE` gives the turns), `gabled_house(cx, cy, walls, rows, levels)`
+  builds a two-module-wide house with a `roof-high` gable.
+- Markers: an empty named `marker_*` parented to the model (see `recipes/ships.py`).
 
-## 4. Optimize
+## 4. The checks
 
-1. **One material on the shared palette texture.** Every model ends up with the same material and the same image,
-   with its UVs pointing at the right palette colors. How to get there depends on the source (the palette itself is
-   Open, chosen with the art direction). Characters are the exception: they keep their own colormap (spec 12.6;
-   see `characters.md`).
-   - Packs with their own `colormap.png` (the newer Kenney packs): each pack has a different colormap, so remap the
-     UVs into the shared palette. If the palette is built from the packs' colormaps, this is usually an offset and
-     scale per pack; otherwise move each UV island to the matching palette color.
-   - Packs with plain material colors (likely the Furniture Kit and 3D Road Tiles): give each face the UVs of the
-     palette color chosen for its old material, then replace all materials with the shared one.
-   - Set colors through shader node inputs or the palette image, never `diffuse_color` (`blender-mcp.md`).
-2. **Remove hidden faces**: bottoms that sit on the ground, faces buried inside joined kit pieces. This is cheaper
-   and safer than decimating; decimation easily ruins a low-poly silhouette.
-3. **Check the triangle budget** for the category (Open until slice 1; until then, report the count and flag it).
-4. **Shading**: flat or smooth per the chosen look (Open). Recalculate normals outward after joining.
-5. `look` again, in material shading, to confirm the colors survived the palette move.
+`pnpm assets check` (also run by `shipped.test.ts` inside `pnpm check`), per shipped model: the name; meshopt;
+no lights, cameras or images; exactly the `palette` material; only mesh and `marker_*` nodes; no turned mesh node;
+the lowest point at 0 (characters and accessories excepted); inside and covering its footprint (buildings from
+content data, roads 1x1, `WxH` variants); the triangle budget; characters: one skin with the 7 joints, exactly the 17
+kept clips, rigid weights. Icons: a 256 x 256 RGBA PNG. The animation: bytes match the manifest, every character
+filed once. The folders hold exactly the catalog. `tools/assets/src/content.test.ts` checks every building, good and
+portrait candidate in content data has its files.
 
-## 5. Icons
+`pnpm blender test` covers what only Blender can see: colors survive the palette move, glass reaches the window slot,
+black swatches are refused, faces spanning colormap cells get one swatch, turns apply, slivers are dropped, road open
+sides, the bake matches Blender's posing, joints a clip does not key stay at rest, icon framing.
 
-Buildings and goods get an icon rendered from the optimized model with the fixed icon camera, while the model is
-still in the scene. See `icons.md`. Goods icons are rendered even when the good has no in-game model.
+## 5. Pitfalls already met (and fixed in the pipeline)
 
-## 6. Export
+- The glTF importer leaves objects in quaternion mode: `kit.place` switches to XYZ before turning.
+- Some pack faces stretch across distant colormap cells: `remap_uvs` gives them the cell most corners use.
+- Welding leaves slivers whose normals vary run to run: `finish` triangulates and drops them (byte-exact rebuilds).
+- meshopt wraps a mesh with children in an extra node: `pack` moves `marker_*` nodes to the scene root first.
+- The Fantasy Town fountain carries an untextured `Water` material: the pipeline refuses it (avoid or rebuild it).
+- Older packs keep `.glb` under `Models/GLTF format/` (`paths.pack_models`) and use material colors (`FLAT_PACKS`).
+- Blender updates `matrix_world` only after `bpy.context.view_layer.update()`; read world positions after it.
+- A model's most used swatch can be the wrong part (the `pillar-wood`'s stone foot): check `swatch_uv` on a render.
+- Fantasy Town roof pieces carry their own gable triangles; `wall-*-slope` walls are for sloping ground, not gables.
 
-Export one model per file with Blender's glTF exporter:
+## 6. Working headless or through MCP
 
-- format GLB, +Y up, only the selected object, modifiers applied;
-- no cameras or lights; animations only for characters (and props once moving parts are decided);
-- write to a staging folder outside `apps/` (not committed), because the committed file is the compressed one.
-
-Parameter and enum names differ between Blender versions. Read them first:
-`bpy.ops.export_scene.gltf.get_rna_type().properties` (keys and `enum_items`), then pass the ones you need.
-
-## 7. Compress with meshopt
-
-- The spec chose meshopt (`EXT_meshopt_compression`). Do not use Draco.
-- Blender's built-in glTF exporter has offered Draco but not meshopt; check the exporter's properties in this Blender
-  version. If meshopt is missing, compress after export with a meshopt command-line tool (candidates: `gltfpack`
-  from meshoptimizer, or `gltf-transform meshopt` from the glTF Transform CLI). Which tool and which flags is Open;
-  record the choice in `conventions.md`. These are our own tools installed from their official sources, not
-  anything from a pack.
-- Write the result to `apps/client/public/models/<name>.glb` (planned).
-- Whether the palette image is embedded in each `.glb` or shipped once as a shared file is decided in the slice 1
-  pipeline task (spec 12.6), together with `island-3d-client`; update this skill then. The compression settings
-  must keep whichever choice is made (a tool that embeds or renames images can undo it).
-- Compression can quantize positions and may restructure nodes or textures. Run the export checks on the compressed
-  file, not the staging file, and re-check the origin there.
-- The client needs a meshopt decoder to load these files; that is `island-3d-client`'s side.
-
-## 8. Export checks
-
-Every exported `.glb` is checked automatically (spec 7 and 9). The checker is planned as the asset validator in
-`tools/` (exact path planned); `island-testing` covers running it in tests. Until it exists, do the same checks by
-hand and report the results.
-
-| Check | Passes when | Status |
-|---|---|---|
-| glTF validator (Khronos) | No errors on the final file. If the validator cannot decode `EXT_meshopt_compression`, also validate the staging file and note it | Fixed (spec 7) |
-| Naming | File name is `category_name-part_variant.glb`: lowercase, hyphens inside each part, variant present, category from the list in `conventions.md` | Fixed (spec 12.6); category list Draft |
-| Scale | Size matches the footprint in whole tiles (buildings) or the category's expected size; footprint equals the content data's footprint | Fixed check; tile size Open |
-| Origin | Lowest point at height 0 (glTF Y); footprint centered on X and Z = 0 within a small tolerance | Fixed check; tolerance Open |
-| Triangle budget | Triangles at or under the category budget | Fixed check; budgets Open |
-| Required clips (characters) | Every kept clip from `characters.md` is present; no combat clip (shoot, attack, die) is present | Fixed |
-| One palette material (characters: their own colormap), no cameras, lights or empties, meshopt extension present | As described above | Proposed; confirm in slice 1 |
-
-Last, re-import the final file into an empty scene and `look` at it from several angles. It should look the same as
-before export.
-
-## 9. Common problems
-
-| Symptom | Likely cause |
-|---|---|
-| Model floats or sinks in the game | Origin not at ground contact, or transforms not applied before setting the origin |
-| Model sits off-center on its tiles | Origin at the bounding box center of an overhanging model instead of the footprint center |
-| Model faces sideways or backwards | Front set on the wrong Blender axis (the front is Blender -Y, glTF +Z), or exported without "+Y up" |
-| Pink or untextured model after import | The pack's relative texture path broke because files were moved out of the pack layout |
-| Colors look right in Blender's solid view but wrong in the export | Color was set with `material.diffuse_color` instead of the shader node input or the palette |
-| Each model type costs several draw calls | More than one material or mesh left after optimizing |
-| Script fails in another user's Blender | Shader node looked up by name, or an enum identifier was hardcoded |
+Headless (`pnpm blender ...`, review scripts under `assets/build/` run with
+`/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python <script>`) is
+the default: exact, repeatable, and it leaves the user's Blender alone. Review renders are composed into sheets and
+opened for the user. Through MCP, load the modules into a new scene as in `blender-mcp.md`.

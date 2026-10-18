@@ -8,6 +8,21 @@ industrial buildings)." It comes first in slice 1 because every exported model d
 bulk processing before they have approved a look (brainstorm, "Style unification pass", step 4: "you approve the
 look before bulk processing").
 
+## Result (decided 2026-10-18, plan 4 Tasks 4 and 5)
+
+- Look: **golden** (picked from as-packs, bright, pastel, golden): the packs' palette at saturation 1.1, lightness 1.0,
+  warmth 0.06, one warm low sun (30 degrees up), a grey-violet sky. Values in `conventions.json` `look`.
+- Tile size **4 units**; roads from the **Fantasy Town Kit** cobble; the ferry from the Watercraft **houseboat**;
+  Mini Characters at **1.7**; budgets and scales in `conventions.md`.
+- Packs added for the gaps: Fantasy Town, Survival, Pirate, Nature, City Kit Roads (`pack-inventory.md`).
+- How it was shown: a vignette of real pack models at both tile sizes, rendered headless with EEVEE ("Standard" view
+  transform, so palette colors render true) from island, neighborhood and street cameras, composed into comparison
+  sheets opened for the user. The working scripts were `assets/build/vignette.py`, `render_looks.py` and `looks.json`
+  (ignored by git, so they may be gone; rebuild them from this procedure).
+
+To change the look later: edit `look`, run `pnpm blender palette`, `pnpm blender icons all`, and re-render the review.
+The layout never changes with the look, so shipped models need no rebuild.
+
 ## Contents
 
 1. Inputs
@@ -112,7 +127,7 @@ assemble from kit pieces, a simple model made in Blender, or a new CC0 pack.
 
 ## 7. Write it down
 
-- Record the chosen look and every convention in `conventions.md`, `icons.md` and `characters.md`, replacing each
-  "to be decided in slice 1" marker, and update `pack-inventory.md`.
+- Record the chosen look and every convention in `conventions.json` first, then `conventions.md`, `icons.md` and
+  `characters.md`, and update `pack-inventory.md`.
 - Propose the matching updates to the spec (Q10, Q12) and the brainstorm to the user; edit them only with approval.
 - Keep the comparison sheet out of git unless the user asks (it is not processed output the game loads).

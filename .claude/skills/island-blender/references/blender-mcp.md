@@ -33,9 +33,22 @@ user to check the three steps above. If the add-on is reported as outdated, tell
 - **Save first.** `execute_blender_code` runs arbitrary Python inside the user's live Blender with full access to
   the machine. Before the first call in a session, ask the user to save their Blender work. Never run
   `read_homefile`, `read_factory_settings`, open another file, or delete objects you did not create without asking.
-- **Prefer a dedicated working file** for pipeline work over the user's own scene. Where working `.blend` files live
-  is not decided yet (the spec only says that processed output is committed); to be decided in slice 1; update this
-  skill then. Until then, ask the user where to save one.
+- **Never reset the user's Blender.** Every `cli.cmd_*` and `cli.main` (and `cli.reset_scene`) resets Blender to
+  factory settings: they are for headless runs only. Through MCP, load the modules into a new scene instead:
+
+  ```python
+  import importlib, sys
+  import bpy
+  sys.path.insert(0, "/Users/vogiaan/coding/projects/island-sim/tools/blender")
+  import island_blender.palette as palette, island_blender.kit as kit
+  for module in (palette, kit):
+      importlib.reload(module)  # kit.mapping() and conventions.load() are cached: reload after a palette rebuild
+  scene = bpy.data.scenes.get("art-direction") or bpy.data.scenes.new("art-direction")
+  bpy.context.window.scene = scene
+  ```
+
+  No working `.blend` files are kept: every model is rebuilt from its recipe, so nothing in the user's file matters to
+  the pipeline.
 - **No authentication on the socket.** The add-on listens on `localhost:9876` without a password. Never forward,
   tunnel or re-bind that port, and never expose it to a container, VM or network. Suggest the user stops the MCP
   server in the N panel when a session is over.

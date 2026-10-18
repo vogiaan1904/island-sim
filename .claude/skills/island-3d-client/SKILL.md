@@ -94,7 +94,7 @@ Each rule has a reason. If a task seems to need breaking one, stop and ask inste
     data beyond their far-away shapes; visiting a friend is a read-only extra on the same renderer.
 11. **No emoji anywhere**, including watch-mode captions, labels and debug overlays, and no symbol characters that
     some phones draw as emoji (spec 1).
-12. **Load only processed models** from `apps/client/public/models/` (planned), named
+12. **Load only processed models** from `apps/client/public/models/`, named
     `category_name-part_variant.glb` (spec 12.6). Never load from `assets/raw/` or `assets/packs/`: those are
     untrusted, uncompressed originals and are not shipped.
 
@@ -128,12 +128,40 @@ R3F scene: terrain chunks, water, instanced models, people (two detail levels), 
 - The spec does not fix folders inside `apps/client`. Keep the derived-render-data code free of React and three so it
   can be unit-tested; record the real folders here in slice 1.
 
+## The model contract (from the asset pipeline, plan 4, 2026-10-18)
+
+The files exist; `tools/assets/src/catalog.ts` lists every one the client may load (models and icons). What the
+client must do with them:
+
+- **One texture, one material.** Every `.glb` has one material named `palette` and no image. Load
+  `apps/client/public/models/palette.png` once and bind it to every `palette` material with nearest filtering (the
+  palette is solid swatches; linear filtering bleeds neighbors), sRGB, no mipmaps or mipmaps clamped per swatch.
+- **Lit windows**: palette slot 0 (UV 0 to 1/32 across, the top 1/8 down; color 226, 238, 255) is window glass. At
+  night make that slot glow (an emissive term keyed on UV, or a second palette image with slot 0 bright).
+- **The look** (`tools/assets/conventions.json`, `look`): one sun, color [1.0, 0.85, 0.68] linear, about 30 degrees up,
+  azimuth 40 degrees; sky [0.62, 0.62, 0.7]; water [0.1, 0.32, 0.45]. Terrain colors should come from the palette's
+  look.
+- **Scale**: 1 unit is about 1 m; one tile is 4 units. Model origin = footprint bottom center; front = glTF +Z. Place a
+  building at its footprint center and turn by the sim's rotation (footprint `w` along X at rotation 0).
+- **Roads**: `road_{straight,end,corner,t,cross,single}_a.glb`, one tile each; open sides at rotation 0: straight +Z
+  and -Z, end +Z, corner +Z and +X, t +Z, +X and -X, cross all, single none. Turn the piece to match the road tile's
+  neighbors.
+- **Markers**: `ship_ferry_a.glb` carries `marker_deck` (passengers board here, the cabin floor) and
+  `marker_waterline` (put this at the water surface); `prop_pier_a.glb` (one tile of walkway the client places on the
+  water beside the dock) carries `marker_deck` at its deck top, its origin at the bottom of its posts. Markers are
+  root-level nodes found by name.
+- **Construction**: `prop_scaffold_<w>x<h>.glb` per footprint, tall enough to raise the building inside it.
+- **Characters**: 12 `character_*.glb` (rigid skin, 7 joints) on the palette, and `characters-animation.bin` /
+  `.json`, the joint-animation texture: details in `references/people-vehicles-ships.md`.
+- **Accessories**: `accessory_bag_a.glb` follows `arm-right`, `accessory_wheelchair_a.glb` follows `root`
+  (`accessories` in `conventions.json`): draw it at `joint matrix x position`, like a vertex of that joint.
+
 ## Workflows
 
 ### Show a new model type in the world (building, prop, vehicle, ship)
 
 1. Whole new building or good? Start from `island-content`, which hands the 3D step back here.
-2. The processed `.glb` must exist as `apps/client/public/models/category_name-part_variant.glb` (planned), made by
+2. The processed `.glb` must exist as `apps/client/public/models/category_name-part_variant.glb`, made by
    `island-blender`: one mesh, the shared palette material, meshopt, origin at the footprint's bottom center, front
    facing the road (glTF +Z). If not, do that first.
 3. Put it in the right stage's load set (Outpost first, later stages in the background).
@@ -213,23 +241,18 @@ Read only the one the task needs.
 Spec section 12 settled many details; these remain. Do not invent values; decide them in slice 1 (with the user
 where it is a design choice) and write the answer here and in the matching reference file.
 
-- Art direction (Q10): sky, water and terrain colors, the palette, the look of glows, smoke and distant islands.
-- Grid tile size and model scale, including character height against a tile.
-- Whether the palette image is embedded in each `.glb` or shipped once (spec 12.6); either way the client builds one
-  shared texture and material.
-- Terrain chunk size; LOD switch distances and hysteresis; neighborhood walker cap; the crowd scale-down rule.
+- The look of glows, smoke and distant islands (the look itself is decided; see the model contract).
+- Terrain chunk size; LOD switch distances and hysteresis; neighborhood walker cap; the crowd scale-down rule. No
+  crowd model ships: if phones need one, a cheaper level of detail for distant people is a client decision.
 - What each quality tier changes (pixel ratio per tier, shadow map size, caps) and how the tier is picked; whether
   90/120 Hz screens are capped at 60 fps.
-- Joint-animation texture layout (with `island-blender`): rig variants, which joints form each clip layer.
-- How a model marks its windows for night lighting, and which parts of a character a color tint may change.
-- How the client knows where a driver sits in each vehicle; which arm pose goes with a bag.
+- Which parts of a character a color tint may change.
+- How the client knows where a driver sits in each vehicle (no vehicles in slice 1).
 - Gesture thresholds (tilt versus move, zoom and turn), trackpad detection, zoom and tilt limits, the auto-tilt
   curve, how momentum feels, which axis is north and in which fixed direction the Mainland lies.
 - Watch mode: how moments are ranked and how long the camera holds each.
-- Construction: how many steps a building rises in. The exact damaged look (spec 12.5: smoke, missing planks) is
-  part of the art-direction task.
-- The exact look of each building level (spec 12.1: a higher level shows on the island, for example an extra floor
-  or a side building) is part of the art-direction task.
+- Construction: how many steps a building rises in. The damaged look (spec 12.5) and building levels (spec 12.1)
+  are later stages; the asset side proposes one model per level (`building_market_a-l2.glb`).
 - Sound sources, file format and location.
 - Folder layout inside `apps/client`.
 

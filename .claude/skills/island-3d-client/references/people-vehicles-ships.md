@@ -1,6 +1,7 @@
 # People, vehicles and ships
 
-Planned design from spec 6.2, decision 26 and the defaults in spec 12.1, 12.5 and 12.6. No code exists yet. The
+Planned design from spec 6.2, decision 26 and the defaults in spec 12.1, 12.5 and 12.6. No client code exists yet; the
+characters, the animation texture and the accessories do (plan 4). The
 bake, the crowd model, scaffolds and bag props (Blender side) are `island-blender`; this file covers how the client
 uses them and how movers are derived from sim flows.
 
@@ -20,8 +21,9 @@ uses them and how movers are derived from sim flows.
 ## 1. The Mini Characters pack
 
 From the spec (decision 26, 6.2, 12.6): 12 characters (6 female, 6 male) of about 690-880 triangles, each a body
-and a head mesh that Blender merges into one, a 7-joint rig in two rest-pose variants, one colormap that the
-characters keep (one extra texture), 32 clips, CC0. Source: `assets/packs/kenney_mini-characters.zip`.
+and a head mesh that Blender merges into one, a 7-joint rig in two rest-pose variants, 32 clips, CC0. Source:
+`assets/packs/kenney_mini-characters.zip`. Shipped (plan 4) as `character_<sex>_<letter>.glb` at scale 1.7 (adults
+about 1.32 m) on the shared palette, with the 17 kept clips.
 
 Extra detail observed by reading the pack's GLB files on 2026-10-16 (raw pack, before any processing; re-check
 against the processed models from `island-blender`):
@@ -74,8 +76,8 @@ while carrying works.
 - **Carrying** is the legs layer on `walk` (or `idle` while waiting) with the arms layer on `holding-both`.
 - **Full-body clips** (`sit`, `drive`, `sprint`, `pick-up`, `interact-*`, `emote-yes`, the wheelchair set) play on
   both layers at once (spec 12.5), which is the same as "arms free".
-- Which joints belong to the arms layer is open, with `island-blender`. The obvious split is `arm-left` and
-  `arm-right` for arms and the other five joints for legs, because `holding-both` keys only the arms.
+- The layers (decided in plan 4, `layers` in the manifest): arms = `arm-left`, `arm-right`; legs = `root`,
+  `leg-left`, `leg-right`, `torso`, `head`. Each clip has a `layer` (`legs`, `arms` or `full`).
 - Each layer has its own clip and phase per instance; the shader picks the layer by the vertex's joint.
 
 ## 4. The joint-animation texture in the shader
@@ -83,10 +85,16 @@ while carrying works.
 The chosen clips are baked into one small joint-animation texture, so the shader animates each instance with its
 own clip and timing (spec 6.2). Hundreds of people then cost a few draw calls, and nothing animates on the CPU.
 
-- **Contract with `island-blender`**: the texture layout (rows per frame and clip, texels per joint, how a joint
-  transform is stored, how clips and rig variants are indexed) is decided once in slice 1 and recorded in both
-  skills. The client must not guess it.
-- **Per-instance data** (planned): character mesh and rig variant, legs clip and phase, arms clip and phase, playback
+- **The contract** (plan 4, `island-blender` `references/characters.md`): `characters-animation.bin` is RGBA32F
+  little-endian, width 21 (7 joints x 3 texels), height 524. Texel `3j + r` of a row is row `r` of joint `j`'s 4x4
+  matrix (the fourth row is 0 0 0 1). The matrix maps the vertex's glTF POSITION (rest pose, final units) to its
+  posed position, so the rest pose is the identity; a vertex follows its first `JOINTS_0` joint (weights are rigid).
+  `characters-animation.json` gives `joints`, `layers`, `fps` (30), `variants` (the characters of each rig variant
+  and its `firstRow`) and `clips` (`name`, `layer`, `firstRow` inside a variant, `frames`). Row of a frame =
+  variant.firstRow + clip.firstRow + frame. A looping clip plays frames 0 to frames - 2 (its last key repeats the
+  first); a one-shot clip holds its last frame. The loop set is not in the manifest yet: idle, walk, sprint and the
+  wheelchair moves loop.
+- **Per-instance data**: character mesh and rig variant, legs clip and phase, arms clip and phase, playback
   speed, scale (children), tint, accessory or prop. Instance matrices place the person; the clip data poses them.
 - **Sampling**: WebGL2 can sample float textures with nearest filtering and `texelFetch`. Linear filtering of 32-bit
   float textures needs an extension that phones may lack, so fetch two neighboring frames and blend them in the
@@ -94,8 +102,9 @@ own clip and timing (spec 6.2). Hundreds of people then cost a few draw calls, a
 - **Phase**: for walkers, derive the cycle phase from distance traveled (progress times route length divided by the
   stride length, scaled for children), so feet do not slide and the result is deterministic. For idle, work and
   celebration clips, use game time times a rate plus a per-slot offset.
-- **Accessories and bags** follow a joint (glasses the head, canes, crutches and bags an arm, wheelchairs the root)
-  by sampling the same texture for that joint. One draw call per prop type.
+- **Accessories**: `accessory_bag_a.glb` (joint `arm-right`) and `accessory_wheelchair_a.glb` (joint `root`), listed
+  in `conventions.json` `accessories`, sit in the shared rest space: draw each vertex at that joint's matrix times its
+  position, like a character vertex. One draw call per accessory type.
 - **Shadows**: if characters cast real shadows, their depth material needs the same vertex animation
   (`scene-and-rendering.md`, shadows).
 - Do not use three.js `SkinnedMesh` with an `AnimationMixer` per person. That is the per-instance CPU cost this design
@@ -106,7 +115,7 @@ own clip and timing (spec 6.2). Hundreds of people then cost a few draw calls, a
 | Zoom | People |
 |---|---|
 | Whole island | None |
-| Neighborhood | The simplified Blender-made crowd model, a few instanced draw calls at most (its format comes from `island-blender`) |
+| Neighborhood | People (no crowd model ships: plan 4 left it out; if phones need it, draw fewer or a cheaper level of detail) |
 | Street | Full characters, about 200 on screen at most, nearest first; drivers visible in cars |
 
 - Movers keep the same route and phase across levels; only the mesh changes.
@@ -117,7 +126,7 @@ own clip and timing (spec 6.2). Hundreds of people then cost a few draw calls, a
 - Variety comes from the 12 characters, accessories and color tints (spec 6.2).
 - Pick the character, accessory and tint from a stable hash of the mover's slot (island, flow, slot index). A mover
   keeps its look for the whole trip. Whether a slot also looks the same day after day is open.
-- A tint over the whole colormap looks wrong. Tint only clothing areas; how a character marks them (colormap area or
+- A tint over a whole character looks wrong. Tint only clothing areas; how a character marks them (colormap area or
   vertex attribute) is open, with `island-blender`.
 - Wheelchair users, canes and glasses appear at small shares (open), chosen by the same hash.
 - **Children** are Mini Characters drawn at about 75% size (spec 12.5): the same meshes and clips with a smaller
@@ -217,8 +226,6 @@ function moverAt(flow: FlowView, slot: number, gameMinutes: number, out: MoverPo
 
 ## 10. Open items
 
-- The texture layout, the handling of the two rig variants and the joint split between the two layers (with
-  `island-blender`).
 - Clothing tint mask, accessory and wheelchair shares, whether slot looks repeat daily.
 - Which non-work flows include children; which arm pose goes with a bag.
 - Seat offsets for drivers; the fixed direction of the Mainland.

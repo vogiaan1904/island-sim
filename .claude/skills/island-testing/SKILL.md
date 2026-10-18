@@ -13,7 +13,8 @@ test*. The rules under test belong to the domain skills listed at the end.
 > root: `pnpm test` (all Vitest projects), `pnpm typecheck`, `pnpm lint`, `pnpm check` (all three), `pnpm pacing`
 > (the pacing report; `--seeds 42,1` and `--fast` for no invariants). One file: `pnpm vitest run <path>` (end a
 > folder path with `/`, or Vitest's filter also matches other files); one server file: `pnpm --filter
-> @island/server exec vitest run <files>`. Client and asset checks are still planned (plans 4-6).
+> @island/server exec vitest run <files>`. Asset checks: `pnpm assets check` (also inside `pnpm check`) and
+> `pnpm blender test` (needs Blender, outside `pnpm check`). Client checks are still planned (plans 5-6).
 
 ## Implemented so far (slice 1, plans 1 to 3)
 
@@ -68,7 +69,7 @@ test*. The rules under test belong to the domain skills listed at the end.
 | Client end to end | Two players sign up, invite, build and visit; fixed screenshots; emulated touch gestures | Playwright | to be decided in slice 1 | `references/client-tests.md` |
 | No emoji in UI | No player-facing string contains an emoji or emoji-like symbol | Vitest scan, plus a Playwright text check | to be decided in slice 1 | `references/client-tests.md` |
 | Phone performance | 60 fps target, never below 30, watch mode at 30 fps, draw calls, heat, battery | The user's real phones and a checklist | results log to be decided | `references/phone-performance.md` |
-| Assets | Every exported `.glb` passes the glTF validator, naming, scale and origin, triangle budget and clip checks | Asset validator | `tools/`, run on `apps/client/public/models/` | `references/asset-checks.md` |
+| Assets | Every shipped `.glb` and icon passes naming, palette, ground, footprint, budget, clip and catalog checks; content has its files | `pnpm assets check`, `pnpm blender test` | `tools/assets/`, `tools/blender/tests/` | `references/asset-checks.md` |
 
 Keep the shape of a pyramid: many fast sim tests, fewer server tests, a handful of end-to-end flows. A rule checked
 only in Playwright is checked slowly and explained badly when it fails.

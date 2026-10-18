@@ -1,6 +1,7 @@
 # Scene and rendering
 
-Planned design from spec 6.2 (approved section 4b) and the defaults in spec 12.4 to 12.6. No code exists yet.
+Planned design from spec 6.2 (approved section 4b) and the defaults in spec 12.4 to 12.6. No client code exists yet;
+the models it draws exist (plan 4, see the model contract in `SKILL.md`).
 Library details must be checked against the installed versions. Anything marked "open" is still undecided.
 
 ## Contents
@@ -36,7 +37,7 @@ Library details must be checked against the installed versions. Anything marked 
 | Distant islands | Friends' islands as simple far-away shapes | 1 | Section 7 |
 | Static models | Buildings, roads, nature, props | one per model type on screen | Shared palette material |
 | Construction | Scaffolds, buildings rising in steps | one per scaffold type, plus the rising models | Section 9 |
-| People | Full characters (street zoom), simplified walkers (neighborhood zoom), accessories, bags | one per character mesh, prop type and detail level | Characters use their own colormap; see `people-vehicles-ships.md` |
+| People | Characters, accessories (bag, wheelchair) | one per character mesh and accessory type | On the shared palette; see `people-vehicles-ships.md` |
 | Vehicles and ships | Trucks, buses, ferry, fishing boats, cargo and trade ships | one per model type | Move along road and sea-lane curves |
 | Effects | Street-light glows, smoke, dust puffs | one per effect type | Instanced sprites |
 | Overlays | Placement ghost, road preview, view lines and highlights | a handful | Only while in use |
@@ -67,12 +68,10 @@ Library details must be checked against the installed versions. Anything marked 
 
 - Models share one palette texture and one material (made by `island-blender`), so **each model type is one
   instanced draw call**. This is the main lever for the budget.
-- **Exception: characters keep their own Mini Characters colormap**, one extra texture and material (spec 12.6);
-  merging them into the shared palette is optional. Whether the pack's accessories and the Blender-made bags use the
-  colormap or the palette follows `island-blender`.
-- Whether the palette image is embedded in each `.glb` or shipped once is decided in the slice 1 pipeline task (spec
-  12.6). Either way the client must end up with **one** palette texture and one shared material: if each file
-  carries its own copy, replace it on load instead of keeping one texture per model.
+- **Characters are on the palette too** (plan 4, decision 6): one texture and one material for every model,
+  accessories included.
+- **The palette ships once** as `apps/client/public/models/palette.png`; no `.glb` holds an image. Load it once, bind
+  it to every material named `palette` with nearest filtering and sRGB, and share that one material.
 - Load a model with drei's glTF loading and the meshopt decoder, take its single mesh's geometry, and draw every
   copy through one `InstancedMesh` with the shared material. Never add a cloned glTF scene per building.
 - A model's front faces the road and is glTF +Z (Blender's -Y, spec 12.6); its origin is the footprint's bottom
@@ -92,7 +91,7 @@ Library details must be checked against the installed versions. Anything marked 
 
 ## 6. Loading per stage
 
-- Models are meshopt-compressed `.glb` files in `apps/client/public/models/` (planned), named
+- Models are meshopt-compressed `.glb` files in `apps/client/public/models/` (listed in `tools/assets/src/catalog.ts`), named
   `category_name-part_variant.glb` with hyphens inside each part and the variant always present (spec 12.6).
 - They load per stage: the Outpost set first, so the first download stays small on mobile data; later stages' sets
   load in the background after the first frame. The service worker caches the app and the models
@@ -125,8 +124,8 @@ Spec 12.5:
   light value. Light the buildings the state says are in use at night: occupied homes, and workplaces that run
   around the clock (port and power, whose night shift is worked by residents, never commuters; spec 12.1). In slice 1
   every building works the day shift, so at first only homes are lit at night. Stagger switch-on times with a hash
-  of the building id so a street lights up gradually. How a model marks its windows (for example a reserved palette
-  area) is open, with `island-blender`.
+  of the building id so a street lights up gradually. Windows are palette slot 0 (UV u from 0 to 1/32, v from 7/8 to
+  1; color 226, 238, 255): pack glass and window panes are moved there by the pipeline.
 - **Street lights**: instanced camera-facing glow sprites (additive blending, no depth write), one draw call, fading
   in with the night factor. No point or spot lights.
 - **Shadows**: one shadow map from the sun. Its shadow camera follows the camera target and covers only the area near
@@ -184,7 +183,7 @@ remain (spec 12.4). Expose these per frame without React re-renders (`state-and-
 | Zoom | What is drawn (spec 6.2, 12.4) |
 |---|---|
 | Whole island | Buildings, vehicles, ships, smoke and lights. No people. Bubbles as small dots, problems only |
-| Neighborhood | The above plus simple walkers (the simplified Blender-made crowd model) and full bubbles |
+| Neighborhood | The above plus people (no crowd model ships yet: draw fewer, or a cheaper level of detail, if the budget needs it) and full bubbles |
 | Street | The above plus full characters, about 200 on screen at most, and drivers visible in cars |
 
 - Switch levels on camera distance, with hysteresis so a level does not flicker at its boundary.

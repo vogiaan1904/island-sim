@@ -1,62 +1,50 @@
 # Asset checks
 
-Every exported `.glb` is checked automatically (spec 7). The conventions themselves (name pattern and category list,
-tile size, origin, facing, palette, budgets, clip list) and how to fix a model that fails are in `island-blender`
-(`references/conventions.md`). This file covers what the checks assert, when they run, and how they fit the test
-suite.
+Every shipped model and icon is checked automatically (spec 7). The conventions themselves and how to fix a model
+that fails are in `island-blender` (`references/conventions.md`, values in `tools/assets/conventions.json`). This
+file covers what the checks assert, when they run, and how they fit the test suite. Built in slice 1 plan 4.
 
-Planned: an asset validator in `tools/` (spec 3) that runs over the pipeline output in `apps/client/public/models/`
-(and the icons in `apps/client/public/icons/`). Its command is to be decided in slice 1.
+## The commands
 
-## What is checked
-
-| Check | Rule | Status |
+| Command | Runs | Needs |
 |---|---|---|
-| glTF validity | The Khronos glTF validator reports no errors; warnings are read, and accepted ones are listed with a reason | Fixed (spec 7) |
-| Naming | `category_name-part_variant.glb`: three parts separated by underscores, words inside a part joined by hyphens, the variant always present (for example `building_farm_a.glb`) | Structure fixed (spec 12.6); the category list is a draft in `island-blender` |
-| Scale | The footprint is a whole number of grid tiles | Tile size decided in slice 1, step 1 (art direction) |
-| Origin | At the bottom center of the footprint: the lowest point sits at height 0 and the footprint is centered on the origin, within a small tolerance | Tolerance to be decided in slice 1 |
-| Facing | The front faces the road, which is glTF +Z (Blender's -Y) | Axis fixed (spec 12.6); checked by eye on the icon renders (`island-blender`), since a script cannot tell a front from a back |
-| Triangle budget | Within the budget for its category | Numbers to be decided in slice 1 (pack fact: a full Mini Character is about 690 to 880 triangles) |
-| Character mesh | Each character's body and head are merged into one mesh, on the 7-joint rig | Fixed (spec 6.2) |
-| Character clips | Every required clip is present (below) | Fixed list (D26, spec 6.2); exact clip names read from the pack in slice 1 |
-| No combat clips | No combat clip in anything the game uses (below) | Fixed (spec 6.2, D26) |
-| Compression | meshopt-compressed (the file uses the `EXT_meshopt_compression` extension) | Fixed (spec 6.2, 7) |
-| Palette | Models use the one shared palette texture, so each model type stays one instanced draw call. Characters are the exception: they keep their own colormap, one extra texture (spec 12.6) | Whether the palette image is embedded in each file or shipped once is open (slice 1 pipeline task); the check follows that decision |
+| `pnpm check` | includes `tools/assets` tests: the checker's unit tests (`check.test.ts`, `pack.test.ts`), `shipped.test.ts` (every shipped file passes and the folders hold exactly the catalog) and `content.test.ts` (content data against the catalog) | Node only |
+| `pnpm assets check` | the same per-file checks over `apps/client/public/models/` and `.../icons/`, printing one line per problem and `assets: no problems` | Node only |
+| `pnpm assets pack <names>` | the Khronos glTF validator on the staging file (it cannot decode meshopt, so it reads the uncompressed export), then meshopt compression | Node only |
+| `pnpm blender test` | the pipeline's unit tests in `tools/blender/tests/` | Blender 5.2.2 at `/Applications/Blender.app` (or `BLENDER`); **not** part of `pnpm check` |
 
-Buildings made in the pipeline's assemble step (the packs have no ready-made buildings, spec 12.6) go through the
-same checks as any other export.
+## What is checked per file (`tools/assets/src/check.ts`)
 
-## Character clips
+| Check | Rule |
+|---|---|
+| Name | `category_name-part_variant.glb` / `.png`, a known category |
+| Compression | `EXT_meshopt_compression` used; no Draco |
+| Contents | no lights, no cameras, no images; exactly one material, `palette`; only mesh nodes and `marker_*` nodes; no turned mesh node |
+| Ground | the lowest point at 0 within `originTolerance` (characters and accessories excepted) |
+| Footprint | buildings (footprint from content data), roads (1x1) and `WxH` variants stay within the footprint plus `overhang` and cover at least `minCover` of it on each axis |
+| Budget | triangles within `triangleBudgets[category]` (buildings per footprint tile); a category with no budget fails |
+| Characters | one skin with exactly the 7 joints, exactly the 17 kept clips (no combat clip), every vertex rigid |
+| Icons | a PNG of `iconSize` x `iconSize`, RGBA |
+| Animation | `characters-animation.bin` matches its manifest's size, every value is a number, every character is filed under exactly one rig variant, the clips are in the kept order |
+| Catalog | the models and icons folders hold exactly `tools/assets/src/catalog.ts` |
+| Content | every building has its model, icon and scaffold; every good its icon; every port master candidate a portrait; every catalog model is used |
 
-- **Required** (D26, spec 6.2): idle, walk, sprint, sit, drive, pick-up, holding-both (carrying goods),
-  interact-left and interact-right (working), emote-yes (celebrations), and the wheelchair set.
-- **Forbidden:** combat clips (shoot, attack, die). They are never used.
-- **"What the game uses"** means: the exported character files, the baked joint-animation texture and its clip list,
-  and every clip name the client code refers to. The raw pack in `assets/raw/` still contains the combat clips; that
-  is fine, because it is git-ignored and never shipped.
-- So the checks are: the bake's clip list contains every required clip and none of the forbidden ones, for both
-  rest-pose variants of the rig; no exported character `.glb` contains a forbidden clip; a search of `apps/client`
-  source finds no forbidden clip name.
-- The simplified crowd version used at neighborhood zoom exists and has fewer triangles than the full model.
-- The exact clip identifiers and the "wheelchair set" members get read from the pack when the bake is built
-  (`island-blender`); copy the final list into the check, not a guess.
+## What the Blender tests cover
 
-## Content cross-check (recommended)
-
-A small Vitest test that reads `packages/content` and the output folders: every building and good has its model and
-its icon, and no shipped model is unused. It catches the most common content mistake, a building that exists in the
-sim but has nothing to draw. `island-blender` drafts the mapping (the name part matches the content id; icons share
-the model's base name); confirm it in slice 1 with `island-content`.
+What only Blender can see: colors survive the move onto the palette, glass reaches the window slot, a face on a
+black swatch is refused, faces stretched across colormap cells get one swatch, material-color packs land on their
+own swatches, `kit.place` turns, `kit.finish` drops sliver triangles and can keep a model in place, boxes made in
+Blender sit on one swatch, the road pieces open exactly their sides, the baked texture poses vertices like Blender,
+joints a clip does not key stay at rest, icons are framed and transparent, portraits frame the head.
 
 ## When to run
 
-- After every export: it is the last step of the `island-blender` pipeline.
-- Before calling done any change under `apps/client/public/models/` or `apps/client/public/icons/`, and show the
-  output.
-- In CI once the repo has a remote.
+- `pnpm assets check` after every `pnpm assets pack` and before calling done any change to the shipped folders.
+- `pnpm blender test` whenever Python under `tools/blender/` changes.
+- `pnpm check` before every commit (it already includes the shipped-files and content tests).
+- In CI once the repo has a remote; `pnpm blender test` needs a runner with Blender.
 
 ## Safety
 
-The checks read pipeline output, not the raw packs. If a check ever needs files from `assets/raw/<zip base name>/`,
-treat them as untrusted downloads: read them as data and never run code found inside them (CLAUDE.md).
+The checks read pipeline output, not the raw packs. The pipeline reads packs only through `kit.import_glb` and
+`palette.glb_colors` (the glTF JSON as data); never run code found inside a pack (CLAUDE.md).

@@ -18,8 +18,8 @@ Two reasons it matters beyond taste:
 | Family | What | Source | Where it's used |
 |---|---|---|---|
 | **UI chrome icons** | SVG line icons | An icon library, **to be decided in slice 1; update this skill then**. The mockups used Lucide-style icons. | Bottom buttons, compass, Watch, close, rotate, check on Place, eye on Show me, statuses, hints, Views options, arrows in recipes |
-| **Building and goods pictures** | Small renders of the real 3D models from a fixed angle | Rendered in Blender by the asset pipeline (`island-blender`), exported to `apps/client/public/icons/` (*planned*) | Build picker, building card picture, recipe tiles, goods in bubbles, trade, Goods flow legend |
-| **Key staff portraits** | Renders of the Mini Characters with accessories (spec 12.4) | Rendered in Blender (`island-blender`) | News, Log, Staff panel, manager slots |
+| **Building and goods pictures** | Small renders of the real 3D models from a fixed angle | Rendered in Blender by the asset pipeline (`island-blender`), shipped in `apps/client/public/icons/` (listed in `tools/assets/src/catalog.ts`) | Build picker, building card picture, recipe tiles, goods in bubbles, trade, Goods flow legend |
+| **Key staff portraits** | Renders of the Mini Characters (spec 12.4), head and upper body: `portrait_<name>_a.png` | Rendered in Blender (`island-blender`) | News, Log, Staff panel, manager slots |
 
 Which one to use:
 
@@ -33,10 +33,11 @@ Which one to use:
 
 ## Display sizes for rendered pictures (for island-blender)
 
-`island-blender` renders the pictures and decides the rig; the pixel size, the file format (PNG or WebP with a
-transparent background) and whether the card picture is a separate larger render are **open, to decide together
-in slice 1.** What the UI needs, estimated from the approved mockups (drawn on a phone screen about 244 px wide;
-a real phone is about 390 CSS px wide, so mockup sizes are multiplied by about 1.6):
+Decided in slice 1 plan 4 (2026-10-18): every picture and portrait is a **256 x 256 RGBA PNG with a transparent
+background**, rendered from one orthographic camera 30 degrees down at the front-right corner, framed with a 6% margin
+(portraits: the head and upper body). One render serves every place below: it was checked at 24 and 90 CSS px on a
+light and a dark background. Names share the model's base name: `building_farm_a.png`, `good_wood_a.png`,
+`portrait_lena_a.png`.
 
 | Where | Displayed size, CSS px (estimate) |
 |---|---|

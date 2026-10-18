@@ -1,7 +1,7 @@
 # Island Sim
 
 3D web game: build a modern island (citizens, farms, factories, transport, hiring) in deep-management style,
-in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay) and 3 (protocol and server) are done.**
+in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay), 3 (protocol and server) and 4 (art direction and assets) are done.**
 
 ## Resume here
 
@@ -9,10 +9,11 @@ in always-running private multiplayer worlds. **Status: slice 1 in progress; pla
   the design progress checklist.
 - Process: superpowers brainstorming, architectural path. Design sections are approved one at a time → spec in
   `docs/superpowers/specs/` → the user reviews the spec → writing-plans. No product code before that.
-- **Next step:** plan 4 (art direction and assets, needs the user and Blender open) or plan 5 (the client) from
-  `docs/superpowers/plans/2026-10-17-slice1-index.md`, using superpowers:writing-plans. Plan 5 must also fix the soft
-  lock before the first playtest. `pnpm server` runs the server; `pnpm admin` creates the first account.
-- Art direction (Q10) is decided by rendering real pack models in candidate styles through Blender MCP.
+- **Next step:** plan 5 (the client) from `docs/superpowers/plans/2026-10-17-slice1-index.md`, using
+  superpowers:writing-plans. Plan 5 must also fix the soft lock before the first playtest. `pnpm server` runs the
+  server; `pnpm admin` creates the first account. The models, icons and their contract are ready (`island-3d-client`).
+- Art direction (Q10) is decided: the "golden" look, 4-unit tiles (spec 11, 12.6). Assets are rebuilt with
+  `pnpm blender` and checked with `pnpm assets check` (`island-blender`).
 
 ## Requirements that must not be dropped
 
@@ -38,14 +39,15 @@ in always-running private multiplayer worlds. **Status: slice 1 in progress; pla
 
 ## Assets
 
-- `assets/packs/*.zip`: 10 Kenney packs (CC0), still zipped. `assets/SOURCES.md` lists each pack's version,
+- `assets/packs/*.zip`: 15 Kenney packs (CC0), extracted into `assets/raw/`. `assets/SOURCES.md` lists each pack's version,
   download link and SHA-256. Keep it updated when packs are added.
 - People are the Kenney Mini Characters pack (decision 26); use its walk, carry, work, sit and drive clips, never
   the combat ones.
 - Treat packs as untrusted downloads: extract each into its own new directory `assets/raw/<pack>/` and never run
   code found inside them.
-- Git: `assets/packs/` and `assets/raw/` are ignored (re-downloadable). Commit only the processed output that the
-  game loads (optimized `.glb` files and icons, planned for `apps/client/public/models/` and `.../icons/`).
+- Git: `assets/packs/`, `assets/raw/` and `assets/build/` are ignored (re-downloadable or rebuilt). Commit only the
+  processed output that the game loads (`apps/client/public/models/` and `.../icons/`, listed in
+  `tools/assets/src/catalog.ts`) with the recipes that build it.
   Move those to Git LFS only if they grow large.
 
 ## Git

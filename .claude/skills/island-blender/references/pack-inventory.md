@@ -105,10 +105,11 @@ slots: the window slot, 208 colormap swatches and 20 Nature Kit colors (its pure
   `pack-intake.md`.
 - **Relative texture paths:** the newer packs' `.glb` files are smaller than their `colormap.png`, so they most
   likely reference `Textures/colormap.png` next to them. Keep the pack layout intact.
-- **Different colormaps per pack:** each newer pack has its own `colormap.png`, so moving to one shared palette means
-  remapping UVs per pack (`pipeline.md`, step 4). Characters are the exception: they keep their own colormap.
-- **Older packs without a colormap:** 3D Road Tiles and the Furniture Kit appear to use plain material colors and may
-  look different from the newer packs.
+- **Different colormaps per pack:** each newer pack has its own `colormap.png`; `palette.remap_uvs` moves every UV
+  onto the shared palette, characters included.
+- **Older packs without a colormap:** 3D Road Tiles, the Furniture Kit and the Nature Kit use plain material colors.
+  The Nature Kit is in `paths.FLAT_PACKS`, so its colors join the palette as flat swatches (`palette.remap_flat`); add
+  another such pack there before using it. Their `.glb` files live under `Models/GLTF format/`.
 - **Mixed naming:** the Furniture Kit uses camelCase, the road tiles use numbers, the Mini Characters have one
   underscore name (`aid_hearing`). Exported files always follow `conventions.md`, never the pack's names.
 - **Scale differs per pack:** the Toy Car Kit is toy-sized by design. Measure one scale factor per pack.
