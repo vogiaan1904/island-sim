@@ -55,28 +55,31 @@ def rig(size: int, look: dict):
     return camera
 
 
-def frame(camera, objects: list) -> None:
-    """Fits the objects' bounding boxes into the picture with the same margin for every icon."""
+def frame(camera, objects: list, focus=None) -> None:
+    """Fits the objects' bounding boxes into the picture with the same margin for every icon; with focus (world
+    points, for example a portrait's head and torso), fits those points instead and lets the rest run off the edges."""
     rotation = CAMERA_TURN.to_matrix()
     inverse = rotation.transposed()
-    points = [inverse @ (o.matrix_world @ Vector(c)) for o in objects for c in o.bound_box]
+    world = focus if focus else [o.matrix_world @ Vector(c) for o in objects for c in o.bound_box]
+    points = [inverse @ Vector(p) for p in world]
     lo = Vector((min(p.x for p in points), min(p.y for p in points), min(p.z for p in points)))
     hi = Vector((max(p.x for p in points), max(p.y for p in points), max(p.z for p in points)))
     middle = (lo + hi) / 2
     camera.data.ortho_scale = max(hi.x - lo.x, hi.y - lo.y) / (1 - 2 * MARGIN)
-    camera.location = rotation @ Vector((middle.x, middle.y, hi.z + 10.0))
-    camera.data.clip_end = (hi.z - lo.z) + 20.0
+    near = max((inverse @ (o.matrix_world @ Vector(c))).z for o in objects for c in o.bound_box)
+    camera.location = rotation @ Vector((middle.x, middle.y, max(hi.z, near) + 10.0))
+    camera.data.clip_end = (max(hi.z, near) - lo.z) + 40.0
 
 
-def render(objects: list, path, size: int, look: dict) -> None:
-    """Renders only the given objects to a PNG of size x size pixels, lit by the look."""
+def render(objects: list, path, size: int, look: dict, focus=None) -> None:
+    """Renders only the given objects to a PNG of size x size pixels, lit by the look; focus as in frame."""
     scene = bpy.context.scene
     camera = rig(size, look)
     shown = set(objects) | {camera, bpy.data.objects["icon-sun"]}
     hidden = [o for o in scene.objects if o not in shown and not o.hide_render]
     for o in hidden:
         o.hide_render = True
-    frame(camera, objects)
+    frame(camera, objects, focus)
     scene.render.filepath = str(path)
     bpy.ops.render.render(write_still=True)
     for o in hidden:

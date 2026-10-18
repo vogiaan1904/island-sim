@@ -63,3 +63,22 @@ def play(rig, action, frame: int) -> None:
     if action.slots:
         rig.animation_data.action_slot = action.slots[0]
     bpy.context.scene.frame_set(frame)
+
+
+def freeze(rig, mesh, name: str):
+    """A static copy of the posed mesh, named name, in place of the rig and the mesh, which are removed (for
+    portraits and pictures; shipped characters keep their rig)."""
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    shape = bpy.data.meshes.new_from_object(mesh.evaluated_get(depsgraph), preserve_all_data_layers=True,
+                                            depsgraph=depsgraph)
+    still = bpy.data.objects.new(name, shape)
+    bpy.context.scene.collection.objects.link(still)
+    still.matrix_world = mesh.matrix_world.copy()
+    for obj in (mesh, rig):
+        bpy.data.objects.remove(obj, do_unlink=True)
+    bpy.context.view_layer.objects.active = still
+    bpy.ops.object.select_all(action="DESELECT")
+    still.select_set(True)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    shape.name = name
+    return still

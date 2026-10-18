@@ -3,6 +3,7 @@
 import json
 
 import bpy
+from mathutils import Vector
 
 from . import bake, characters, conventions, export, icons, kit, palette, paths, recipes
 
@@ -44,7 +45,9 @@ def cmd_icons(*names: str) -> None:
         reset_scene()
         model = recipes.RECIPES[name]["build"]()
         out = paths.ICONS / f"{name}.png"
-        icons.render([model], out, size, conventions.load()["look"])
+        flat = list(model.get("focus", []))  # a portrait frames its head (recipes/portraits.py)
+        focus = [Vector(flat[i:i + 3]) for i in range(0, len(flat), 3)] or None
+        icons.render([model], out, size, conventions.load()["look"], focus)
         print(f"rendered {out}")
 
 

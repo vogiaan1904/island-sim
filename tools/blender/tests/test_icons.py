@@ -5,7 +5,7 @@ from pathlib import Path
 
 import bpy
 
-from island_blender import cli, icons
+from island_blender import characters, cli, icons
 from helpers import pixels
 
 LOOK = {"sun": {"color": [1, 1, 1], "energy": 3.0, "elevation": 40, "azimuth": 30}, "sky": [0.6, 0.65, 0.7]}
@@ -45,3 +45,19 @@ class IconTest(unittest.TestCase):
         self.assertEqual(tuple(round(math.degrees(a), 3) for a in sun.rotation_euler), (60.0, 0.0, 40.0))
         background = next(n for n in bpy.context.scene.world.node_tree.nodes if n.type == "BACKGROUND")
         self.assertEqual(tuple(round(c, 5) for c in background.inputs["Color"].default_value[:3]), (0.62, 0.62, 0.7))
+
+    def test_a_portrait_frames_the_head(self):
+        cli.reset_scene()
+        rig, mesh, clips = characters.prepare("female-a", ["idle"], 1.7)
+        characters.play(rig, clips["idle"], 0)
+        bones = rig.pose.bones
+        focus = [rig.matrix_world @ bones["head"].head, rig.matrix_world @ bones["head"].tail,
+                 rig.matrix_world @ bones["torso"].head]
+        path = Path(tempfile.mkdtemp()) / "portrait_test_a.png"
+        icons.render([mesh], path, 64, LOOK, focus=focus)
+        width, height, data = pixels(path)
+        alpha = [data[i * 4 + 3] for i in range(width * height)]
+        rows = [y for y in range(height) if any(alpha[y * width + x] > 0.5 for x in range(width))]
+        self.assertGreaterEqual(max(rows), height - 1 - round(height * icons.MARGIN) - 1)  # Blender rows run upward
+        middle = [x for x in range(width) if alpha[(height // 2) * width + x] > 0.5]
+        self.assertGreaterEqual(len(middle), 0.8 * width)
