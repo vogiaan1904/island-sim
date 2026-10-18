@@ -105,6 +105,13 @@ const LINE_ICONS = {
       <path d="M12 19V5" />
     </>
   ),
+  down: (
+    <>
+      <path d="M12 5v14" />
+      <path d="m19 12-7 7-7-7" />
+    </>
+  ),
+  minus: <path d="M5 12h14" />,
   x: <path d="M18 6 6 18M6 6l12 12" />,
   check: <path d="M20 6 9 17l-5-5" />,
   plus: <path d="M5 12h14M12 5v14" />,
