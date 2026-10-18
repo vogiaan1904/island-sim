@@ -2,6 +2,7 @@ import { content } from '@island/content';
 import { useMemo } from 'react';
 import { useGame, useGameState } from '../../session/game.tsx';
 import type { PanelId } from '../../store/view.ts';
+import { CardHost } from '../cards/CardHost.tsx';
 import { Compass } from '../Compass.tsx';
 import { Icon, type IconName } from '../icons.tsx';
 import { STAGE_NAMES } from '../names.ts';
@@ -18,7 +19,8 @@ import './Hud.css';
  */
 export function Hud() {
   const island = useGameState((state) => state.island);
-  const panelOpen = useGameState((state) => state.view.openPanel !== null);
+  // A panel or a building card on the island: the wide layout leaves room on the right for either.
+  const panelOpen = useGameState((state) => state.view.openPanel !== null || state.view.tappedBuilding !== null);
   const model = useMemo(() => (island === null ? null : hudModel(island.state, content)), [island?.state]);
   if (island === null || model === null) return null;
   const glideKey = `${island.world}/${island.slot}`;
@@ -34,6 +36,7 @@ export function Hud() {
         {island.own && <BottomBar />}
       </div>
       <PanelHost bodies={PANEL_BODIES} />
+      <CardHost />
     </>
   );
 }
