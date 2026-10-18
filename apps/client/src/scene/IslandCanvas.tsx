@@ -2,9 +2,11 @@ import { content } from '@island/content';
 import { Canvas } from '@react-three/fiber';
 import { Suspense, useEffect } from 'react';
 import { Color } from 'three';
+import { CAMERA_FOV } from '../camera/controller.ts';
 import { LOOK, TILE_SIZE } from '../render/look.ts';
 import { useGameState } from '../session/game.tsx';
 import { Buildings } from './Buildings.tsx';
+import { CameraRig } from './CameraRig.tsx';
 import { Sun } from './Sun.tsx';
 import { Terrain } from './Terrain.tsx';
 import { Water } from './Water.tsx';
@@ -20,8 +22,7 @@ function Ready({ onReady }: { onReady: () => void }) {
 }
 
 /**
- * The 3D island: terrain, water, the buildings and the sun, seen from a fixed camera for now (the free camera is
- * ticket 07). The default export, so the app loads three.js in its own chunk.
+ * The 3D island: terrain, water, the buildings and the sun, seen from the free camera (`CameraRig`). The default export, so the app loads three.js in its own chunk.
  */
 export default function IslandCanvas({ onReady }: { onReady: () => void }) {
   const island = useGameState((state) => state.island?.state ?? null);
@@ -29,9 +30,9 @@ export default function IslandCanvas({ onReady }: { onReady: () => void }) {
     <div className="island-canvas">
       <Canvas
         dpr={[1, 2]}
-        camera={{ position: [MIDDLE, 95, MIDDLE + 125], fov: 40, near: 1, far: 2000 }}
-        onCreated={({ camera }) => camera.lookAt(MIDDLE, 0, MIDDLE)}
+        camera={{ position: [MIDDLE, 95, MIDDLE + 125], fov: CAMERA_FOV, near: 1, far: 2000 }}
       >
+        <CameraRig />
         <color attach="background" args={[new Color().setRGB(...LOOK.sky)]} />
         <Sun middle={MIDDLE} />
         <Water size={SIZE} />

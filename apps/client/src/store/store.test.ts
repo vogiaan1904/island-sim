@@ -8,7 +8,7 @@ describe('the game store', () => {
     expect(store.getState()).toMatchObject({
       island: null,
       commands: {},
-      view: { cameraMode: 'free', quality: null },
+      view: { cameraMode: 'free', quality: null, controlsChoice: 'auto', controlsDetected: 'mouse', tappedBuilding: null },
       session: { phase: 'checking', account: null, worlds: [] },
     });
   });
@@ -20,7 +20,49 @@ describe('the game store', () => {
     store.getState().receive(islandMessage(world));
     expect(store.getState().island?.state).toEqual(islandOf(world));
     store.getState().receive(islandMessage(world));
-    expect(store.getState().view).toEqual({ cameraMode: 'free', quality: 'high' });
+    expect(store.getState().view).toMatchObject({ cameraMode: 'free', quality: 'high' });
+  });
+
+  it('keeps the camera across a new full state', () => {
+    const store = createGameStore();
+    const world = aliceWorld();
+    store.getState().receive(islandMessage(world));
+    store.getState().cameraGesture({ kind: 'fly-to', x: 30, z: 40, distance: 50 });
+    const camera = store.getState().view.camera;
+    store.getState().receive(islandMessage(world));
+    expect(store.getState().view.camera).toBe(camera);
+  });
+
+  it('holds the camera state, which gestures and flights from anywhere in the app change', () => {
+    const store = createGameStore();
+    store.getState().cameraGesture({ kind: 'twist', angle: 1 });
+    expect(store.getState().view.camera.azimuth).toBeCloseTo(1);
+    store.getState().cameraGesture({ kind: 'face-north' });
+    expect(store.getState().view.camera.azimuth).toBeCloseTo(0);
+    store.getState().cameraGesture({ kind: 'fly-to', x: 20, z: 30, distance: 40 });
+    expect(store.getState().view.camera).toMatchObject({ x: 20, z: 30, distance: 40 });
+  });
+
+  it('coasts on each step after a fling, and comes to rest', () => {
+    const store = createGameStore();
+    const viewport = { width: 800, height: 600 };
+    const drag = (x: number) => ({ kind: 'drag' as const, x, y: 300, dx: -8, dy: 0, dt: 0.016, viewport });
+    store.getState().cameraGesture(drag(392));
+    store.getState().cameraGesture(drag(384));
+    store.getState().cameraGesture({ kind: 'release', idleMs: 5 });
+    expect(store.getState().view.camera.coasting).toBe(true);
+    const x = store.getState().view.camera.x;
+    store.getState().cameraStep(0.1);
+    expect(store.getState().view.camera.x).toBeGreaterThan(x);
+    for (let i = 0; i < 400; i += 1) store.getState().cameraStep(0.016);
+    expect(store.getState().view.camera.coasting).toBe(false);
+  });
+
+  it('keeps the trackpad or mouse choice and the detected device apart', () => {
+    const store = createGameStore();
+    store.getState().setView({ controlsDetected: 'trackpad' });
+    store.getState().setView({ controlsChoice: 'mouse' });
+    expect(store.getState().view).toMatchObject({ controlsChoice: 'mouse', controlsDetected: 'trackpad' });
   });
 
   it('tracks a command from sent to settled', () => {

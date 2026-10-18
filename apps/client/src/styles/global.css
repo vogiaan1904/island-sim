@@ -11,6 +11,11 @@ body,
   min-height: 100%;
 }
 
+/* No pull-to-refresh, overscroll bounce or edge swipe chaining out of the game (also on html, which Safari reads). */
+html {
+  overscroll-behavior: none;
+}
+
 body {
   font-family: var(--font);
   color: var(--ink);

@@ -1,5 +1,7 @@
 import type { AccountInfo, PlayerCommand, ServerMessage, WorldInfo } from '@island/protocol';
 import { createStore, type StoreApi } from 'zustand/vanilla';
+import { applyGesture, step, type Gesture } from '../camera/controller.ts';
+import { ISLAND_LIMITS } from '../camera/limits.ts';
 import { applyMessage, commandSent, initialClientState, type ClientState } from './mirror.ts';
 import type { ViewState } from './view.ts';
 
@@ -22,6 +24,10 @@ export interface GameActions {
   /** A command just sent with this request id; pending until its result. */
   commandSent(requestId: number, command: PlayerCommand): void;
   setView(patch: Partial<ViewState>): void;
+  /** One camera gesture through the pure controller: input, the compass, "Show me" flights (`{ kind: 'fly-to', ... }`). */
+  cameraGesture(gesture: Gesture): void;
+  /** Momentum for `dt` seconds; the camera rig calls it every frame, and it does nothing at rest. */
+  cameraStep(dt: number): void;
   setSession(patch: Partial<SessionState>): void;
 }
 
@@ -36,6 +42,13 @@ export function createGameStore(): GameStore {
     receive: (message) => set((state) => applyMessage(state, message)),
     commandSent: (requestId, command) => set((state) => commandSent(state, requestId, command)),
     setView: (patch) => set((state) => ({ view: { ...state.view, ...patch } })),
+    cameraGesture: (gesture) =>
+      set((state) => ({ view: { ...state.view, camera: applyGesture(state.view.camera, gesture, ISLAND_LIMITS) } })),
+    cameraStep: (dt) =>
+      set((state) => {
+        const camera = step(state.view.camera, dt, ISLAND_LIMITS);
+        return camera === state.view.camera ? state : { view: { ...state.view, camera } };
+      }),
     setSession: (patch) => set((state) => ({ session: { ...state.session, ...patch } })),
   }));
 }

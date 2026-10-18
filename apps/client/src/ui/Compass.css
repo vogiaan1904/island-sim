@@ -1,0 +1,43 @@
+.compass {
+  position: fixed;
+  z-index: 5;
+  /* Under the notch and clear of the HUD's top-right pills; the HUD ticket moves it if they collide. */
+  top: calc(max(12px, env(safe-area-inset-top)) + 96px);
+  right: max(12px, env(safe-area-inset-right));
+  width: 3rem;
+  height: 3rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+  /* Taps on it are its own: they never reach the camera gestures on the canvas below. */
+  touch-action: manipulation;
+}
+
+.compass:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+
+.compass:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.compass-needle {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+  /* The needle turns as the camera glides; the view already smooths, so no transition of its own. */
+  will-change: transform;
+}
+
+.compass-needle svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
