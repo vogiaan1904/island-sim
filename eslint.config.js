@@ -41,7 +41,7 @@ const deterministicRules = {
 };
 
 export default defineConfig([
-  { ignores: ['**/node_modules/**', '**/dist/**', 'assets/**'] },
+  { ignores: ['**/node_modules/**', '**/dist/**', 'assets/**', '.claude/worktrees/**'] },
   js.configs.recommended,
   tseslint.configs.recommended,
   {

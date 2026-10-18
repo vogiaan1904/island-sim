@@ -17,3 +17,6 @@ coverage/
 
 # Python bytecode that Blender writes next to tools/blender
 __pycache__/
+
+# Agent worktrees (one per ticket while a feature is built)
+.claude/worktrees/
