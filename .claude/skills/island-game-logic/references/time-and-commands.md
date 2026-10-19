@@ -127,7 +127,9 @@ commuters, repair; spec 12.4). Two commands come from the server rather than a b
 - The placement ghost shows labels for what is right or wrong ("Road access", "Too close to the farm") using the same
   sim rules as the server (spec 6.1). So write placement checks as pure functions over state, content, building type,
   position and rotation that report every check, passed or failed. The preview lists them all; `applyCommand` uses
-  the same checks and returns the reason code of a failing one.
+  the same checks and returns the reason code of a failing one. `checkPlacement` also reports the building's
+  connector (its new road tiles), `connectorCents` and the total `costCents`; affordability and the shortfall use the
+  total, and `place-building` paves the connector and books it as `road-purchase` after the `building-purchase`.
 - A reason can need data: "Need N more coins" needs the shortfall. Return the amount in cents with the code; the
   client shows whole coins (spec 12.4, `island-ui`).
 - Keep reason codes stable identifiers. They travel through `packages/protocol`, and the client turns them into words

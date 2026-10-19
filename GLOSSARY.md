@@ -15,6 +15,11 @@ The condition of a building whose upkeep could not be paid; it keeps its workers
 later payment succeeds.
 _Avoid_: unpaid, stopped, broken
 
+**Connector**:
+The road a building lays when it is placed, from the building to the dock, reusing the roads already there and adding
+only the missing tiles; paid together with the building.
+_Avoid_: auto-road, access road, link
+
 **Mirror**:
 The client's copy of the open island, built from the server's full state and kept current by its updates; the
 client reads it and never changes it.

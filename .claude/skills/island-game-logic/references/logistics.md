@@ -25,6 +25,9 @@ Do not add per-vehicle state, even "just for the ferry". The ferry and ships are
 - Edges have a **capacity** and a length in whole tiles (travel time follows from it, in game minutes). The capacity
   units and numbers are still open.
 - Buildings connect to the graph through road access (one of the placement checks, see `time-and-commands.md`).
+  Placing a building lays its **connector** (spec 12.1): the cheapest road from the footprint to a tile beside the
+  dock, counted in new tiles (road tiles cost nothing), so every placed building is joined to the dock. A road drawn
+  by hand can still be loose; a connector later joins it.
 - Changing the network (building or removing roads now; rails and sea lanes later) is the only thing that
   invalidates cached paths.
 - Trucks arrive in Village. Before that, the client can show the same flows as people carrying goods (the Mini

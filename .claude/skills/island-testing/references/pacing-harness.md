@@ -70,7 +70,7 @@ whether invariants were on. Then, per milestone: the tick reached, game days, re
 previous milestone), the target, and a verdict (early, on target, late). Illustrative layout:
 
 ```
-Pacing report  seed 42  bot outpost-v1  pattern first-hour+3x10min-v1  invariants on
+Pacing report  seed 42  bot outpost-v2  pattern first-hour+3x10min-v1  invariants on
 milestone          tick      game days   real time   since previous   target                  verdict
 first residents    1,200     0.8         50 min      50 min           first session (~1 h)    on target
 Settlement starts  20,160    14.0        14 h        13 h 10 min      first day (24 h)        on target
@@ -94,9 +94,10 @@ The numbers above are made up to show the layout; they are not results or target
 
 ## Slice 1 setup (plan 2)
 
-- Bot `outpost-v1` (`tools/pacing/src/bot.ts`): stateless, decides every 10 ticks while present. It lays a road
+- Bot `outpost-v2` (`tools/pacing/src/bot.ts`): stateless, decides every 10 ticks while present. It lays a road
   north from the dock with cross streets, sets auto-sell (keeping the Island Hall's wood), builds a fishing hut,
-  farm, market, well, 3 cottages, lumber camp and warehouse nearest the dock, hires commuters for the jobs residents
+  farm, market, well, 3 cottages, lumber camp and warehouse nearest the dock, beside its roads when it can (a spot
+  that needs a connector, spec 12.1, only when none fits; v2 added this when connectors arrived), hires commuters for the jobs residents
   leave open, collects rewards, places the Island Hall once unlocked and affordable, and buys its missing wood when
   the stores cannot cover it.
 - Check-in patterns (documented assumptions, `patterns.ts`): casual, the first hour and then 10 minutes every 8 real

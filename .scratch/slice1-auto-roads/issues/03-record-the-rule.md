@@ -5,8 +5,8 @@
 
 **Blocked by:** 01, 02.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Decision 27 and spec 12.1 say what the connector is and why.
-- [ ] `GLOSSARY.md` defines Connector.
-- [ ] The skills that describe placement and the ghost mention it.
+- [x] Decision 27 and spec 12.1 say what the connector is and why.
+- [x] `GLOSSARY.md` defines Connector.
+- [x] The skills that describe placement and the ghost mention it.

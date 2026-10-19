@@ -288,6 +288,9 @@ buttons) is `island-ui`. Inside the canvas:
 - Its tint shows valid or invalid (colors follow the art direction and `island-ui`). Validity comes from `sim`'s own
   placement check, the same rules the server uses; re-run it only when the snapped tile or the rotation changes,
   not on every pointer move.
+- A building's connector (its road to the dock, from the sim's placement report) shows with the ghost as see-through
+  road pieces and tile highlights, drawn by the same component as the road drag's preview (`RoadTilesGhost`) and
+  tinted like the ghost; it goes when the building lands.
 - Place sends the command. Until the server answers, the ghost shows a short "placing" state; **the landing bounce
   and the puff of dust play when the server accepts the build** (spec 12.4). A rejection returns to the ghost with
   the reason.

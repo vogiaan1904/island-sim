@@ -233,7 +233,8 @@ goods icons are rendered from the 3D models in Blender.
   Happiness, Traffic. The island fades slightly while a view is on.
 - **Placing a building:** a see-through copy snaps to the grid just above your finger, with labels for what's right
   or wrong ("Road access", "Too close to the farm"), checked with the same `sim` rules as the server; Rotate, Cancel,
-  Place; it lands with a bounce and a puff of dust. Roads: drag along the grid, see the cost, confirm.
+  Place; it lands with a bounce and a puff of dust. Its road to the dock (the connector, 12.1) shows with it and is
+  in its price. Roads: drag along the grid, see the cost, confirm.
 - **Layouts:** narrow (phone upright) uses cards from the bottom; wide (phone sideways, tablet, desktop) shows the
   same cards on the right so the island stays visible. Desktop adds hover hints and keyboard shortcuts.
 
@@ -399,6 +400,13 @@ any of them during spec review; the skills follow this section.
   below zero: a building that can't be paid slows down and shows "waiting for money".
   It keeps its workers and runs at reduced output (`waitingOutputPermille`) until a later payment succeeds (decided
   2026-10-18, plan 5).
+- **Connector** (decided 2026-10-19, decision 27): placing a building that needs road also lays its connector, the
+  road with the fewest new tiles from a tile beside its footprint to a tile beside the dock. It crosses only land free
+  of buildings, reuses every road tile already there at no cost (so a loose road gets joined), and pays its new tiles
+  at the road price, with the building, in one command. No new tile is needed beside a road already joined to the
+  dock. A spot with no such road, or one needing more tiles than one road command may lay, is refused as no road
+  access ("No road can reach the dock"). The ghost shows the connector's road pieces and the total price. Drawing
+  roads by hand is unchanged.
 - **Mainland help** (decided 2026-10-18, plan 5; closes plan 2 decision 15): at the morning ferry, before commuters
   board, an island with no residents, too few coins for one commuter's wage, no goods in any store, nothing in transit
   or cargo and no reward waiting gets a small grant (`mainlandHelpCents`) and a "mainland-help" event. So an island
