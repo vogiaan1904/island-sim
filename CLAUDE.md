@@ -1,7 +1,8 @@
 # Island Sim
 
 3D web game: build a modern island (citizens, farms, factories, transport, hiring) in deep-management style,
-in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay), 3 (protocol and server) and 4 (art direction and assets) are done. Plan 5 (the client) is half built: `slice1-client` is built (tickets 01 to 20 and 22 done) and waits on the user's two checks, ticket 08 (camera feel on a real phone) and ticket 21 (look review); `slice1-alive` is next.**
+in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay), 3 (protocol and server) and 4 (art direction and assets) are done. Plan 5 (the client) is half built: `slice1-client` is built (tickets 01 to 20 and 22 done) and waits on the user's two checks, ticket 08 (camera feel on a real phone) and ticket 21 (look review); `slice1-auto-roads` (placing a building lays its road to the dock, decision 27) is built;
+`slice1-alive` is next.**
 
 ## Resume here
 
