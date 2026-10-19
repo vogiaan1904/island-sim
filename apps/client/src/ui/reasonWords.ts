@@ -25,6 +25,8 @@ const WORDS: Record<Reason, string> = {
   'not-enough-coins': 'Need more coins',
   'too-many-tiles': "That's too many road tiles at once",
   'nothing-to-build': 'There is nothing new to build there',
+  'nothing-to-remove': 'There is no road there',
+  'cuts-off-building': 'A building would lose its road to the dock',
   'not-enough-seats': "The ferry doesn't have that many seats",
   'no-such-building': 'That building is gone',
   'unknown-good': "We don't know that good",

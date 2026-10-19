@@ -207,6 +207,24 @@ describe('switching between drawing and looking around', () => {
   });
 });
 
+describe('removing road', () => {
+  it('swaps to removing, takes only road tiles, and sends remove-road for free', async () => {
+    const { game, user } = show();
+    await pickRoad(user);
+    const remove = screen.getByRole('button', { name: 'Remove road' });
+    expect(remove).toHaveAttribute('aria-pressed', 'false');
+    await user.click(remove);
+    expect(placement(game)).toMatchObject({ kind: 'road', removing: true });
+    expect(screen.getByText('Drag over road to remove it')).toBeInTheDocument();
+    dragRoad(game, [13, 19], [15, 19]);
+    const panel = screen.getByRole('region', { name: 'Placing Remove road' });
+    expect(panel).toHaveTextContent('1 tile');
+    expect(panel).toHaveTextContent('Removing road is free');
+    await user.click(within(panel).getByRole('button', { name: 'Remove' }));
+    expect(game.session.command).toHaveBeenCalledWith({ type: 'remove-road', tiles: [[14, 19]] });
+  });
+});
+
 describe('roads and emoji', () => {
   it('shows no emoji', async () => {
     const { game, user, container } = show(2_500);

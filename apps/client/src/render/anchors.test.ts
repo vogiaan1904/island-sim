@@ -46,7 +46,7 @@ describe('the ghost anchor', () => {
   });
 
   it('floats over the last tile dragged for a road, and has none before the first', () => {
-    const road = { kind: 'road' as const, tiles: [{ x: 3, y: 4 }, { x: 4, y: 4 }], cursor: null, pen: 'draw' as const, phase: 'aiming' as const, requestId: null, refusal: null };
+    const road = { kind: 'road' as const, tiles: [{ x: 3, y: 4 }, { x: 4, y: 4 }], cursor: null, pen: 'draw' as const, removing: false, phase: 'aiming' as const, requestId: null, refusal: null };
     expect(ghostAnchor(road, content)).toMatchObject({ x: 4 * 4 + 2, z: 4 * 4 + 2 });
     expect(ghostAnchor({ ...road, tiles: [] }, content)).toBeNull();
   });

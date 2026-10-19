@@ -11,7 +11,7 @@ import type { CommandState } from '../store/mirror.ts';
 // A road draft (`kind: 'road'`, ticket 13) is the second kind: the new tiles dragged so far, with the same phases, so the
 // panel, the placing state and the landing work for both. It also has a pen: 'draw' (a one-finger drag lays road and
 // leaves the camera alone) or 'look' (the player chose to move the camera; nothing is drawn). The switch is a button in
-// the panel, never guessed from the gesture.
+// the panel, never guessed from the gesture. While `removing`, the drag takes road tiles to clear instead of new ones.
 
 /**
  * aiming: the ghost follows the player. placing: Place was pressed and the server has not answered (the ghost stays
@@ -42,6 +42,8 @@ export interface RoadDraft {
   /** Where the current drag is, so the next sample is joined to it by a path of tiles; null before a drag and after one ends. */
   cursor: Tile | null;
   pen: 'draw' | 'look';
+  /** True when the drag clears road (`remove-road`) instead of building it. */
+  removing: boolean;
   phase: DraftPhase;
   requestId: number | null;
   refusal: { reason: Reason; shortfallCents: number } | null;
@@ -122,7 +124,7 @@ export function lostDraft(draft: PlacementDraft): PlacementDraft {
 
 /** A new road draft: no tiles yet, the pen down. */
 export function startRoadDraft(): RoadDraft {
-  return { kind: 'road', tiles: [], cursor: null, pen: 'draw', phase: 'aiming', requestId: null, refusal: null };
+  return { kind: 'road', tiles: [], cursor: null, pen: 'draw', removing: false, phase: 'aiming', requestId: null, refusal: null };
 }
 
 /** The tiles a drag walks from one tile to another: one side-step at a time, along the longer way first. */
@@ -140,8 +142,9 @@ function pathBetween(from: Tile, to: Tile): Tile[] {
 /**
  * The pointer is on this tile. `begin` marks the first sample of a new drag, which starts where it is instead of
  * joining the end of the last one. Every tile between samples is taken, so a quick swipe leaves no gaps; tiles that
- * are road already (`roads` is the island's string) are walked over but not added; nothing is added past the most the
- * sim takes in one command. Only a road draft that is aiming and has the pen down draws.
+ * are road already (`roads` is the island's string) are walked over but not added, or, while removing, only they are
+ * added; nothing is added past the most the sim takes in one command. Only a road draft that is aiming and has the pen
+ * down draws.
  */
 export function drawRoad(draft: PlacementDraft, tile: Tile, begin: boolean, ctx: { content: Content; roads: string }): PlacementDraft {
   if (draft.kind !== 'road' || draft.phase !== 'aiming' || draft.pen !== 'draw') return draft;
@@ -154,7 +157,8 @@ export function drawRoad(draft: PlacementDraft, tile: Tile, begin: boolean, ctx:
   const tiles = [...draft.tiles];
   for (const step of from === null ? [here] : pathBetween(from, here)) {
     const taken = tiles.some((t) => t.x === step.x && t.y === step.y);
-    if (!taken && ctx.roads[step.y * size + step.x] !== '1' && tiles.length < limit) tiles.push(step);
+    const road = ctx.roads[step.y * size + step.x] === '1';
+    if (!taken && road === draft.removing && tiles.length < limit) tiles.push(step);
   }
   return { ...draft, tiles, cursor: here, refusal: null };
 }
@@ -163,6 +167,12 @@ export function drawRoad(draft: PlacementDraft, tile: Tile, begin: boolean, ctx:
 export function penTo(draft: PlacementDraft, pen: 'draw' | 'look'): PlacementDraft {
   if (draft.kind !== 'road' || draft.phase !== 'aiming' || draft.pen === pen) return draft;
   return { ...draft, pen, cursor: null };
+}
+
+/** Swaps between building and removing road; the tiles dragged so far go, since they meant the other thing. */
+export function removingTo(draft: PlacementDraft, removing: boolean): PlacementDraft {
+  if (draft.kind !== 'road' || draft.phase !== 'aiming' || draft.removing === removing) return draft;
+  return { ...draft, removing, tiles: [], cursor: null, refusal: null };
 }
 
 /** Drops every tile dragged so far. */

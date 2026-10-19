@@ -1,8 +1,8 @@
 import type { Content } from '@island/content';
 import type { PlayerCommand } from '@island/protocol';
-import { checkRoad, type IslandState } from '@island/sim';
+import { checkRoad, checkRoadRemoval, type IslandState } from '@island/sim';
 import { type PlacementLabel, type PlacementVerdict } from './verdict.ts';
-import type { Tile } from './draft.ts';
+import type { RoadDraft, Tile } from './draft.ts';
 import { needMoreText } from '../ui/coins.ts';
 
 // The road drag's answer (spec: Placement), in the same shape as a building's so the panel needs no second path. The
@@ -36,4 +36,20 @@ export function roadVerdict(island: IslandState, content: Content, tiles: readon
   if (reason === null && tiles.length === limit) labels.push({ id: 'length', ok: true, text: `That is the most for one go (${limit} tiles)` });
   const command: PlayerCommand | null = reason === null ? { type: 'place-road', tiles: tiles.map(({ x, y }) => [x, y] as [number, number]) } : null;
   return { ok: reason === null, labels, costCents, connector: [], shortfallCents, reason, command };
+}
+
+/** The answer for a drag that clears road: free, and refused only when a building would lose its road to the dock. */
+export function removalVerdict(island: IslandState, content: Content, tiles: readonly Tile[]): PlacementVerdict {
+  if (tiles.length === 0) return { ...NOTHING, reason: 'nothing-to-remove' };
+  const pairs = tiles.map(({ x, y }) => [x, y] as [number, number]);
+  const report = checkRoadRemoval(island, content, pairs);
+  const labels: PlacementLabel[] =
+    report.reason === 'cuts-off-building' ? [{ id: 'road-access', ok: false, text: 'A building would lose its road to the dock' }] : [];
+  const command: PlayerCommand | null = report.ok ? { type: 'remove-road', tiles: pairs } : null;
+  return { ok: report.ok, labels, costCents: 0, connector: [], shortfallCents: 0, reason: report.reason, command };
+}
+
+/** The verdict for a road draft, building or removing. */
+export function roadDraftVerdict(island: IslandState, content: Content, draft: RoadDraft): PlacementVerdict {
+  return (draft.removing ? removalVerdict : roadVerdict)(island, content, draft.tiles);
 }

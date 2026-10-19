@@ -1,7 +1,7 @@
 import { content } from '@island/content';
 import { findBuildingDef } from '@island/sim';
 import { useEffect } from 'react';
-import { clearRoad, lostDraft, penTo, rotateDraft, sendingDraft, settleDraft, type PlacementDraft } from '../../placement/draft.ts';
+import { clearRoad, lostDraft, penTo, removingTo, rotateDraft, sendingDraft, settleDraft, type PlacementDraft } from '../../placement/draft.ts';
 import type { PlacementVerdict } from '../../placement/verdict.ts';
 import { useGame, useGameState } from '../../session/game.tsx';
 import { Icon } from '../icons.tsx';
@@ -58,7 +58,7 @@ export function PlacementPanel() {
   useEffect(() => () => store.getState().setView({ placement: null }), [store]);
 
   if (draft === null || verdict === null || island === null || !island.own || draft.phase === 'landing') return null;
-  const name = draft.kind === 'road' ? 'Road' : BUILDING_NAMES[draft.building];
+  const name = draft.kind === 'road' ? (draft.removing ? 'Remove road' : 'Road') : BUILDING_NAMES[draft.building];
   const def = draft.kind === 'road' ? undefined : findBuildingDef(content, draft.building) ?? undefined;
   const placing = draft.phase === 'placing';
 
@@ -71,13 +71,13 @@ export function PlacementPanel() {
 
   return (
     <div className="placing" data-placement={draft.phase}>
-      <p className="placing-hint">{draft.kind === 'road' ? (draft.pen === 'draw' ? 'Drag to draw a road' : 'Drag to move the view') : 'Drag to move'}</p>
+      <p className="placing-hint">{hintFor(draft)}</p>
       <section className="placing-card" role="region" aria-label={`Placing ${name}`}>
         <PlacementLabels verdict={verdict} />
         <div className="placing-body">
           <span className="build-picture">
             {draft.kind === 'road' ? (
-              <Icon name="route" size={32} />
+              <Icon name={draft.removing ? 'eraser' : 'route'} size={32} />
             ) : (
               <img src={`/icons/building_${draft.building}_a.png`} alt="" width={56} height={56} draggable={false} />
             )}
@@ -86,7 +86,7 @@ export function PlacementPanel() {
             <h2 className="placing-name">{name}</h2>
             <p className="placing-blurb">
               {draft.kind === 'road'
-                ? roadWords(draft.tiles.length)
+                ? roadWords(draft.tiles.length, draft.removing)
                 : `${BUILDING_BLURBS[draft.building]}${def === undefined ? '' : ` Takes ${def.footprint.w} x ${def.footprint.h} tiles.`}`}
             </p>
           </div>
@@ -113,6 +113,16 @@ export function PlacementPanel() {
               >
                 <Icon name="eye" size={24} />
               </button>
+              <button
+                className="placing-round placing-pen"
+                type="button"
+                aria-label="Remove road"
+                aria-pressed={draft.removing}
+                disabled={placing}
+                onClick={() => set(removingTo(draft, !draft.removing))}
+              >
+                <Icon name="eraser" size={24} />
+              </button>
               <button className="placing-round" type="button" aria-label="Start over" disabled={placing || draft.tiles.length === 0} onClick={() => set(clearRoad(draft))}>
                 <Icon name="undo" size={24} />
               </button>
@@ -125,17 +135,24 @@ export function PlacementPanel() {
           <button className="placing-round placing-cancel" type="button" aria-label="Cancel" disabled={placing} onClick={() => set(null)}>
             <Icon name="x" size={24} strokeWidth={3} />
           </button>
-          <PlaceButton verdict={verdict} placing={placing} onPlace={place} />
+          <PlaceButton verdict={verdict} placing={placing} removing={draft.kind === 'road' && draft.removing} onPlace={place} />
         </div>
       </section>
     </div>
   );
 }
 
+/** The hint above the card: what a drag does now. */
+function hintFor(draft: PlacementDraft): string {
+  if (draft.kind !== 'road') return 'Drag to move';
+  if (draft.pen === 'look') return 'Drag to move the view';
+  return draft.removing ? 'Drag over road to remove it' : 'Drag to draw a road';
+}
+
 /** What the road card says about the tiles dragged so far and the price of each. */
-function roadWords(tiles: number): string {
+function roadWords(tiles: number, removing: boolean): string {
   const price = coinsText(content.rules.roadPricePerTileCents);
-  const each = `Each new tile costs ${price} coins.`;
+  const each = removing ? 'Removing road is free.' : `Each new tile costs ${price} coins.`;
   return tiles === 0 ? each : `${tiles} ${tiles === 1 ? 'tile' : 'tiles'}. ${each}`;
 }
 
@@ -153,9 +170,9 @@ function PlacementLabels({ verdict }: { verdict: PlacementVerdict }) {
   );
 }
 
-function PlaceButton({ verdict, placing, onPlace }: { verdict: PlacementVerdict; placing: boolean; onPlace: () => void }) {
+function PlaceButton({ verdict, placing, removing, onPlace }: { verdict: PlacementVerdict; placing: boolean; removing: boolean; onPlace: () => void }) {
   const short = verdict.shortfallCents > 0;
-  const text = placing ? 'Placing' : short ? needMoreText(verdict.shortfallCents) : 'Place';
+  const text = placing ? (removing ? 'Removing' : 'Placing') : short ? needMoreText(verdict.shortfallCents) : removing ? 'Remove' : 'Place';
   return (
     <button className="placing-place" type="button" disabled={placing || !verdict.ok} aria-busy={placing} onClick={onPlace}>
       {!placing && !short && <Icon name="check" size={22} strokeWidth={3} />}

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { aliceWorld, islandOf } from '../test/islands.ts';
 import { worldWithRoad } from '../test/placement.ts';
 import type { Tile } from './draft.ts';
-import { roadVerdict } from './roadVerdict.ts';
+import { removalVerdict, roadVerdict } from './roadVerdict.ts';
 
 // The sim's own place-road decides what the verdict must agree with, on islands the sim's own commands made.
 
@@ -124,5 +124,30 @@ describe('the road verdict', () => {
     }
     expect(disagreements).toEqual([]);
     expect(stateHash(world)).toBe(before);
+  });
+});
+
+describe('the removal verdict', () => {
+  const removeSays = (world: WorldState, tiles: Tile[]) =>
+    applyCommand(structuredClone(world), content, { type: 'remove-road', slot: 0, tiles: tiles.map((t) => [t.x, t.y] as [number, number]) }, { sequence: 9 });
+
+  it('clears road for free and gives the command the server takes', () => {
+    const world = worldWithRoad();
+    const verdict = removalVerdict(islandOf(world), content, column(14, 19, 21));
+    expect(verdict).toMatchObject({ ok: true, costCents: 0, shortfallCents: 0, reason: null });
+    expect(verdict.command).toEqual({ type: 'remove-road', tiles: [[14, 19], [14, 20], [14, 21]] });
+    expect(removeSays(world, column(14, 19, 21)).ok).toBe(true);
+  });
+
+  it('says a building would lose its road to the dock, as the sim refuses', () => {
+    const world = worldWithRoad();
+    const placed = applyCommand(world, content, { type: 'place-building', slot: 0, building: 'cottage', x: 15, y: 18, rotation: 0 }, { sequence: 3 });
+    expect(placed.ok).toBe(true);
+    const verdict = removalVerdict(islandOf(world), content, column(14, 20, 20));
+    expect(verdict.ok).toBe(false);
+    expect(verdict.command).toBeNull();
+    expect(verdict.reason).toBe('cuts-off-building');
+    expect(verdict.labels).toEqual([{ id: 'road-access', ok: false, text: 'A building would lose its road to the dock' }]);
+    expect(removeSays(world, column(14, 20, 20))).toMatchObject({ ok: false, reason: 'cuts-off-building' });
   });
 });

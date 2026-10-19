@@ -1,7 +1,7 @@
 import { content } from '@island/content';
 import { describe, expect, it } from 'vitest';
 import type { CommandState } from '../store/mirror.ts';
-import { aimAt, clearRoad, drawRoad, lostDraft, penTo, rotateDraft, sendingDraft, settleDraft, startRoadDraft, type PlacementDraft, type RoadDraft } from './draft.ts';
+import { aimAt, clearRoad, drawRoad, lostDraft, penTo, removingTo, rotateDraft, sendingDraft, settleDraft, startRoadDraft, type PlacementDraft, type RoadDraft } from './draft.ts';
 
 const size = content.rules.islandSize;
 const NO_ROADS = '0'.repeat(size * size);
@@ -24,7 +24,19 @@ const draw = (draft: PlacementDraft, x: number, y: number, begin = false, roads 
 
 describe('starting a road', () => {
   it('begins in drawing mode with no tiles, aiming', () => {
-    expect(startRoadDraft()).toEqual({ kind: 'road', tiles: [], cursor: null, pen: 'draw', phase: 'aiming', requestId: null, refusal: null });
+    expect(startRoadDraft()).toEqual({ kind: 'road', tiles: [], cursor: null, pen: 'draw', removing: false, phase: 'aiming', requestId: null, refusal: null });
+  });
+});
+
+describe('removing road', () => {
+  it('takes only tiles that are road while removing, and starts over when the mode changes', () => {
+    const roads = roadsAt([5, 6], [6, 6]);
+    const removing = removingTo(draw(startRoadDraft(), 2, 2, true), true);
+    expect(asRoad(removing)).toMatchObject({ removing: true, tiles: [], cursor: null });
+    const dragged = draw(draw(removing, 4, 6, true, roads), 8, 6, false, roads);
+    expect(keys(dragged)).toEqual(['5,6', '6,6']);
+    expect(asRoad(removingTo(dragged, false))).toMatchObject({ removing: false, tiles: [] });
+    expect(removingTo(dragged, true)).toBe(dragged);
   });
 });
 

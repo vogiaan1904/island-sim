@@ -1,7 +1,7 @@
 import { content } from '@island/content';
 import { useMemo } from 'react';
 import type { PlacementDraft } from '../../placement/draft.ts';
-import { roadVerdict } from '../../placement/roadVerdict.ts';
+import { roadDraftVerdict } from '../../placement/roadVerdict.ts';
 import { buildingVerdict, type PlacementVerdict } from '../../placement/verdict.ts';
 import type { IslandMirror } from '../../store/mirror.ts';
 
@@ -9,6 +9,6 @@ import type { IslandMirror } from '../../store/mirror.ts';
 export function usePlacementVerdict(draft: PlacementDraft | null, island: IslandMirror | null): PlacementVerdict | null {
   return useMemo(() => {
     if (draft === null || island === null) return null;
-    return draft.kind === 'road' ? roadVerdict(island.state, content, draft.tiles) : buildingVerdict(island.state, content, draft);
+    return draft.kind === 'road' ? roadDraftVerdict(island.state, content, draft) : buildingVerdict(island.state, content, draft);
   }, [island?.state, draft]);
 }

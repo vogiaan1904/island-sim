@@ -48,7 +48,7 @@ describe('the labels on the ghost', () => {
 
   it('shows the road verdict over the last tile of a drag', () => {
     const { game } = show();
-    aim(game, { kind: 'road', tiles: [{ x: 0, y: 0 }], cursor: null, pen: 'draw', phase: 'aiming', requestId: null, refusal: null });
+    aim(game, { kind: 'road', tiles: [{ x: 0, y: 0 }], cursor: null, pen: 'draw', removing: false, phase: 'aiming', requestId: null, refusal: null });
     expect(screen.getByTestId('ghost-labels')).toHaveTextContent('Needs dry land');
   });
 
