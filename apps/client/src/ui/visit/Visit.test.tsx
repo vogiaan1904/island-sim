@@ -4,7 +4,7 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ISLAND_LIMITS } from '../../camera/limits.ts';
-import { createCamera } from '../../camera/controller.ts';
+import { startTarget } from '../../camera/start.ts';
 import { GameProvider, type Game } from '../../session/game.tsx';
 import { startDraft } from '../../placement/draft.ts';
 import { stubGame } from '../../test/game.ts';
@@ -126,7 +126,11 @@ describe('arriving on an island', () => {
     const camera = () => game.store.getState().view.camera;
     expect(document.querySelector('.arrival-fade')).not.toBeNull();
     expect(camera().distance).toBe(ISLAND_LIMITS.maxDistance);
-    expect(camera().x).toBe(ISLAND_LIMITS.center.x);
+    // It comes down over the island's dock, where the ferry comes in.
+    const dock = startTarget(game.store.getState().island?.state ?? null, content);
+    expect(dock).not.toEqual(ISLAND_LIMITS.center);
+    expect(camera().x).toBe(dock.x);
+    expect(camera().z).toBe(dock.z);
     const jumps = camera().jumps;
 
     act(() => vi.advanceTimersByTime(FLIGHT_DELAY_MS));
@@ -138,13 +142,17 @@ describe('arriving on an island', () => {
     expect(game.store.getState().session.arriving).toBeNull();
   });
 
-  it('does nothing on a plain open of the own island', () => {
+  it('starts the camera over the dock on a plain open of the own island, with no flight, and only once', () => {
     const game = gameAt(false);
-    const before = game.store.getState().view.camera;
     renderWith(game, <Arrival />);
     expect(document.querySelector('.arrival-fade')).toBeNull();
-    expect(game.store.getState().view.camera).toBe(before);
-    expect(before).toEqual(createCamera(ISLAND_LIMITS));
+    const camera = () => game.store.getState().view.camera;
+    const dock = startTarget(game.store.getState().island?.state ?? null, content);
+    expect(camera()).toMatchObject({ x: dock.x, z: dock.z, distance: ISLAND_LIMITS.startDistance });
+    // The player looks elsewhere; a new full state of the same island (a reconnect) leaves the camera alone.
+    act(() => game.store.getState().cameraGesture({ kind: 'fly-to', x: 50, z: 60, instant: true }));
+    act(() => game.store.getState().receive({ ...islandMessage(aliceWorld()), own: true, summary: { islands } }));
+    expect(camera()).toMatchObject({ x: 50, z: 60 });
   });
 
   it('waits for the island of the trip: a visit marker does not fire on the old own island', () => {
