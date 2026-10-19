@@ -24,3 +24,17 @@ _Avoid_: auto-road, access road, link
 The client's copy of the open island, built from the server's full state and kept current by its updates; the
 client reads it and never changes it.
 _Avoid_: cache, local state, replica
+
+**Moment**:
+Something on the island that watch mode shows: a ferry that is due, a recent event worth seeing, or a busy spot on the
+tour when nothing else is happening.
+_Avoid_: shot, scene, highlight
+
+**Ferry manifest**:
+An island's record of its last ferry trip: who stepped off (newcomers, by the home they move into, and commuters) and
+who boarded (leavers, by the home they left, and commuters going home). Each trip replaces it.
+_Avoid_: passenger list, last ferry
+
+**Carrier**:
+A person walking goods along the roads from one building to another, before the island has trucks.
+_Avoid_: porter, courier, delivery
