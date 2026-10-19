@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SMALL, building, buildingOf, islandOf, paint, village } from '../../test/fixtures.ts';
 import { tickWorld } from '../tick.ts';
+import { assignWorkers } from './labor.ts';
 
 const work = (world: ReturnType<typeof village>, id: number) => buildingOf(world, id).work;
 
@@ -100,5 +101,63 @@ describe('the labor pass', () => {
     if (farm) Object.assign(farm, { residents: 3, commuters: 1, ratePermille: 1000 });
     tickWorld(night, SMALL);
     expect(work(night, 2)).toMatchObject({ residents: 0, commuters: 0, ratePermille: 0 });
+  });
+});
+
+describe('the worker assignment', () => {
+  type World = ReturnType<typeof village>;
+  /** The labor pass's answer and the assignment's, side by side, for one world at a day-shift minute. */
+  function both(world: World): { stored: unknown[]; assigned: unknown[] } {
+    const island = islandOf(world, 0);
+    const assigned = assignWorkers(island, SMALL, island.commuters.present).map((a) => ({
+      id: a.workplace,
+      residents: a.homes.reduce((sum, h) => sum + h.workers, 0),
+      commuters: a.commuters,
+    }));
+    tickWorld(world, SMALL);
+    const stored = islandOf(world, 0)
+      .buildings.filter((b) => b.work !== null && b.constructionLeft === 0)
+      .map((b) => ({ id: b.id, residents: b.work?.residents, commuters: b.work?.commuters }));
+    return { stored, assigned };
+  }
+
+  it('gives exactly the staffing the labor pass stores', () => {
+    const plain = village(430);
+    islandOf(plain, 0).commuters.present = 2;
+    const byPriority = village(430);
+    buildingOf(byPriority, 3).priority = 2;
+    islandOf(byPriority, 0).commuters.present = 5;
+    const understaffed = village(430);
+    const noDockRoad = village(430);
+    paint(islandOf(noDockRoad, 0), ['~~~~~~~~', '~......~', '~.,,,,.~', '~.##.#.~', '~.,,,,.~', '~.,,,,.~', '~......~', '~~~~~~~~']);
+    islandOf(noDockRoad, 0).commuters.present = 4;
+    for (const world of [plain, byPriority, understaffed, noDockRoad]) {
+      const { stored, assigned } = both(world);
+      expect(assigned).toEqual(stored);
+    }
+  });
+
+  it('says which homes the residents come from, nearest first, and lists workplaces by id', () => {
+    const world = village(430);
+    const island = islandOf(world, 0);
+    island.buildings.push(building('cottage', 5, 5, 2));
+    const near = buildingOf(world, 5).home;
+    if (near) near.residents = 4;
+    buildingOf(world, 3).priority = 2;
+    const assigned = assignWorkers(island, SMALL, 1);
+    expect(assigned.map((a) => a.workplace)).toEqual([2, 3]);
+    expect(assigned[1]).toEqual({ workplace: 3, homes: [{ home: 5, workers: 3 }, { home: 1, workers: 1 }], commuters: 0 });
+    expect(assigned[0]).toEqual({ workplace: 2, homes: [{ home: 1, workers: 2 }], commuters: 1 });
+  });
+
+  it('answers as if the shift were on, even at night', () => {
+    const world = village(1030);
+    expect(assignWorkers(islandOf(world, 0), SMALL, 0)[0]).toEqual({ workplace: 2, homes: [{ home: 1, workers: 3 }], commuters: 0 });
+  });
+
+  it('leaves out workplaces still being built', () => {
+    const world = village(430);
+    buildingOf(world, 2).constructionLeft = 5;
+    expect(assignWorkers(islandOf(world, 0), SMALL, 0).map((a) => a.workplace)).toEqual([3]);
   });
 });

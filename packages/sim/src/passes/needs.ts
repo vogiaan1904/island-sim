@@ -12,7 +12,7 @@ import type { TickContext } from './context.ts';
 // meals, happiness follows the share of needs met, a step every game hour, so one bad hour changes little.
 
 /** The built services of a need that reach a home, nearest first, ties by id. */
-function servicesInReach(island: IslandState, content: Content, home: BuildingState, need: NeedId): BuildingState[] {
+export function servicesInReach(island: IslandState, content: Content, home: BuildingState, need: NeedId): BuildingState[] {
   const roads = roadsFrom(island, content, home);
   return withDefs(island, content)
     .filter(({ building, def }) => def.serves?.need === need && isBuilt(building))

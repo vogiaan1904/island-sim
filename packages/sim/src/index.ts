@@ -37,7 +37,10 @@ export { MIGRATIONS, SnapshotError, loadWorld, serializeWorld } from './snapshot
 export { validateWorld } from './validate.ts';
 export { MINUTES_PER_HOUR, dayOf, isDayShift, minuteOfDay } from './clock.ts';
 export type { RoadRemovalReport, RoadsFrom } from './roads.ts';
-export { accessTiles, checkRoadRemoval, joinedToDock, roadsFrom } from './roads.ts';
+export { accessTiles, checkRoadRemoval, joinedToDock, roadPath, roadsFrom } from './roads.ts';
+export type { WorkerAssignment } from './passes/labor.ts';
+export { assignWorkers } from './passes/labor.ts';
+export { servicesInReach } from './passes/needs.ts';
 export { childrenOf, residentsOf, workersOf } from './people.ts';
 export { buyPriceCents, mainlandPaysEnough, storedForSale } from './mainland.ts';
 export type { MaterialLine } from './materials.ts';

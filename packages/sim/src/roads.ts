@@ -99,6 +99,43 @@ export function roadsFrom(island: IslandState, content: Content, building: Build
   };
 }
 
+/**
+ * The road tiles walked from one building to another, as tile indexes in walking order: as many as `roadsFrom` counts,
+ * so a walk along it takes the travel time the sim uses. It ends on the nearest access tile of the destination (lowest
+ * index on a tie) and steps back down the distance field in a fixed neighbor order. Null when no road joins them.
+ */
+export function roadPath(island: IslandState, content: Content, from: BuildingState, to: BuildingState): number[] | null {
+  const size = content.rules.islandSize;
+  const starts = accessTiles(island, content, from);
+  if (starts.length === 0) return null;
+  const dist = roadDistances(island, size, starts);
+  let tile: number | null = null;
+  for (const t of accessTiles(island, content, to)) {
+    const d = dist[t] ?? UNREACHED;
+    if (d !== UNREACHED && (tile === null || d < (dist[tile] as number))) tile = t;
+  }
+  if (tile === null) return null;
+  const path = [tile];
+  while ((dist[tile] as number) > 1) {
+    const x = tile % size;
+    const y = Math.floor(tile / size);
+    const want = (dist[tile] as number) - 1;
+    let previous: number | null = null;
+    for (const [ox, oy] of NEIGHBORS4) {
+      if (!inBounds(size, x + ox, y + oy)) continue;
+      const n = tileIndex(size, x + ox, y + oy);
+      if (dist[n] === want) {
+        previous = n;
+        break;
+      }
+    }
+    if (previous === null) throw new Error(`roadPath: the distance field has a gap at tile ${tile}`);
+    tile = previous;
+    path.push(tile);
+  }
+  return path.reverse();
+}
+
 /** The ids of the buildings that need road and reach the dock along roads. */
 export function joinedToDock(island: IslandState, content: Content): Set<number> {
   const joined = new Set<number>();

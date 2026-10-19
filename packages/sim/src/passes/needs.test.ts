@@ -3,7 +3,7 @@ import { SMALL, buildingOf, islandOf, town, village } from '../../test/fixtures.
 import type { LedgerEntry } from '../ledger.ts';
 import type { WorldState } from '../state.ts';
 import { tickWorld } from '../tick.ts';
-import { unmetNeedsAt } from './needs.ts';
+import { servicesInReach, unmetNeedsAt } from './needs.ts';
 
 const cottage = (world: WorldState) => buildingOf(world, 1);
 
@@ -77,5 +77,18 @@ describe('rent', () => {
     if (home) home.happiness = 500;
     buildingOf(sad, 5).stock = {};
     expect(rent(tickWorld(sad, SMALL).ledger)).toEqual([{ kind: 'money', slot: 0, deltaCents: 40, reason: 'rent' }]);
+  });
+});
+
+describe('services in reach', () => {
+  it('lists the built services of a need that reach a home, the ones unmet needs read', () => {
+    const world = town(430);
+    const island = islandOf(world, 0);
+    const home = buildingOf(world, 1);
+    expect(servicesInReach(island, SMALL, home, 'food').map((b) => b.id)).toEqual([5]);
+    expect(servicesInReach(island, SMALL, home, 'water').map((b) => b.id)).toEqual([6]);
+    buildingOf(world, 5).constructionLeft = 10;
+    expect(servicesInReach(island, SMALL, home, 'food')).toEqual([]);
+    expect(unmetNeedsAt(island, SMALL, home)).toEqual(['food']);
   });
 });
