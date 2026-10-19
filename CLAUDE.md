@@ -3,7 +3,7 @@
 3D web game: build a modern island (citizens, farms, factories, transport, hiring) in deep-management style,
 in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay), 3 (protocol and server) and 4 (art direction and assets) are done. Plan 5 (the client) is half built: `slice1-client` is built (tickets 01 to 20 and 22 done) and waits on the user's two checks, ticket 08 (camera feel on a real phone) and ticket 21 (look review); `slice1-auto-roads` (placing a building lays its road to the dock, decision 27), `slice1-remove-roads`
 (decision 28), `slice1-big-island` (64 x 64 tiles, decision 29) and `slice1-soft-ui` (no dark outlines, decision 30) are
-built on stacked branches, not merged yet; `slice1-alive` is next.**
+built and merged; `slice1-alive` is next.**
 
 ## Resume here
 
