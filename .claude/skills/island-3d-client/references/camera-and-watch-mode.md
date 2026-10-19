@@ -114,7 +114,7 @@ Changing what a gesture does is a design change: ask the user.
 
 | Limit | How (built) | Values |
 |---|---|---|
-| Zoom range | Min and max distance from the target to the eye, from the island's size | 10 units (street level) to 2.4 x the island's width (307 units for a 32-tile island) |
+| Zoom range | Min and max distance from the target to the eye, from the island's size | 10 units (street level) to 2.4 x the island's width (614 units for the 64-tile island) |
 | Tilt range | Polar angle from straight down | 0 to 1.4 rad (about 80 degrees), and never so low that the eye is under the clearance |
 | Stays around the island | The target is clamped to a box | the island plus one eighth of its width (16 units) on each side |
 | Never below the ground | The eye keeps a clearance above y = 0, which caps the tilt at close range | 3 units. Land is flat at height 0, so there is no terrain lookup yet |

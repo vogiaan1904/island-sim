@@ -28,7 +28,7 @@ the no-emoji check - test hooks the client needs (plan 6).
 |---|---|
 | `no-emoji.ts` | `expectNoEmoji(container)`: fails on any emoji or emoji-like symbol in the text and the attributes a player reads (`island-ui`, `references/icons.md`). Call it in every screen test |
 | `game.ts` `stubGame(phase)` | A `Game` for component tests: the real store in that session phase, a session whose every action is a `vi.fn` spy (`logIn`, `register`, `openWorld`, `visit`, `home`, `command`, `markSeen` ...), and a real clock. Wrap the component in `<GameProvider game={game}>` |
-| `islands.ts` `aliceWorld()`, `islandOf(world, slot)`, `islandMessage(world, slot, worldId)` | A world on seed 42 with Alice's island claimed by the sim's own commands (dock at 12,26), and the full-state message the server would send for it. Feed it with `game.store.getState().receive(islandMessage(world))`; change the world first to build the case |
+| `islands.ts` `aliceWorld()`, `islandOf(world, slot)`, `islandMessage(world, slot, worldId)` | A world on seed 42 with Alice's island claimed by the sim's own commands (dock at 31,56), and the full-state message the server would send for it. Feed it with `game.store.getState().receive(islandMessage(world))`; change the world first to build the case |
 | `placement.ts` `worldWithRoad()` | Alice's island with a road along x = 14, built by the sim's `place-road` |
 | `news.ts` | Event builders for the news and Log tests |
 | `api.ts` `stubApi()`, `signInOn`, `gameOn`, `world(overrides)`, `ok`, `refused` | A stubbed HTTP API typed with the protocol's response types, and a game made from the real session over it with a socket that never answers. Each method is a spy to override per test |

@@ -37,7 +37,7 @@ Unit tests sit next to the code (`apps/server/src/**/*.test.ts`); integration te
   least one test like this, and add one for any new timer (the backup timer is tested with fake timers in
   `test/shutdown.test.ts`).
 - **Worlds without the network:** `worldDeps()` (an in-memory database with accounts `id-alice`, `id-bob`,
-  `id-carol`) and `aliceWorld()` (alice's world on seed 42, her dock at 12,26) build a `Worlds` registry directly;
+  `id-carol`) and `aliceWorld()` (alice's world on seed 42, her dock at 31,56) build a `Worlds` registry directly;
   `runTicks(runtime, clock, n)` runs live ticks.
 - **A real server:** `startTestServer(overrides, clock)` (`test/server.ts`) listens on free ports with an in-memory
   database (or `tempDatabase()` for restarts) and `ORIGIN` as the game's origin. `addAccount` adds an account as the

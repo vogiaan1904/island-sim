@@ -36,7 +36,7 @@ checked against the installed versions. Anything marked "open" is still undecide
 | Layer | Contents | Draw calls (normal pass) | Notes |
 |---|---|---|---|
 | Environment | Sky color, fog, the sun light, ambient fill | 0-1 | Colors from the art direction (Q10) |
-| Terrain | Merged chunks with vertex colors | 4 (16-tile chunks of the 32-tile island) | Section 3 |
+| Terrain | Merged chunks with vertex colors | 4 (32-tile chunks of the 64-tile island) | Section 3 |
 | Water | One surface, cheap wave and shore foam | 1 | |
 | Distant islands | Friends' islands as simple far-away shapes | 1 | Section 7 |
 | Static models | Buildings, roads, nature, props | one per model type on screen | Shared palette material |
@@ -54,8 +54,8 @@ checked against the installed versions. Anything marked "open" is still undecide
 - Rebuild only the chunk whose tiles changed, and only when the state changes (per tick at most, never per frame).
 - Keep a CPU-side height lookup built from the same data. The camera ground limit, the placement ghost and movers on
   slopes all use it, so nobody needs to raycast the terrain every frame.
-- **As built** (`render/terrain.ts`, `scene/Terrain.tsx`): `terrainChunks(terrain, size, 16)` makes 16 x 16 tile chunks
-  (4 draw calls for the 32-tile island) of non-indexed flat-shaded triangles with one vertex color per tile
+- **As built** (`render/terrain.ts`, `scene/Terrain.tsx`): `terrainChunks(terrain, size, 32)` makes 32 x 32 tile chunks
+  (4 draw calls for the 64-tile island) of non-indexed flat-shaded triangles with one vertex color per tile
   (`LOOK.grass`, `LOOK.sand`, `LOOK.seabed`; first picks, ticket 21 reviews them). Land is flat at height 0, where models
   stand; the ground falls to -2.4 under open water, sloping only across water tiles next to the shore; the water
   surface rests at -0.35 so the beach shows. A water tile whose two land sides meet at a corner gets that corner's

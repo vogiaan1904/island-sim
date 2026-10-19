@@ -539,6 +539,10 @@ any of them during spec review; the skills follow this section.
 
 ### 12.6 Assets
 
+- **Island size** (decided 2026-10-19, decision 29): every island is 64 x 64 tiles of 4 units (about 256 m across).
+  The generated coast reaches in and out by up to an eighth of the map, blended between points an eighth of the map
+  apart, with ponds filled. One road command lays up to 128 tiles. A world made at another size cannot load; start a
+  new one.
 - The packs have no ready-made buildings (the Building Kit is modular pieces with flat roofs), so the pipeline has an
   **assemble** step, and the slice 1 inventory checks other CC0 packs for nature, crops and buildings.
 - Characters move onto the shared palette too (plan 4, decision 6): one texture and one material for every model.
