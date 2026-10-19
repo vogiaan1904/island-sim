@@ -3,7 +3,7 @@
 3D web game: build a modern island (citizens, farms, factories, transport, hiring) in deep-management style,
 in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay), 3 (protocol and server) and 4 (art direction and assets) are done. Plan 5 (the client) is half built: `slice1-client` is built (tickets 01 to 20 and 22 done) and waits on the user's two checks, ticket 08 (camera feel on a real phone) and ticket 21 (look review); `slice1-auto-roads` (placing a building lays its road to the dock, decision 27), `slice1-remove-roads`
 (decision 28), `slice1-big-island` (64 x 64 tiles, decision 29) and `slice1-soft-ui` (no dark outlines, decision 30) are
-built and merged; `slice1-alive` is next.**
+built and merged; `slice1-alive` is specified and ticketed (`.scratch/slice1-alive/`) and being built on its branch.**
 
 ## Resume here
 
@@ -12,12 +12,9 @@ built and merged; `slice1-alive` is next.**
 - Process: the mattpocock skills' main flow (`HARNESS.md`, "Workflow"). The game design spec is
   `docs/design/`; each remaining slice 1 plan becomes a feature in `.scratch/<feature>/` (a spec and tickets).
   No product code before the user approves the tickets.
-- **Next step:** `slice1-alive` (crowds, ferry, watch mode, sound) gets its `/grill-with-docs` on the open questions
-  under "Plan 5, `slice1-alive`" in `docs/plans/2026-10-17-slice1-index.md`. The user was offered this or slice 2
-  content first (only the 8 Outpost buildings exist, so the 64-tile island feels empty); confirm the order with them
-  first. Ticket 08 (camera) is approved; ticket 21 (look review) stays open for further look notes (the coast and the
-  outlines are done). Optional small follow-up: start the camera over the dock, not the island's middle. After the
-  grilling, `/to-spec` and `/to-tickets`. Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);
+- **Next step:** build `slice1-alive` on its branch, ticket by ticket in `.scratch/slice1-alive/issues/` (spec
+  `.scratch/slice1-alive/spec.md`, ADR `docs/adr/0001-ferry-manifest.md`, terms in `GLOSSARY.md`). Tickets 10, 13 and
+  14 are the user's. Ticket 21 of `slice1-client` (look review) stays open for further look notes. Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);
   develop with `pnpm server:dev` and `pnpm client`. `pnpm admin create-account <name>` makes the first account. The
   skills `island-3d-client`, `island-ui`, `island-testing`, `island-server` and `island-game-logic` describe what is
   built.
