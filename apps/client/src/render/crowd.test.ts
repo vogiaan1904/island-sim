@@ -132,3 +132,53 @@ describe('people by zoom', () => {
     expect(peopleShown(340, max, true)).toBe(true);
   });
 });
+
+describe('the crowd: carriers', () => {
+  /** The village with one shipment from the farm to the dock arriving at tick `arrive`, of `amount` units. */
+  function shipping(amount: number, arrive: number): IslandState {
+    const island = village();
+    const dock = island.buildings.find((b) => b.type === 'dock');
+    if (!dock) throw new Error('no dock');
+    island.transit.push({ id: 900, good: 'vegetables', amount, from: 103, to: dock.id, arriveTick: arrive });
+    return island;
+  }
+  const carriersAt = (island: IslandState, ticks: number) => {
+    const plan = crowdPlan(island, content);
+    const out = newMovers(plan);
+    const count = moversAt(plan, ticks, { x: 0, z: 0 }, out, 200);
+    return out.slice(0, count).filter((m) => m.arms === 'holding-both').map((m) => ({ ...m }));
+  };
+  const NOON = at(720);
+
+  // The farm to the dock is 4 road tiles: a shipment takes 4 ticks, so its last carrier sets off 4 ticks before it lands.
+  it('walks a shipment along the road with goods in both arms, arriving when the goods land', () => {
+    const island = shipping(3, NOON + 20);
+    expect(carriersAt(island, NOON)).toEqual([]);
+    const walking = carriersAt(island, NOON + 19);
+    expect(walking).toHaveLength(1);
+    expect(walking[0]).toMatchObject({ legs: 'walk', accessory: 'bag' });
+    expect(onRoadRow(walking[0] as Mover)).toBe(true);
+    expect(carriersAt(island, NOON + 19.99)).toHaveLength(1);
+    expect(carriersAt(island, NOON + 20.01)).toEqual([]);
+  });
+
+  it('moves toward the destination as time goes on', () => {
+    const island = shipping(3, NOON + 20);
+    const dockX = 31 * TILE_SIZE;
+    const [early] = carriersAt(island, NOON + 16.5);
+    const [later] = carriersAt(island, NOON + 19);
+    expect(Math.abs((later as Mover).x - dockX)).toBeLessThan(Math.abs((early as Mover).x - dockX));
+  });
+
+  it('sends one carrier per 5 units, at most 4, in single file', () => {
+    for (const [amount, carriers] of [[1, 1], [5, 1], [6, 2], [20, 4], [60, 4]] as const) {
+      expect(carriersAt(shipping(amount, NOON + 20), NOON + 18), `${amount} units`).toHaveLength(carriers);
+    }
+  });
+
+  it('shows no carrier when no road joins the two buildings any more', () => {
+    const island = shipping(3, NOON + 20);
+    island.roads = island.roads.replace(/1/g, '0');
+    expect(carriersAt(island, NOON + 19)).toEqual([]);
+  });
+});

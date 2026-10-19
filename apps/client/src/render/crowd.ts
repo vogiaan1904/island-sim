@@ -39,10 +39,17 @@ interface Look {
   wheelchair: boolean;
 }
 
-/** One walk along the roads: a line through world points, set off at a minute of the day. */
+/** When a walk sets off: at a minute of every day (commutes), or once at a game tick (a shipment). */
+type Start = { daily: number } | { tick: number };
+
+/** One walk along the roads: a line through world points, set off at its start, at its speed. */
 interface Walk {
   look: Look;
-  start: number;
+  start: Start;
+  /** Metres per game minute. */
+  speed: number;
+  /** Goods in both arms. */
+  carrying: boolean;
   /** x, z pairs. */
   points: Float64Array;
   /** Distance walked at each point. */
@@ -53,8 +60,6 @@ export interface CrowdPlan {
   walks: Walk[];
   startMinute: number;
   ticksPerDay: number;
-  /** Metres walked per game minute: the sim's road speed. */
-  speed: number;
 }
 
 /** At most this many people on screen, nearest to what the camera looks at first (spec 6.2). */
@@ -73,6 +78,11 @@ const STAGGER_MINUTES = 4;
 const SIDE_STEP = 0.6;
 /** About 3 in 100 people use a wheelchair. */
 const WHEELCHAIR_PERCENT = 3;
+/** One carrier walks each this many units of a shipment... */
+const UNITS_PER_CARRIER = 5;
+/** ...and never more than this many, in single file this far apart. */
+const MAX_CARRIERS = 4;
+const CARRIER_GAP = 1.2;
 
 /** A stateless 32-bit hash of whole numbers (stable ids), so looks and timings never use a random generator. */
 export function hash32(...parts: number[]): number {
@@ -111,8 +121,8 @@ function door(content: Content, building: BuildingState, toward: { x: number; z:
   };
 }
 
-/** The walk from one building to another along the sim's road path, or null when no road joins them. */
-function walkBetween(content: Content, island: IslandState, from: BuildingState, to: BuildingState, look: Look, start: number): Walk | null {
+/** The walk from one building to another along the sim's road path, at the sim's road speed; null when no road joins them. */
+function walkBetween(content: Content, island: IslandState, from: BuildingState, to: BuildingState, look: Look, start: Start): Walk | null {
   const tiles = roadPath(island, content, from, to);
   if (tiles === null) return null;
   const size = content.rules.islandSize;
@@ -130,7 +140,8 @@ function walkBetween(content: Content, island: IslandState, from: BuildingState,
     points[i * 2 + 1] = p.z + dz;
     if (i > 0) along[i] = (along[i - 1] as number) + Math.hypot(p.x - (line[i - 1]?.x ?? 0), p.z - (line[i - 1]?.z ?? 0));
   });
-  return { look, start, points, along };
+  const speed = TILE_SIZE / content.rules.roadTicksPerTile;
+  return { look, start, speed, carrying: false, points, along };
 }
 
 /** Each home's people in a fixed order: the workers first (the person indexes the work flows use), then the children. */
@@ -149,8 +160,8 @@ function residentsCommute(island: IslandState, content: Content, walks: Walk[]):
         nextPerson.set(homeId, person + 1);
         const look = lookOf(island.slot, homeId, person);
         const stagger = unit(hash32(look.key, 1)) * STAGGER_MINUTES;
-        const there = walkBetween(content, island, home, work, look, rules.shiftStartMinute + stagger);
-        const back = walkBetween(content, island, work, home, look, rules.shiftEndMinute + stagger);
+        const there = walkBetween(content, island, home, work, look, { daily: rules.shiftStartMinute + stagger });
+        const back = walkBetween(content, island, work, home, look, { daily: rules.shiftEndMinute + stagger });
         if (there) walks.push(there);
         if (back) walks.push(back);
       }
@@ -158,12 +169,42 @@ function residentsCommute(island: IslandState, content: Content, walks: Walk[]):
   }
 }
 
-/** Every walk the island's people make in a day, from its state alone. Planned again whenever the state changes. */
+/**
+ * Goods on the roads (before trucks): carriers walk each shipment in single file, one per few units, timed so the last
+ * one steps in as the goods land in the destination's stock. They walk the whole route in the sim's travel time.
+ */
+function carriers(island: IslandState, content: Content, walks: Walk[]): void {
+  const byId = new Map(island.buildings.map((b) => [b.id, b]));
+  const ticksPerTile = content.rules.roadTicksPerTile;
+  for (const shipment of island.transit) {
+    const from = byId.get(shipment.from);
+    const to = byId.get(shipment.to);
+    const tiles = from && to ? roadPath(island, content, from, to) : null;
+    if (!from || !to || tiles === null) continue;
+    const travel = Math.max(1, tiles.length * ticksPerTile);
+    const count = Math.min(MAX_CARRIERS, Math.ceil(shipment.amount / UNITS_PER_CARRIER));
+    for (let k = 0; k < count; k += 1) {
+      const h = hash32(island.slot, shipment.id, k, 2);
+      const look: Look = { key: h, character: h % CHARACTERS.length, scale: 1, wheelchair: false };
+      const walk = walkBetween(content, island, from, to, look, { tick: 0 });
+      if (walk === null) continue;
+      const length = walk.along[walk.along.length - 1] as number;
+      walk.speed = length / travel;
+      // The leader is k gaps ahead of the last carrier, so it set off that much earlier.
+      const ahead = (count - 1 - k) * CARRIER_GAP;
+      walk.start = { tick: shipment.arriveTick - travel - ahead / walk.speed };
+      walk.carrying = true;
+      walks.push(walk);
+    }
+  }
+}
+
+/** Every walk the island's people make, from its state alone. Planned again whenever the state changes. */
 export function crowdPlan(island: IslandState, content: Content): CrowdPlan {
   const walks: Walk[] = [];
   residentsCommute(island, content, walks);
-  const rules = content.rules;
-  return { walks, startMinute: rules.startMinute, ticksPerDay: rules.ticksPerDay, speed: TILE_SIZE / rules.roadTicksPerTile };
+  carriers(island, content, walks);
+  return { walks, startMinute: content.rules.startMinute, ticksPerDay: content.rules.ticksPerDay };
 }
 
 /** A pool of movers big enough for every walk in the plan, made once and reused every frame. */
@@ -184,6 +225,8 @@ export function newMovers(plan: CrowdPlan): Mover[] {
 }
 
 const WALK_CYCLE = cycleFrames(clip('walk'));
+/** Holding both arms out is a pose: its last frame. */
+const HOLD_FRAME = clip('holding-both').frames - 1;
 const WHEEL_CYCLE = cycleFrames(clip('wheelchair-move-forward'));
 
 /** Places one walker at a distance along its walk. */
@@ -204,9 +247,13 @@ function place(walk: Walk, walked: number, out: Mover): void {
   if (span > 0) out.heading = Math.atan2(x1 - x0, z1 - z0);
   out.character = look.character;
   out.scale = look.scale;
-  out.arms = null;
-  out.armsPhase = 0;
-  if (look.wheelchair) {
+  out.arms = walk.carrying ? 'holding-both' : null;
+  out.armsPhase = walk.carrying ? HOLD_FRAME : 0;
+  if (walk.carrying) {
+    out.legs = 'walk';
+    out.legsPhase = (walked / (STRIDE * look.scale)) * WALK_CYCLE;
+    out.accessory = 'bag';
+  } else if (look.wheelchair) {
     out.legs = 'wheelchair-move-forward';
     out.legsPhase = (walked / WHEEL_STRIDE) * WHEEL_CYCLE;
     out.accessory = 'wheelchair';
@@ -226,7 +273,8 @@ export function moversAt(plan: CrowdPlan, ticks: number, target: { x: number; z:
   const minute = (((ticks + plan.startMinute) % day) + day) % day;
   let count = 0;
   for (const walk of plan.walks) {
-    const walked = (minute - walk.start) * plan.speed;
+    const since = 'daily' in walk.start ? minute - walk.start.daily : ticks - walk.start.tick;
+    const walked = since * walk.speed;
     if (walked < 0 || walked > (walk.along[walk.along.length - 1] as number)) continue;
     const mover = out[count];
     if (mover === undefined) break;
