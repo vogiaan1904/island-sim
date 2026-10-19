@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SMALL, islandOf, smallWorld } from '../../test/fixtures.ts';
+import { SMALL, dockedWorld, islandOf, smallWorld } from '../../test/fixtures.ts';
 import { stateHash } from '../hash.ts';
 import { serializeWorld } from '../snapshot.ts';
 import type { WorldState } from '../state.ts';
@@ -13,20 +13,22 @@ function place(world: WorldState, building: string, x: number, y: number, rotati
 
 describe('place-building', () => {
   it('pays the price up front and starts a construction site', () => {
-    const world = smallWorld();
+    const world = dockedWorld();
+    const roads = islandOf(world, 0).roads;
     expect(place(world, 'cottage', 2, 2)).toEqual({
       ok: true,
       ledger: [{ kind: 'money', slot: 0, deltaCents: -20_000, reason: 'building-purchase' }],
       events: [
-        { tick: 0, source: 1, index: 0, type: 'construction-started', slot: 0, data: { buildingId: 1, building: 'cottage' } },
+        { tick: 0, source: 1, index: 0, type: 'construction-started', slot: 0, data: { buildingId: 2, building: 'cottage' } },
       ],
-      data: { buildingId: 1 },
+      data: { buildingId: 2 },
     });
     const island = islandOf(world, 0);
     expect(island.coinsCents).toBe(480_000);
-    expect(island.buildings).toEqual([
+    expect(island.roads).toBe(roads);
+    expect(island.buildings.slice(1)).toEqual([
       {
-        id: 1,
+        id: 2,
         type: 'cottage',
         x: 2,
         y: 2,
@@ -40,32 +42,47 @@ describe('place-building', () => {
         home: { residents: 0, happiness: 1000, unmetNeeds: [] },
       },
     ]);
-    expect(world.nextId).toBe(2);
+    expect(world.nextId).toBe(3);
+  });
+
+  it('paves the connector to the dock and books it as a road purchase', () => {
+    const world = dockedWorld();
+    expect(place(world, 'cottage', 2, 5)).toMatchObject({
+      ok: true,
+      ledger: [
+        { kind: 'money', slot: 0, deltaCents: -20_000, reason: 'building-purchase' },
+        { kind: 'money', slot: 0, deltaCents: -1_000, reason: 'road-purchase' },
+      ],
+    });
+    const island = islandOf(world, 0);
+    expect(island.roads[4 * 8 + 2]).toBe('1');
+    expect(island.coinsCents).toBe(479_000);
   });
 
   it('answers the first failed placement check with its reason code', () => {
     expect(place(smallWorld(), 'cottage', -1, 0)).toMatchObject({ ok: false, reason: 'out-of-bounds' });
     expect(place(smallWorld(), 'cottage', 0, 0)).toMatchObject({ ok: false, reason: 'bad-terrain' });
     expect(place(smallWorld(), 'cottage', 3, 3)).toMatchObject({ ok: false, reason: 'tile-occupied' });
+    // DEFAULT_MAP has no dock, so no road can reach one.
     expect(place(smallWorld(), 'cottage', 2, 5)).toMatchObject({ ok: false, reason: 'no-road-access' });
   });
 
   it('reports the coin shortfall and changes nothing', () => {
-    const world = smallWorld(undefined, 19_999);
+    const world = dockedWorld(undefined, 19_999);
     const before = stateHash(world);
     expect(place(world, 'cottage', 2, 2)).toEqual({ ok: false, reason: 'not-enough-coins', shortfallCents: 1 });
     expect(stateHash(world)).toBe(before);
   });
 
   it('lets the player spend their last coin', () => {
-    const world = smallWorld(undefined, 20_000);
+    const world = dockedWorld(undefined, 20_000);
     expect(place(world, 'cottage', 2, 2).ok).toBe(true);
     expect(islandOf(world, 0).coinsCents).toBe(0);
   });
 
   it('uses the rotated footprint', () => {
     expect(place(smallWorld(), 'farm', 5, 4, 0)).toMatchObject({ ok: false, reason: 'bad-terrain' });
-    expect(place(smallWorld(), 'farm', 5, 4, 1)).toMatchObject({ ok: true });
+    expect(place(dockedWorld(), 'farm', 5, 4, 1)).toMatchObject({ ok: true });
   });
 
   it('answers huge coordinates with out-of-bounds instead of hanging', () => {
@@ -81,7 +98,7 @@ describe('place-building', () => {
   });
 
   it('refuses a spot another building already took', () => {
-    const world = smallWorld();
+    const world = dockedWorld();
     expect(place(world, 'cottage', 2, 2).ok).toBe(true);
     expect(place(world, 'well', 2, 2)).toMatchObject({ ok: false, reason: 'tile-occupied' });
   });

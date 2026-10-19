@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HALL_MAP, SMALL, buildingOf, hallSite, islandOf, smallWorld } from '../../test/fixtures.ts';
+import { HALL_MAP, SMALL, buildingOf, dockedWorld, hallSite, islandOf, smallWorld } from '../../test/fixtures.ts';
 import { applyCommand } from '../commands/apply.ts';
 import type { Command } from '../commands/types.ts';
 import { stateHash } from '../hash.ts';
@@ -25,11 +25,11 @@ describe('placing the Island Hall', () => {
   });
 
   it('starts a landmark once unlocked, and only once per island', () => {
-    const world = smallWorld(HALL_MAP);
+    const world = dockedWorld(HALL_MAP);
     islandOf(world, 0).unlockedLandmarks = ['island-hall'];
     expect(apply(world, place)).toMatchObject({
       ok: true,
-      events: [{ type: 'landmark-started', data: { buildingId: 1, building: 'island-hall' } }],
+      events: [{ type: 'landmark-started', data: { buildingId: 2, building: 'island-hall' } }],
     });
     expect(apply(world, place, 2)).toMatchObject({ ok: false, reason: 'already-built' });
   });

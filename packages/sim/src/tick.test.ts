@@ -1,6 +1,6 @@
 import { content } from '@island/content';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MAP, SMALL, building, islandOf, paint, smallWorld } from '../test/fixtures.ts';
+import { DEFAULT_MAP, SMALL, building, dockedWorld, islandOf, paint, smallWorld } from '../test/fixtures.ts';
 import { applyCommand } from './commands/apply.ts';
 import type { Command } from './commands/types.ts';
 import type { WorldState } from './state.ts';
@@ -20,31 +20,33 @@ describe('tickWorld', () => {
   });
 
   it('finishes construction after its build ticks, with an event from the tick', () => {
-    const world = smallWorld();
+    const world = dockedWorld();
     placeCottage(world, 0, 1);
     for (let i = 0; i < 119; i += 1) expect(tickWorld(world, SMALL).events).toEqual([]);
-    expect(islandOf(world, 0).buildings[0]?.constructionLeft).toBe(1);
+    expect(islandOf(world, 0).buildings[1]?.constructionLeft).toBe(1);
     expect(tickWorld(world, SMALL).events).toEqual([
-      { tick: 120, source: 0, index: 0, type: 'construction-finished', slot: 0, data: { buildingId: 1, building: 'cottage' } },
+      { tick: 120, source: 0, index: 0, type: 'construction-finished', slot: 0, data: { buildingId: 2, building: 'cottage' } },
     ]);
-    expect(islandOf(world, 0).buildings[0]?.constructionLeft).toBe(0);
+    expect(islandOf(world, 0).buildings[1]?.constructionLeft).toBe(0);
     expect(world.tick).toBe(120);
   });
 
   it('numbers one tick\'s events across islands in slot order', () => {
-    const world = smallWorld();
+    const world = dockedWorld();
     const bob = islandOf(world, 1);
     paint(bob, DEFAULT_MAP);
     bob.owner = 'bob';
     bob.name = 'Coral Bay';
     bob.coinsCents = 500_000;
+    bob.buildings.push(building('dock', 2, 5, 1));
+    world.nextId = 3;
     placeCottage(world, 1, 1);
     placeCottage(world, 0, 2);
     let events = tickWorld(world, SMALL).events;
     while (events.length === 0) events = tickWorld(world, SMALL).events;
     expect(events.map((e) => [e.slot, e.index, e.data.buildingId])).toEqual([
-      [0, 0, 2],
-      [1, 1, 1],
+      [0, 0, 4],
+      [1, 1, 3],
     ]);
   });
 

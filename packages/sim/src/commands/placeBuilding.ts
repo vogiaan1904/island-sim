@@ -1,5 +1,6 @@
 import { newBuilding } from '../buildings.ts';
 import { emit } from '../events.ts';
+import { pave } from '../grid.ts';
 import { pay } from '../ledger.ts';
 import { findBuildingDef, stageOrder } from '../lookup.ts';
 import { checkPlacement, type PlacementCheckId } from '../placement.ts';
@@ -15,8 +16,8 @@ const REASON_FOR_CHECK: Record<PlacementCheckId, ReasonCode> = {
 };
 
 /**
- * Pays the price up front and starts a construction site (spec 12.1); nothing is ever queued. A landmark can be
- * placed once it is unlocked, and only once per island.
+ * Pays the price up front, paves the building's connector to the dock, and starts a construction site (spec 12.1);
+ * nothing is ever queued. A landmark can be placed once it is unlocked, and only once per island.
  */
 export function placeBuilding(ctx: CommandContext, command: PlaceBuildingCommand): CommandResult {
   const { world, content } = ctx;
@@ -40,6 +41,10 @@ export function placeBuilding(ctx: CommandContext, command: PlaceBuildingCommand
   if (failed) return reject(REASON_FOR_CHECK[failed.id], failed.id === 'affordable' ? report.shortfallCents : 0);
 
   pay(island, def.priceCents, 'building-purchase', ctx.ledger);
+  if (report.connector.length > 0) {
+    pave(island, report.connector);
+    pay(island, report.connectorCents, 'road-purchase', ctx.ledger);
+  }
   const id = world.nextId;
   world.nextId += 1;
   island.buildings.push(newBuilding(def, id, x, y, rotation));

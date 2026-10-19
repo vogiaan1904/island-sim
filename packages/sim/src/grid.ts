@@ -28,3 +28,10 @@ export function isLand(island: IslandState, size: number, x: number, y: number):
 export function isRoad(island: IslandState, size: number, x: number, y: number): boolean {
   return inBounds(size, x, y) && island.roads[tileIndex(size, x, y)] === '1';
 }
+
+/** Turns the tiles (row-major indexes) into road. */
+export function pave(island: IslandState, tiles: readonly number[]): void {
+  const roads = island.roads.split('');
+  for (const index of tiles) roads[index] = '1';
+  island.roads = roads.join('');
+}

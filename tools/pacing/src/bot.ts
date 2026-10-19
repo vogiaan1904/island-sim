@@ -17,7 +17,7 @@ import {
 // send and reads only what a player sees. It is stateless: every decision comes from the world as it is, so the
 // same seed always gives the same game. Change the version whenever its strategy changes.
 
-export const BOT_VERSION = 'outpost-v1';
+export const BOT_VERSION = 'outpost-v2';
 export const BOT_OWNER = 'pacing-bot';
 export const BOT_ISLAND_NAME = 'Pacing Isle';
 
@@ -153,7 +153,10 @@ function roadPlan(island: IslandState, content: Content): Array<Array<readonly [
   return chunks;
 }
 
-/** The free spot nearest the dock where the building passes every placement check. */
+/**
+ * The free spot nearest the dock where the building passes every placement check, beside the roads it has when it
+ * can: a spot that needs a connector (spec 12.1) counts each new road tile as farther than the whole island.
+ */
 function findSpot(island: IslandState, content: Content, type: BuildingId): { x: number; y: number; rotation: Rotation } | null {
   const def = content.buildings.find((b) => b.id === type);
   const dock = island.buildings.find((b) => b.type === 'dock');
@@ -164,9 +167,11 @@ function findSpot(island: IslandState, content: Content, type: BuildingId): { x:
     const { w, h } = footprintSize(def, rotation);
     for (let y = 0; y <= size - h; y += 1) {
       for (let x = 0; x <= size - w; x += 1) {
-        const score = Math.abs(x - dock.x) + Math.abs(y - dock.y);
-        if (best && score >= best.score) continue;
-        if (checkPlacement(island, content, def, x, y, rotation).ok) best = { x, y, rotation, score };
+        const distance = Math.abs(x - dock.x) + Math.abs(y - dock.y);
+        if (best && distance >= best.score) continue;
+        const report = checkPlacement(island, content, def, x, y, rotation);
+        const score = distance + report.connector.length * 2 * size;
+        if (report.ok && (!best || score < best.score)) best = { x, y, rotation, score };
       }
     }
   }

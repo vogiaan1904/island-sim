@@ -18,7 +18,13 @@ export interface PlacementReport {
   ok: boolean;
   /** Every check in a fixed order, passed or failed, so the preview can label them all. */
   checks: PlacementCheck[];
-  /** How many cents are missing for the price; 0 when affordable. */
+  /** The road tiles placing it would pave to join it to the dock (its connector), ascending; empty when none. */
+  connector: number[];
+  /** The price of the connector's tiles, in cents. */
+  connectorCents: number;
+  /** The building's price plus its connector's. */
+  costCents: number;
+  /** How many cents are missing for that total; 0 when affordable. */
   shortfallCents: number;
 }
 
@@ -59,8 +65,6 @@ export function checkPlacement(
 ): PlacementReport {
   const size = content.rules.islandSize;
   const { w, h } = footprintSize(def, rotation);
-  const shortfallCents = Math.max(0, def.priceCents - island.coinsCents);
-  const affordable = shortfallCents === 0;
 
   // Check the anchor before building any tile list: a huge coordinate must never reach a loop.
   // Written as x > size - w (not x + w > size) so no sum can overflow the safe-integer range.
@@ -72,12 +76,10 @@ export function checkPlacement(
       ['terrain', false],
       ['free', false],
       ['road-access', false],
-      ['affordable', affordable],
-    ], shortfallCents);
+    ], island, content, def, []);
   }
 
   const tiles = footprintTiles(x, y, w, h);
-  const inFootprint = (tx: number, ty: number) => tx >= x && ty >= y && tx < x + w && ty < y + h;
   const allLand = tiles.every(([tx, ty]) => isLand(island, size, tx, ty));
   const touchesWater = tiles.some(([tx, ty]) =>
     NEIGHBORS4.some(([ox, oy]) => !isLand(island, size, tx + ox, ty + oy)),
@@ -89,26 +91,102 @@ export function checkPlacement(
     ([tx, ty]) => occupancy[tileIndex(size, tx, ty)] === 0 && !isRoad(island, size, tx, ty),
   );
 
-  const roadAccess =
-    !def.needsRoad ||
-    tiles.some(([tx, ty]) =>
-      NEIGHBORS4.some(
-        ([ox, oy]) => !inFootprint(tx + ox, ty + oy) && isRoad(island, size, tx + ox, ty + oy),
-      ),
-    );
+  const connector = def.needsRoad ? findConnector(island, content, occupancy, x, y, w, h) : [];
 
   return report([
     ['in-bounds', true],
     ['terrain', terrain],
     ['free', free],
-    ['road-access', roadAccess],
-    ['affordable', affordable],
-  ], shortfallCents);
+    ['road-access', connector !== null],
+  ], island, content, def, connector ?? []);
 }
 
-function report(entries: Array<[PlacementCheckId, boolean]>, shortfallCents: number): PlacementReport {
-  const checks = entries.map(([id, ok]) => ({ id, ok }));
-  return { ok: checks.every((check) => check.ok), checks, shortfallCents };
+function report(
+  entries: Array<[PlacementCheckId, boolean]>,
+  island: IslandState,
+  content: Content,
+  def: BuildingDef,
+  connector: number[],
+): PlacementReport {
+  const connectorCents = connector.length * content.rules.roadPricePerTileCents;
+  const costCents = def.priceCents + connectorCents;
+  const shortfallCents = Math.max(0, costCents - island.coinsCents);
+  const checks = [...entries, ['affordable', shortfallCents === 0] as [PlacementCheckId, boolean]].map(([id, ok]) => ({ id, ok }));
+  return { ok: checks.every((check) => check.ok), checks, connector, connectorCents, costCents, shortfallCents };
+}
+
+/**
+ * A building's connector (spec 12.1): the road with the fewest new tiles from a tile beside the footprint to a tile
+ * beside the dock, crossing only land free of buildings and outside the footprint. Road tiles cost nothing, so a road
+ * already joined to the dock needs no new tile and a loose road is reused. Returns the new tiles ascending, or null
+ * when there is no dock or every way needs more tiles than one road command may lay. Ties go to the first start tile
+ * (ascending) and the first neighbor in NEIGHBORS4 order, so the same island and aim always give the same road.
+ */
+function findConnector(
+  island: IslandState,
+  content: Content,
+  occupancy: readonly number[],
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): number[] | null {
+  const dock = island.buildings.find((b) => b.type === 'dock');
+  if (!dock) return null;
+  const size = content.rules.islandSize;
+  const inside = (tx: number, ty: number, bx: number, by: number, bw: number, bh: number) =>
+    tx >= bx && ty >= by && tx < bx + bw && ty < by + bh;
+  const open = (tx: number, ty: number) =>
+    isLand(island, size, tx, ty) && occupancy[tileIndex(size, tx, ty)] === 0 && !inside(tx, ty, x, y, w, h);
+  const beside = (bx: number, by: number, bw: number, bh: number): number[] => {
+    const found = new Set<number>();
+    for (const [tx, ty] of footprintTiles(bx, by, bw, bh)) {
+      for (const [ox, oy] of NEIGHBORS4) {
+        const nx = tx + ox;
+        const ny = ty + oy;
+        if (!inside(nx, ny, bx, by, bw, bh) && open(nx, ny)) found.add(tileIndex(size, nx, ny));
+      }
+    }
+    return [...found].sort((a, b) => a - b);
+  };
+  const dockSize = footprintSize(buildingDefOf(content, 'dock'), dock.rotation);
+  const goal = new Set(beside(dock.x, dock.y, dockSize.w, dockSize.h));
+  const newTile = (i: number) => (island.roads[i] === '1' ? 0 : 1);
+
+  // Dial's search with costs 0 and 1: buckets[d] holds tiles first reached with d new tiles.
+  const max = content.rules.maxRoadTilesPerCommand;
+  const cost = new Array<number>(size * size).fill(-1);
+  const from = new Array<number>(size * size).fill(-1);
+  const buckets: number[][] = [];
+  const reach = (i: number, d: number, previous: number) => {
+    if (d > max || (cost[i] !== -1 && (cost[i] as number) <= d)) return;
+    cost[i] = d;
+    from[i] = previous;
+    (buckets[d] ??= []).push(i);
+  };
+  for (const start of beside(x, y, w, h)) reach(start, newTile(start), -1);
+  for (let d = 0; d < buckets.length; d += 1) {
+    const bucket = buckets[d] ?? [];
+    for (let k = 0; k < bucket.length; k += 1) {
+      const i = bucket[k] as number;
+      if (cost[i] !== d) continue;
+      if (goal.has(i)) {
+        const paved: number[] = [];
+        for (let t = i; t !== -1; t = from[t] as number) if (newTile(t) === 1) paved.push(t);
+        return paved.sort((a, b) => a - b);
+      }
+      const tx = i % size;
+      const ty = Math.floor(i / size);
+      for (const [ox, oy] of NEIGHBORS4) {
+        const nx = tx + ox;
+        const ny = ty + oy;
+        if (!open(nx, ny)) continue;
+        const n = tileIndex(size, nx, ny);
+        reach(n, d + newTile(n), i);
+      }
+    }
+  }
+  return null;
 }
 
 /** Where the game puts the dock: the southern-most free shore spot, scanning rows bottom-up and left to right. */

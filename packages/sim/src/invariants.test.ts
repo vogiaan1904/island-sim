@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SMALL, building, islandOf, smallWorld } from '../test/fixtures.ts';
+import { SMALL, building, dockedWorld, islandOf, smallWorld } from '../test/fixtures.ts';
 import { applyCommand } from './commands/apply.ts';
 import type { Command } from './commands/types.ts';
 import { checkInvariants } from './invariants.ts';
@@ -9,7 +9,7 @@ const cottage: Command = { type: 'place-building', slot: 0, building: 'cottage',
 
 describe('checkInvariants', () => {
   it('finds nothing wrong after a normal command and tick', () => {
-    const world = smallWorld();
+    const world = dockedWorld();
     const beforeCommand = structuredClone(world);
     const result = applyCommand(world, SMALL, cottage, { sequence: 1 });
     expect(result.ok && checkInvariants(beforeCommand, world, result.ledger, SMALL)).toEqual([]);

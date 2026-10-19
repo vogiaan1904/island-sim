@@ -1,12 +1,12 @@
 import { content } from '@island/content';
 import { describe, expect, it } from 'vitest';
-import { SMALL, building, islandOf, smallWorld } from '../test/fixtures.ts';
+import { SMALL, building, dockedWorld, islandOf, smallWorld } from '../test/fixtures.ts';
 import { buildingDefOf } from './lookup.ts';
 import { checkPlacement, checkRoad, findDockSpot, footprintSize, occupancyGrid } from './placement.ts';
 import type { IslandState, Rotation } from './state.ts';
 import { createWorld } from './world.ts';
 
-const island = (): IslandState => islandOf(smallWorld(), 0);
+const island = (): IslandState => islandOf(dockedWorld(), 0);
 const def = (id: string) => buildingDefOf(SMALL, id);
 const failed = (i: IslandState, id: string, x: number, y: number, rotation: Rotation = 0) =>
   checkPlacement(i, SMALL, def(id), x, y, rotation)
@@ -25,7 +25,7 @@ describe('checkPlacement', () => {
     expect(failed(island(), 'cottage', -1, 0)).toEqual(['in-bounds', 'terrain', 'free', 'road-access']);
     expect(failed(island(), 'cottage', 0, 0)).toEqual(['terrain', 'road-access']);
     expect(failed(island(), 'cottage', 3, 3)).toEqual(['free']);
-    expect(failed(island(), 'cottage', 2, 5)).toEqual(['road-access']);
+    expect(failed(islandOf(smallWorld(), 0), 'cottage', 2, 5)).toEqual(['road-access']);
   });
 
   it('uses the rotated footprint', () => {
@@ -67,7 +67,69 @@ describe('checkPlacement', () => {
     const i = island();
     i.buildings.push(building('farm', 7, 2, 4));
     expect(occupancyGrid(i, SMALL)[4 * 8 + 3]).toBe(7);
-    expect(failed(i, 'cottage', 4, 5)).toEqual(['free', 'road-access']);
+    expect(failed(i, 'cottage', 4, 5)).toEqual(['free']);
+  });
+});
+
+describe('the connector', () => {
+  // A beach corridor from the dock (1,5) up the west side and along row 1; the only tile beside the dock is (1,4).
+  const CORRIDOR = ['~~~~~~~~', '~,,,,,,~', '~,~~~~~~', '~,~~~~~~', '~,~~~~~~', '~..~~~~~', '~..~~~~~', '~~~~~~~~'];
+  const PATH = [[5, 1], [4, 1], [3, 1], [2, 1], [1, 1], [1, 2], [1, 3], [1, 4]].map(([x, y]) => y! * 8 + x!).sort((a, b) => a - b);
+  const corridor = (coinsCents?: number, roads: Array<[number, number]> = []): IslandState => {
+    const i = islandOf(smallWorld(CORRIDOR, coinsCents), 0);
+    i.buildings.push(building('dock', 9, 1, 5));
+    const marked = i.roads.split('');
+    for (const [x, y] of roads) marked[y * 8 + x] = '1';
+    i.roads = marked.join('');
+    return i;
+  };
+  const cottageAtEnd = (i: IslandState, rules = SMALL) => checkPlacement(i, rules, def('cottage'), 6, 1, 0);
+
+  it('lays the cheapest road to the tile beside the dock and adds its tiles to the price', () => {
+    const report = cottageAtEnd(corridor());
+    expect(report.ok).toBe(true);
+    expect(report.connector).toEqual(PATH);
+    expect(report.connectorCents).toBe(8 * SMALL.rules.roadPricePerTileCents);
+    expect(report.costCents).toBe(20_000 + 8_000);
+  });
+
+  it('reuses a loose road and pays only the missing tiles', () => {
+    const report = cottageAtEnd(corridor(undefined, [[2, 1], [3, 1], [4, 1]]));
+    expect(report.connector).toEqual([[5, 1], [1, 1], [1, 2], [1, 3], [1, 4]].map(([x, y]) => y! * 8 + x!).sort((a, b) => a - b));
+    expect(report.connectorCents).toBe(5_000);
+  });
+
+  it('needs nothing when the building already touches a road joined to the dock', () => {
+    const report = cottageAtEnd(corridor(undefined, PATH.map((t) => [t % 8, Math.floor(t / 8)] as [number, number])));
+    expect(report).toMatchObject({ ok: true, connector: [], connectorCents: 0, costCents: 20_000 });
+  });
+
+  it('prices the building and its road together, to the last coin', () => {
+    expect(cottageAtEnd(corridor(28_000)).ok).toBe(true);
+    const short = cottageAtEnd(corridor(27_999));
+    expect(short.ok).toBe(false);
+    expect(short.shortfallCents).toBe(1);
+    expect(short.checks.filter((check) => !check.ok).map((check) => check.id)).toEqual(['affordable']);
+  });
+
+  it('refuses road access when buildings or water wall the spot off from the dock', () => {
+    const walled = corridor();
+    walled.buildings.push(building('well', 8, 1, 3));
+    expect(cottageAtEnd(walled).checks.find((check) => check.id === 'road-access')).toEqual({ id: 'road-access', ok: false });
+    expect(cottageAtEnd(walled).connector).toEqual([]);
+    const noDock = corridor();
+    noDock.buildings = [];
+    expect(cottageAtEnd(noDock).checks.find((check) => check.id === 'road-access')?.ok).toBe(false);
+  });
+
+  it('refuses a connector longer than one road command may lay', () => {
+    const rules = (max: number) => ({ ...SMALL, rules: { ...SMALL.rules, maxRoadTilesPerCommand: max } });
+    expect(cottageAtEnd(corridor(), rules(8)).ok).toBe(true);
+    expect(cottageAtEnd(corridor(), rules(7)).checks.find((check) => check.id === 'road-access')?.ok).toBe(false);
+  });
+
+  it('lays no road for a building that needs none', () => {
+    expect(checkPlacement(corridor(), SMALL, def('dock'), 5, 1, 0)).toMatchObject({ connector: [], connectorCents: 0 });
   });
 });
 

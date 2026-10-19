@@ -43,6 +43,17 @@ export function smallWorld(rows: readonly string[] = DEFAULT_MAP, coinsCents = 5
   return world;
 }
 
+/**
+ * smallWorld (DEFAULT_MAP unless given) with the dock (id 1) at 5,1, its tile beside it on the road, as every claimed island has
+ * one: a building that needs road joins the dock through it (spec 12.1).
+ */
+export function dockedWorld(rows: readonly string[] = DEFAULT_MAP, coinsCents = 500_000): WorldState {
+  const world = smallWorld(rows, coinsCents);
+  islandOf(world, 0).buildings.push(building('dock', 1, 5, 1));
+  world.nextId = 2;
+  return world;
+}
+
 /** A building as the sim stores it, already built unless constructionLeft says otherwise. */
 export function building(
   type: BuildingId,
@@ -111,11 +122,11 @@ export const HALL_MAP: readonly string[] = [
  * The hall's materials are on site when `delivered` is true.
  */
 export function hallSite(minute: number, options: { delivered?: boolean; coinsCents?: number } = {}): WorldState {
-  const world = nextTickAt(smallWorld(HALL_MAP, options.coinsCents), minute);
+  const world = nextTickAt(dockedWorld(HALL_MAP, options.coinsCents), minute);
   const island = islandOf(world, 0);
   const hall = building('island-hall', 2, 2, 4, { constructionLeft: 1_440 });
   if (options.delivered) hall.stock = { wood: 150 };
-  island.buildings.push(building('dock', 1, 5, 1), hall);
+  island.buildings.push(hall);
   island.unlockedLandmarks = ['island-hall'];
   world.nextId = 3;
   return world;

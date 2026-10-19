@@ -1,3 +1,4 @@
+import { pave } from '../grid.ts';
 import { pay } from '../ledger.ts';
 import { checkRoad } from '../placement.ts';
 import { accept, claimedIsland, reject, type CommandContext } from './context.ts';
@@ -11,9 +12,7 @@ export function placeRoad(ctx: CommandContext, command: PlaceRoadCommand): Comma
   if (report.reason === 'not-enough-coins') return reject('not-enough-coins', report.shortfallCents);
   if (report.reason !== null) return reject(report.reason);
 
-  const roads = island.roads.split('');
-  for (const index of report.newTiles) roads[index] = '1';
-  island.roads = roads.join('');
+  pave(island, report.newTiles);
   pay(island, report.costCents, 'road-purchase', ctx.ledger);
   return accept(ctx, { tilesBuilt: report.newTiles.length });
 }

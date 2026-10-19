@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SMALL, islandOf, smallWorld } from '../../test/fixtures.ts';
+import { SMALL, dockedWorld, islandOf, smallWorld } from '../../test/fixtures.ts';
 import { stateHash } from '../hash.ts';
 import type { WorldState } from '../state.ts';
 import { applyCommand } from './apply.ts';
@@ -37,7 +37,7 @@ describe('place-road', () => {
 
   it('refuses tiles outside the map, under buildings, or too many at once', () => {
     expect(road(smallWorld(), [[8, 0]])).toMatchObject({ ok: false, reason: 'out-of-bounds' });
-    const world = smallWorld();
+    const world = dockedWorld();
     const cottage = { type: 'place-building', slot: 0, building: 'cottage', x: 2, y: 2, rotation: 0 } as Command;
     expect(applyCommand(world, SMALL, cottage, { sequence: 1 }).ok).toBe(true);
     expect(road(world, [[2, 2]])).toMatchObject({ ok: false, reason: 'tile-occupied' });
