@@ -16,6 +16,7 @@ import {
 import { footprintCenter } from '../../render/instances.ts';
 import type { IconName } from '../icons.tsx';
 import { BUILDING_NAMES, GOOD_NAMES } from '../names.ts';
+import { needMoreText } from '../coins.ts';
 
 // What a building's conditions mean to the player: the most important one in words, the cause of a problem with the
 // one thing that fixes it (the Fix button), and the materials of a landmark site. Pure (no React, no store), so the
@@ -83,11 +84,6 @@ function theName(def: BuildingDef): string {
 
 function sentence(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-/** Whole coins with a thousands separator, rounded up so that paying the amount is enough. */
-export function coinsWords(cents: number): string {
-  return Math.ceil(cents / 100).toLocaleString('en-US');
 }
 
 function staffed(building: BuildingState): number {
@@ -214,7 +210,7 @@ function materialsFix(building: BuildingState, def: BuildingDef, ctx: CardContex
     return show(dock, building, ctx, onTheFerry ? 'The materials are bought and come on the next ferry.' : 'The materials are on their way to the site.');
   }
   if (materials.shortfallCents > 0) {
-    return show(dock, building, ctx, `Need ${coinsWords(materials.shortfallCents)} more coins to buy the missing ${goodsList(goodsLacking(building, def))}. Selling goods in Trade earns them.`);
+    return show(dock, building, ctx, `${needMoreText(materials.shortfallCents)} to buy the missing ${goodsList(goodsLacking(building, def))}. Selling goods in Trade earns them.`);
   }
   return {
     kind: 'command',

@@ -8,7 +8,6 @@ import { Icon } from '../icons.tsx';
 import { BUILDING_NAMES, GOOD_NAMES } from '../names.ts';
 import { useCommand } from '../useCommand.ts';
 import {
-  coinsWords,
   landmarkMaterials,
   dockSpot,
   problemOf,
@@ -22,6 +21,7 @@ import {
 import { useBackClosesCard } from './useBackClosesCard.ts';
 import '../PanelHost.css';
 import './cards.css';
+import { coinsText, needMoreText } from '../coins.ts';
 
 /** How close "Show me" and Fix bring the camera to the cause (world units from the ground point). */
 const FLY_DISTANCE = 60;
@@ -245,12 +245,12 @@ function Materials({
       {own && missing > 0 && (
         <button className="card-buy" type="button" disabled={busy || short} onClick={onBuy}>
           {short ? (
-            `Need ${coinsWords(materials.shortfallCents)} more coins`
+            needMoreText(materials.shortfallCents)
           ) : (
             <>
               <span>Buy</span>
               <Icon name="coin" size={20} />
-              <span>{coinsWords(materials.costCents)}</span>
+              <span>{coinsText(materials.costCents)}</span>
             </>
           )}
         </button>

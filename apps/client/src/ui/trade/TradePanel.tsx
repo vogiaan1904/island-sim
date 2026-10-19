@@ -6,6 +6,7 @@ import { Icon } from '../icons.tsx';
 import { GOOD_NAMES, goodPicture } from '../names.ts';
 import { useCommand } from '../useCommand.ts';
 import './TradePanel.css';
+import { coinsText, countText } from '../coins.ts';
 
 /** A price this much above or below the good's usual price (in percent) shows as a trend; closer counts as usual. */
 const TREND_PERCENT = 10;
@@ -56,7 +57,7 @@ function GoodTile({ good, island, priceCents }: { good: GoodDef; island: IslandS
           <h3 className="trade-name">{name}</h3>
           <p className="trade-price">
             <Icon name="coin" size={20} />
-            <span className="trade-price-number">{Math.floor(priceCents / 100)}</span>
+            <span className="trade-price-number">{coinsText(priceCents)}</span>
             <span className="trade-each">each</span>
             {trend === 'above' && (
               <span className="trade-trend" data-trend="above" role="img" aria-label="Above the usual price">
@@ -69,7 +70,7 @@ function GoodTile({ good, island, priceCents }: { good: GoodDef; island: IslandS
               </span>
             )}
           </p>
-          <p className="trade-stored">{stored > 0 ? `${stored.toLocaleString('en-US')} in storage` : 'Nothing in storage'}</p>
+          <p className="trade-stored">{stored > 0 ? `${countText(stored)} in storage` : 'Nothing in storage'}</p>
         </div>
       </div>
       {tooLittle && (
@@ -88,7 +89,7 @@ function GoodTile({ good, island, priceCents }: { good: GoodDef; island: IslandS
       </div>
       {outcome.status === 'ok' && (
         <p className="trade-result" role="status">
-          Sold {outcome.data.amount ?? 0} for {Math.floor((outcome.data.earnedCents ?? 0) / 100)} coins
+          Sold {outcome.data.amount ?? 0} for {coinsText(outcome.data.earnedCents ?? 0)} coins
         </p>
       )}
       {outcome.status === 'refused' && (

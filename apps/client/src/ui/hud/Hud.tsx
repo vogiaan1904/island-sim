@@ -14,6 +14,7 @@ import { PANEL_BODIES, PANEL_TITLES } from '../panels.ts';
 import { GlidingNumber } from './GlidingNumber.tsx';
 import { hudModel, type GoalTile, type HudModel, type StageRing } from './model.ts';
 import './Hud.css';
+import { countText } from '../coins.ts';
 
 /**
  * The HUD over the island (island-ui, screens.md section 1): the stage badge with its progress ring, the counters, the
@@ -82,7 +83,7 @@ function Counters({ model, glideKey }: { model: HudModel; glideKey: string }) {
 
 function Pill({ label, icon, value, glideKey }: { label: string; icon: IconName; value: number; glideKey: string }) {
   return (
-    <div className="hud-pill" role="group" aria-label={`${label}: ${value.toLocaleString('en-US')}`} data-counter={label.toLowerCase()}>
+    <div className="hud-pill" role="group" aria-label={`${label}: ${countText(value)}`} data-counter={label.toLowerCase()}>
       <span className="hud-pill-icon">
         <Icon name={icon} size={22} />
       </span>

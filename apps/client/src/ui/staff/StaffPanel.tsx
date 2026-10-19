@@ -7,6 +7,7 @@ import { GOOD_NAMES, goodPicture, portraitPicture, PORT_MASTER_TRAITS, ROLE_NAME
 import { Stepper } from '../Stepper.tsx';
 import { useCommand } from '../useCommand.ts';
 import './StaffPanel.css';
+import { coinsText } from '../coins.ts';
 
 /** How much a rule keeps when the player first turns it on, and the step of its stepper. */
 const FIRST_KEEP = 10;
@@ -38,7 +39,7 @@ function Commuters() {
   const [choice, setChoice] = useState(hiredNow);
   const { send, outcome } = useCommand();
   const seats = content.rules.ferrySeats;
-  const wage = Math.floor(content.rules.commuterWagePerDayCents / 100);
+  const wage = coinsText(content.rules.commuterWagePerDayCents);
   return (
     <section className="staff-card" aria-labelledby="staff-commuters">
       <div className="staff-head">

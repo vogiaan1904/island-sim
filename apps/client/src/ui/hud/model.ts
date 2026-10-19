@@ -2,6 +2,7 @@ import type { BuildingDef, Content, GoalDef, GoalId, NeedId, StageId } from '@is
 import { isBuilt, residentsOf, type IslandState } from '@island/sim';
 import type { IconName } from '../icons.tsx';
 import { BUILDING_NAMES, NEED_WORDS } from '../names.ts';
+import { coinsHeld } from '../coins.ts';
 
 // What the HUD shows, worked out from the island and the content data alone (no React, no store): every number the
 // HUD draws comes from here, so it can be tested against real islands. The rules (what unlocks a landmark, what a
@@ -48,7 +49,7 @@ export function hudModel(island: IslandState, content: Content): HudModel {
   const stageOrder = orderOf(content, island.stage);
   return {
     stage: island.stage,
-    coins: Math.floor(island.coinsCents / 100),
+    coins: coinsHeld(island.coinsCents),
     residents,
     commuters: stageOrder === 1 ? island.commuters.present : null,
     ring: stageRing(island, content, residents),

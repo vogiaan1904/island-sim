@@ -1,8 +1,9 @@
 import type { Content } from '@island/content';
 import type { PlayerCommand } from '@island/protocol';
 import { checkRoad, type IslandState } from '@island/sim';
-import { needMoreCoins, type PlacementLabel, type PlacementVerdict } from './verdict.ts';
+import { type PlacementLabel, type PlacementVerdict } from './verdict.ts';
 import type { Tile } from './draft.ts';
+import { needMoreText } from '../ui/coins.ts';
 
 // The road drag's answer (spec: Placement), in the same shape as a building's so the panel needs no second path. The
 // sim's own `checkRoad` (the check `place-road` acts on) decides; only the words and the length limit label live here.
@@ -30,7 +31,7 @@ export function roadVerdict(island: IslandState, content: Content, tiles: readon
   if (report.problems.includes('bad-terrain')) labels.push({ id: 'terrain', ok: false, text: 'Needs dry land' });
   if (report.problems.includes('tile-occupied')) labels.push({ id: 'free', ok: false, text: 'Something is in the way' });
   if (reason === 'nothing-to-build') return NOTHING;
-  if (reason === 'not-enough-coins') labels.push({ id: 'affordable', ok: false, text: needMoreCoins(shortfallCents) });
+  if (reason === 'not-enough-coins') labels.push({ id: 'affordable', ok: false, text: needMoreText(shortfallCents) });
   if (reason === null && tiles.length === limit) labels.push({ id: 'length', ok: true, text: `That is the most for one go (${limit} tiles)` });
   const command: PlayerCommand | null = reason === null ? { type: 'place-road', tiles: tiles.map(({ x, y }) => [x, y] as [number, number]) } : null;
   return { ok: reason === null, labels, costCents, shortfallCents, reason, command };

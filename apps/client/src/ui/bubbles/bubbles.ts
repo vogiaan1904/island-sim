@@ -5,6 +5,7 @@ import { buildingAnchor, islandAnchor, type Anchor } from '../../render/anchors.
 import { problemOf, statusOf, type CardContext, type Picture } from '../cards/conditions.ts';
 import type { IconName } from '../icons.tsx';
 import { BUILDING_NAMES, NEED_WORDS } from '../names.ts';
+import { coinsHeld, countText } from '../coins.ts';
 
 // Which bubbles float over the island and where (island-ui, screens.md section 2). Pure: no React, no store. What
 // counts as a problem is the building card's own reading of the sim's conditions (`problemOf`, so a bubble and a card
@@ -124,7 +125,7 @@ export function bubblesOf(ctx: CardContext, own: boolean): Bubble[] {
     for (const goal of ctx.island.rewards) {
       const def = ctx.content.goals.find((g) => g.id === goal);
       if (def === undefined) continue;
-      const coins = Math.floor(def.rewardCents / 100);
+      const coins = coinsHeld(def.rewardCents);
       rewards.push({
         key: `reward/${goal}`,
         kind: 'reward',
@@ -132,7 +133,7 @@ export function bubblesOf(ctx: CardContext, own: boolean): Bubble[] {
         coins,
         ...rewardSpot(goal, ctx),
         picture: { kind: 'icon', name: 'gift' },
-        label: `Collect ${coins.toLocaleString('en-US')} coins`,
+        label: `Collect ${countText(coins)} coins`,
         stack: SOLO,
       });
     }

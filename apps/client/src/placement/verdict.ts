@@ -2,7 +2,7 @@ import type { BuildingDef, BuildingId, Content } from '@island/content';
 import type { PlayerCommand } from '@island/protocol';
 import { checkPlacement, type IslandState, type PlacementCheckId, type ReasonCode, type Rotation } from '@island/sim';
 import { BUILDING_NAMES } from '../ui/names.ts';
-import { reasonWords } from '../ui/reasonWords.ts';
+import { coinsHeld, coinsShort, needMoreText } from '../ui/coins.ts';
 
 // The placement module's answer (spec: Placement). Given the mirrored island and what the player is aiming at, it says
 // what the sim would say: whether the spot passes, which check blocks it, the labels in words, the price and the
@@ -41,15 +41,6 @@ export interface PlacementVerdict {
   reason: ReasonCode | null;
   /** The command to send. Null while the spot is blocked, so a blocked spot can never be sent by mistake. */
   command: PlayerCommand | null;
-}
-
-/** Whole coins missing, never rounded down so far that "Need 0 more coins" shows while one cent is short. */
-export function coinsShort(shortfallCents: number): number {
-  return Math.ceil(shortfallCents / 100);
-}
-
-export function needMoreCoins(shortfallCents: number): string {
-  return reasonWords('not-enough-coins', shortfallCents);
 }
 
 function defOf(content: Content, id: BuildingId): BuildingDef | undefined {
@@ -110,7 +101,7 @@ export function buildingVerdict(island: IslandState, content: Content, aim: Buil
       labels.push({ id: 'road-access', ok, text: ok ? 'Road access' : 'Needs a road beside it' });
     }
   }
-  if (passed.get('affordable') !== true) labels.push({ id: 'affordable', ok: false, text: needMoreCoins(report.shortfallCents) });
+  if (passed.get('affordable') !== true) labels.push({ id: 'affordable', ok: false, text: needMoreText(report.shortfallCents) });
   const failed = report.checks.find((check) => !check.ok);
   return {
     ok: report.ok,
@@ -144,11 +135,11 @@ export function buildingOptions(island: IslandState, content: Content): Building
   return content.buildings
     .filter((def) => def.playerBuildable)
     .map((def): BuildingOption => {
-      const base = { id: def.id, name: BUILDING_NAMES[def.id], coins: Math.floor(def.priceCents / 100) };
+      const base = { id: def.id, name: BUILDING_NAMES[def.id], coins: coinsHeld(def.priceCents) };
       const blocked = unavailable(island, content, def);
       if (blocked !== null) return { ...base, state: { kind: 'locked', text: blocked.text } };
       const shortCents = Math.max(0, def.priceCents - island.coinsCents);
-      if (shortCents > 0) return { ...base, state: { kind: 'short', coins: coinsShort(shortCents), text: needMoreCoins(shortCents) } };
+      if (shortCents > 0) return { ...base, state: { kind: 'short', coins: coinsShort(shortCents), text: needMoreText(shortCents) } };
       return { ...base, state: { kind: 'ready' } };
     });
 }

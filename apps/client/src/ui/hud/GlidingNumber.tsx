@@ -1,7 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
+import { countText } from '../coins.ts';
 import { createCounterGlide, type CounterGlide } from '../../glide/counter.ts';
-
-const format = new Intl.NumberFormat('en-US');
 
 const reducedMotion = (): boolean => typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -18,7 +17,7 @@ export function GlidingNumber({ value, resetKey }: { value: number; resetKey: st
 
   useLayoutEffect(() => {
     const show = (shown: number) => {
-      if (element.current !== null) element.current.textContent = format.format(Math.round(shown));
+      if (element.current !== null) element.current.textContent = countText(Math.round(shown));
     };
     const counter = (glide.current ??= createCounterGlide());
     const now = performance.now();

@@ -1,4 +1,5 @@
 import type { Reason } from '@island/protocol';
+import { needMoreText } from './coins.ts';
 
 // Why a command was refused, in the player's words (island-ui, text-tone.md "Rejections and errors"). The sim and the
 // server hold codes only. This is the one place the lines live; a table typed over every code, so a new code fails
@@ -53,8 +54,7 @@ export const NOT_SENT_WORDS = "That can't be done just now, try again in a momen
 /** The refusal in words. A coin shortfall (cents) reads "Need N more coins" in whole coins, rounded up. */
 export function reasonWords(reason: Reason, shortfallCents: number): string {
   if (reason === 'not-enough-coins' && shortfallCents > 0) {
-    const coins = Math.ceil(shortfallCents / 100);
-    return `Need ${coins.toLocaleString('en-US')} more ${coins === 1 ? 'coin' : 'coins'}`;
+    return needMoreText(shortfallCents);
   }
   return WORDS[reason];
 }

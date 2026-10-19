@@ -7,6 +7,7 @@ import { buildingOptions, type BuildingOption } from '../../placement/verdict.ts
 import { useGame, useGameState } from '../../session/game.tsx';
 import { Icon } from '../icons.tsx';
 import './Build.css';
+import { coinsText, countText } from '../coins.ts';
 
 /**
  * The Build panel's body: every building the player can place with its picture, name and cost. One that costs more than
@@ -38,7 +39,7 @@ export function BuildPicker() {
             </span>
             <span className="build-cost">
               <Icon name="coin" size={18} />
-              {Math.floor(content.rules.roadPricePerTileCents / 100).toLocaleString('en-US')}
+              {coinsText(content.rules.roadPricePerTileCents)}
             </span>
           </button>
         </li>
@@ -56,7 +57,7 @@ export function BuildPicker() {
               </span>
               <span className="build-cost">
                 <Icon name="coin" size={18} />
-                {option.coins.toLocaleString('en-US')}
+                {countText(option.coins)}
               </span>
             </button>
           </li>

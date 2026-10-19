@@ -4,6 +4,7 @@ import { footprintCenter } from '../render/instances.ts';
 import { TILE_SIZE } from '../render/look.ts';
 import type { IconName } from '../ui/icons.tsx';
 import { BUILDING_NAMES, STAGE_NAMES } from '../ui/names.ts';
+import { coinsText } from '../ui/coins.ts';
 
 // What an event says, shows and points at, for the news card, the Log and the celebration (island-ui, text-tone.md).
 // The sim's events carry ids and numbers only; the words live here, one entry per event type in the content data, typed
@@ -69,7 +70,7 @@ const WORDS: Record<EventTypeId, Words> = {
     const because = events.at(-1)?.data['short'] === 'seats' ? 'the ferry was full' : "we couldn't pay them";
     return `${plural(n, 'commuter', 'commuters')} stayed home because ${because}.`;
   },
-  'mainland-help': (events) => `The Mainland sent ${Math.floor(sum(events, 'cents') / 100)} coins to get us moving again.`,
+  'mainland-help': (events) => `The Mainland sent ${coinsText(sum(events, 'cents'))} coins to get us moving again.`,
   'cargo-arrived': (events) => `The ferry unloaded ${plural(sum(events, 'units'), 'good', 'goods')}.`,
   'goal-completed': (events) => {
     const goal = events.at(-1)?.data['goal'];

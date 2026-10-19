@@ -2,13 +2,14 @@ import { content } from '@island/content';
 import { useEffect, useMemo } from 'react';
 import { clearRoad, lostDraft, penTo, rotateDraft, sendingDraft, settleDraft, type PlacementDraft } from '../../placement/draft.ts';
 import { roadVerdict } from '../../placement/roadVerdict.ts';
-import { buildingVerdict, needMoreCoins, type PlacementVerdict } from '../../placement/verdict.ts';
+import { buildingVerdict, type PlacementVerdict } from '../../placement/verdict.ts';
 import { useGame, useGameState } from '../../session/game.tsx';
 import { Icon } from '../icons.tsx';
 import { BUILDING_NAMES } from '../names.ts';
 import { reasonWords } from '../reasonWords.ts';
 import { BUILDING_BLURBS } from './blurbs.ts';
 import './Build.css';
+import { coinsText, needMoreText } from '../coins.ts';
 
 /** How long the landing (bounce and dust) shows before the placement ends, in milliseconds. */
 export const LANDING_MS = 900;
@@ -93,7 +94,7 @@ export function PlacementPanel() {
           </div>
           <span className="build-cost">
             <Icon name="coin" size={18} />
-            {Math.floor(verdict.costCents / 100).toLocaleString('en-US')}
+            {coinsText(verdict.costCents)}
           </span>
         </div>
         {draft.refusal !== null && (
@@ -135,7 +136,7 @@ export function PlacementPanel() {
 
 /** What the road card says about the tiles dragged so far and the price of each. */
 function roadWords(tiles: number): string {
-  const price = Math.floor(content.rules.roadPricePerTileCents / 100);
+  const price = coinsText(content.rules.roadPricePerTileCents);
   const each = `Each new tile costs ${price} coins.`;
   return tiles === 0 ? each : `${tiles} ${tiles === 1 ? 'tile' : 'tiles'}. ${each}`;
 }
@@ -156,7 +157,7 @@ function PlacementLabels({ verdict }: { verdict: PlacementVerdict }) {
 
 function PlaceButton({ verdict, placing, onPlace }: { verdict: PlacementVerdict; placing: boolean; onPlace: () => void }) {
   const short = verdict.shortfallCents > 0;
-  const text = placing ? 'Placing' : short ? needMoreCoins(verdict.shortfallCents) : 'Place';
+  const text = placing ? 'Placing' : short ? needMoreText(verdict.shortfallCents) : 'Place';
   return (
     <button className="placing-place" type="button" disabled={placing || !verdict.ok} aria-busy={placing} onClick={onPlace}>
       {!placing && !short && <Icon name="check" size={22} strokeWidth={3} />}
