@@ -27,6 +27,8 @@ Downloaded 2026-10-15 unless the row says otherwise.
 | `kenney_nature-kit.zip` | Nature Kit (2.1), downloaded 2026-10-18; material colors, no colormap | 2020-04-29 | https://kenney.nl/assets/nature-kit | `fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d` |
 | `kenney_pirate-kit.zip` | Pirate Kit (2.1), downloaded 2026-10-18 | 2026-02-17 | https://kenney.nl/assets/pirate-kit | `667ed2caf92954ddb98f7b7cede831fe99ab75063c26b25e23d32715bee9c943` |
 | `kenney_survival-kit.zip` | Survival Kit (2.0), downloaded 2026-10-18 | 2024-04-03 | https://kenney.nl/assets/survival-kit | `c3586341b5932c87eb43d75d915434f47daed168b17ed36a03e8ca9977c7443e` |
+| `kenney_interface-sounds.zip` | Interface Sounds (1.0), downloaded 2026-10-19; 100 `.ogg` sounds | 2020-02-11 | https://kenney.nl/assets/interface-sounds | `f2193d072726d6758a5f7871b2dcc54dcce0d5c35c6f0a62f92549b327c81232` |
+| `kenney_ui-audio.zip` | UI Audio, downloaded 2026-10-19; 50 `.ogg` sounds | — | https://kenney.nl/assets/ui-audio | `946fc23a63d535d693eb31b2eabb80c8c28d6351e2186b344ceb71b2cb1d5eb6` |
 
 Verify all checksums: `cd assets/packs && shasum -a 256 *.zip`
 
