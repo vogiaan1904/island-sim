@@ -20,8 +20,8 @@ the islands keep running while you're away, and you can watch each other's islan
 | 2 | Simulation: Outpost to Settlement | The gameplay of the first stage, headless and tested | plan 1 | done: `2026-10-17-slice1-plan2-outpost-gameplay.md` |
 | 3 | Protocol and server | `packages/protocol`, `apps/server`: the always-running worlds behind accounts and invite codes | plans 1-2 | done: `2026-10-18-slice1-plan3-protocol-server.md` |
 | 4 | Art direction and asset pipeline | The chosen look, the conventions, and every slice 1 model and icon | the user and Blender (can run beside plans 1-3) | done: `2026-10-18-slice1-plan4-art-assets.md` |
-| 5 | Client | `apps/client`: the 3D island and the style A UI on phones. Two features: `slice1-client` (the playable island, plus the soft lock fix) then `slice1-alive` (crowds, ferry, watch mode, sound) | plans 1-3; plan 4 for final models | in progress: `slice1-client` is built (ticket 08 approved; ticket 21, the look review, stays open for notes); `slice1-alive` is built on its branch (tickets 01 to 12, 15, 16) and waits on the user's look check (13) and phone measurement (14) |
-| 6 | Ship slice 1 | Installable app, two-player end-to-end test, deployment, phone performance check | plans 1-5 | not written: `.scratch/slice1-ship/` |
+| 5 | Client | `apps/client`: the 3D island and the style A UI on phones. Two features: `slice1-client` (the playable island, plus the soft lock fix) then `slice1-alive` (crowds, ferry, watch mode, sound) | plans 1-3; plan 4 for final models | done 2026-10-19: both features built and merged; the user approved the camera (ticket 08) and the look of the living island (`slice1-alive` 13). The look review notes (`slice1-client` 21) and the phone frame rate (`slice1-alive` 14) moved into plan 6 |
+| 6 | Ship slice 1 | Installable app, two-player end-to-end test, deployment, phone performance check | plans 1-5 | next: its `/grill-with-docs` on the questions under "Plan 6, ship slice 1" below, then `/to-spec` and `/to-tickets` into `.scratch/slice1-ship/` |
 
 ## What each later plan covers
 
@@ -136,7 +136,28 @@ The questions as they were asked:
   Vitest and Testing Library. Playwright and the real-phone check belong to plan 6.
 - Which tickets need the user (the look, phone speed, real touch) and are therefore `ready-for-human`.
 
-**Plan 6, ship slice 1** (spec 6.2, 9)
-- PWA: manifest, service worker, the "Add to Home Screen" hint, Wake Lock in watch mode, recovering from context loss.
-- The two-player Playwright test (sign up, invite, build, visit); screenshot checks; the real-phone checklist.
-- Deploy to one small always-on machine with HTTPS (choose the provider); confirm the slice 1 done criteria.
+**Plan 6, ship slice 1** (spec 6.2, 9; next, not grilled). Its `/grill-with-docs` runs on the merged `main`, with the
+skills `island-server` (operations), `island-3d-client` (`state-and-pwa.md`), `island-ui`, `island-testing`
+(`phone-performance.md`, `client-tests.md`) as inputs.
+- PWA: manifest and icons, service worker and model and sound caching (what is cached, how a new build replaces it),
+  the "Add to Home Screen" hint, recovering from WebGL context loss without a reload. The Wake Lock in watch mode is
+  built (`slice1-alive`); it only works on https, so check it on the deployment.
+- The two-player Playwright test (sign up, invite, build, visit); screenshot checks (fixtures, pinned clock and camera,
+  the test hooks the client needs); emulated-touch gesture tests; the in-game debug readout (fps, frame time, draw
+  calls, people on screen) the real-phone checklist asks for.
+- Deploy to one small always-on machine with HTTPS: the provider, TLS, process supervision, deploy steps, the backup's
+  second location; then `island-server` (operations.md). Confirm the slice 1 done criteria (spec 8.1: you and a friend
+  each grow an island from empty to Settlement on your phones, the islands keep running while you are away, and you can
+  watch each other's islands).
+- **Carried over from plan 5:**
+  - The real-phone run (`slice1-alive` ticket 14): street zoom at rush hour per quality tier, draw calls and frame
+    time; whether the start check's 24 ms step-down fits real phones; 90/120 Hz screens capped at 60 (built); watch
+    mode at 30 fps (built; if a slow pan still looks choppy, decide 60 on desktop or everywhere); a cheaper level of
+    detail for people only if the numbers ask for it. `pnpm preview 415 --lan` serves a ready village to the phone.
+  - The look review notes (`slice1-client` ticket 21) and the rough spots from `slice1-alive` ticket 13: carriers hold
+    the bag (no goods prop), people step out of a building's back wall when its road runs behind it, ferry passengers
+    walk through the dock building, a newly arrived family also shows in that morning's commute, watch mode frames the
+    pier so the incoming ferry is below the screen at first. The user called the look good; these are polish, to take
+    or leave.
+  - Slice 2 (noted in `slice1-alive`): friends' islands far away need positions in the world summary and a wider
+    archipelago spacing (48 tiles is less than a 64-tile island).

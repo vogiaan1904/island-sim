@@ -5,7 +5,7 @@ approved mockup (sign-in, world screens, Build picker, Staff, Trade, Log, Settin
 
 **Blocked by:** 06, 10, 12, 16, 17, 18, 20.
 
-**Status:** ready-for-human
+**Status:** wontfix
 
 - [ ] The user sees the island on their phone: terrain and water colors against the golden look, lighting, shadows,
       day and night, scaffolds.
@@ -19,3 +19,6 @@ approved mockup (sign-in, world screens, Build picker, Staff, Trade, Log, Settin
   (client only): a water tile whose two land sides meet at a corner gets that corner's half as flat beach, split along
   the diagonal that cuts it off; land tiles stay whole and the sim's grid is unchanged. Done in `render/terrain.ts`.
   Recorded for the skill update: spec 12.5 terrain look.
+
+- 2026-10-19: not done in plan 5; moved into plan 6 (ship slice 1) at the user's choice, which already holds the
+  real-phone checklist and the final look. See "Plan 6, ship slice 1" in `docs/plans/2026-10-17-slice1-index.md`.

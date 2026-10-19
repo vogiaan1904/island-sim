@@ -8,14 +8,14 @@ description: How to build, change and review the 3D side of the Island Sim clien
 > **Status (2026-10-19): the slice 1 island is built** (`slice1-client`, tickets 03 to 20): terrain, water, instanced
 > buildings, roads, scaffolds and the pier, day and night with lit windows, one sun and a shadow map, the free camera on
 > touch, trackpad, mouse and keyboard, the placement and road ghosts, the world anchors for bubbles, visiting.
-> **`slice1-alive` built:** people (Mini Characters posed in the vertex shader: commutes, carriers, workers, builders,
+> **`slice1-alive` built and merged:** people (Mini Characters posed in the vertex shader: commutes, carriers, workers, builders,
 > the market walk, ferry passengers), the ferry from the Mainland in the south, nature props, the camera starting
 > over the dock, watch mode with the Wake Lock, the frame driver (60 fps cap, 30 while watching), the ambience and the
 > button sounds. **Not built:** vehicles and drivers (Village), friends' islands far away (slice 2: the world summary
 > has no positions and the archipelago spacing predates 64-tile islands), smoke and glows, a cheaper level of detail
 > for people, clothing tints, a goods prop for carriers. **Plan 6:** service worker, context-loss recovery. Draw calls
-> and frame rate have not been measured on a phone (`slice1-alive` ticket 14), and the look waits for the user (ticket
-> 21 of `slice1-client`, ticket 13 of `slice1-alive`), so numbers marked that way may still move. Where this skill and the design
+> and frame rate have not been measured on a phone yet (plan 6), and the look notes of `slice1-client` ticket 21 and
+> `slice1-alive` ticket 13 moved to plan 6 as polish, so numbers marked that way may still move. Where this skill and the design
 > spec (`docs/design/2026-10-16-island-sim-design.md`) disagree, the spec wins.
 
 ## What this skill covers
