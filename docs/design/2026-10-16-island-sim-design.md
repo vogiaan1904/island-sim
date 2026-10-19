@@ -407,6 +407,9 @@ any of them during spec review; the skills follow this section.
   dock. A spot with no such road, or one needing more tiles than one road command may lay, is refused as no road
   access ("No road can reach the dock"). The ghost shows the connector's road pieces and the total price. Drawing
   roads by hand is unchanged.
+- **Removing road** (decided 2026-10-19, decision 28): the road tool's Remove pen clears road tiles for free, with no
+  refund. A removal is refused when a building that needs road and reaches the dock now would no longer reach it
+  ("A building would lose its road to the dock"); a building that was already cut off does not block it.
 - **Mainland help** (decided 2026-10-18, plan 5; closes plan 2 decision 15): at the morning ferry, before commuters
   board, an island with no residents, too few coins for one commuter's wage, no goods in any store, nothing in transit
   or cargo and no reward waiting gets a small grant (`mainlandHelpCents`) and a "mainland-help" event. So an island

@@ -292,7 +292,8 @@ buttons) is `island-ui`. Inside the canvas:
   not on every pointer move.
 - A building's connector (its road to the dock, from the sim's placement report) shows with the ghost as see-through
   road pieces and tile highlights, drawn by the same component as the road drag's preview (`RoadTilesGhost`) and
-  tinted like the ghost; it goes when the building lands.
+  tinted like the ghost; it goes when the building lands. A removal drag shows only the highlights, amber over the
+  road that will go and red when the sim refuses it.
 - Place sends the command. Until the server answers, the ghost shows a short "placing" state; **the landing bounce
   and the puff of dust play when the server accepts the build** (spec 12.4). A rejection returns to the ghost with
   the reason.

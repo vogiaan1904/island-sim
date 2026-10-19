@@ -200,7 +200,10 @@ Spec 6.1 "Placing a building", 12.1 and 12.4. The most frequent action, so it mu
 - The see-through ghost snaps to the grid just above the finger so the finger never hides the spot (3D:
   `island-3d-client`). On it, **labels** say what's right or wrong: green "Road access", red "Too close to the
   farm". The road label has three forms: "Road access" (already joined to the dock), "Road to the dock: N tiles" (it
-  lays a connector, spec 12.1, whose tiles are in the price) and red "No road can reach the dock". Labels are short words, one idea each. The ghost's valid and invalid tints use the same green and red as
+  lays a connector, spec 12.1, whose tiles are in the price) and red "No road can reach the dock".
+- The road panel has a **Remove road** toggle (eraser icon) beside Look around: while it is on, the drag picks up only
+  road tiles, the card says "Remove road" and "Removing road is free", the button says Remove, and a refusal says
+  "A building would lose its road to the dock". Labels are short words, one idea each. The ghost's valid and invalid tints use the same green and red as
   the labels, from the shared tokens, so 2D and 3D agree.
 - The labels come from the same `sim` rules the server uses. The UI only displays the reasons; it never
   re-implements a rule. Place is not available while a rule blocks the spot (`sim` decides which reasons block).
