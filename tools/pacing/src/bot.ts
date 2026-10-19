@@ -114,7 +114,7 @@ function materialsToBuy(world: WorldState, content: Content, island: IslandState
     const onTheWay = island.transit.filter((s) => s.to === site.id && s.good === good).reduce((n, s) => n + s.amount, 0);
     const bought = island.cargo.filter((c) => c.to === site.id && c.good === good).reduce((n, c) => n + c.amount, 0);
     const missing = amount - (site.stock[good] ?? 0) - onTheWay - bought;
-    if (missing > storedForSale(island, content, good)) cost += missing * buyPriceCents(world, content, good);
+    if (missing > storedForSale(island, content, good)) cost += missing * buyPriceCents(world.market, content, good);
   }
   return cost > 0 ? cost : null;
 }

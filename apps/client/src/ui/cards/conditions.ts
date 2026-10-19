@@ -1,10 +1,12 @@
 import type { BuildingDef, BuildingId, Content, GoodId } from '@island/content';
 import type { PlayerCommand } from '@island/protocol';
 import {
-  applyPermille,
   footprintSize,
   HIGH_PRIORITY,
   isBuilt,
+  materialLines,
+  materialsCostCents,
+  type MaterialLine,
   shownStatus,
   type BuildingState,
   type ConditionId,
@@ -269,18 +271,6 @@ export function problemOf(building: BuildingState, ctx: CardContext): Problem | 
   }
 }
 
-export interface MaterialLine {
-  good: GoodId;
-  need: number;
-  stored: number;
-  /** Carried on the roads from the dock to the site. */
-  onTheRoad: number;
-  /** Bought from the Mainland, waiting for the next ferry. */
-  onTheFerry: number;
-  /** Still to buy: needed, minus stored, on the road and on the ferry. */
-  missing: number;
-}
-
 export interface LandmarkMaterials {
   lines: MaterialLine[];
   /** What buying every missing unit costs now, in cents (0 while the market is unknown). */
@@ -295,13 +285,7 @@ export function landmarkMaterials(building: BuildingState, ctx: CardContext): La
   const landmark = def.landmark;
   if (landmark === null || isBuilt(building)) return null;
   const { island, content, market } = ctx;
-  const lines = landmark.materials.map(({ good, amount }): MaterialLine => {
-    const stored = building.stock[good] ?? 0;
-    const onTheRoad = island.transit.filter((s) => s.to === building.id && s.good === good).reduce((sum, s) => sum + s.amount, 0);
-    const onTheFerry = island.cargo.filter((c) => c.to === building.id && c.good === good).reduce((sum, c) => sum + c.amount, 0);
-    return { good, need: amount, stored, onTheRoad, onTheFerry, missing: Math.max(0, amount - stored - onTheRoad - onTheFerry) };
-  });
-  const costCents =
-    market === null ? 0 : lines.reduce((sum, line) => sum + line.missing * applyPermille(market.prices[line.good], content.rules.buyMarkupPermille), 0);
+  const lines = materialLines(island, building, content);
+  const costCents = market === null ? 0 : materialsCostCents(market, content, lines);
   return { lines, costCents, shortfallCents: Math.max(0, costCents - island.coinsCents) };
 }

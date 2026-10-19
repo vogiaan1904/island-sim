@@ -17,8 +17,8 @@ export type {
 export { createWorld } from './world.ts';
 export { CONDITION_ORDER, HIGH_PRIORITY, LOW_PRIORITY, NORMAL_PRIORITY, isBuilt, newBuilding, shownStatus } from './buildings.ts';
 export { SIM_VERSION, contentHash } from './version.ts';
-export type { PlacementCheck, PlacementCheckId, PlacementReport } from './placement.ts';
-export { checkPlacement, findDockSpot, footprintSize, footprintTiles } from './placement.ts';
+export type { PlacementCheck, PlacementCheckId, PlacementReport, RoadReport } from './placement.ts';
+export { checkPlacement, checkRoad, findDockSpot, footprintSize, footprintTiles } from './placement.ts';
 export type { Command, CommandMeta, CommandResult, ReasonCode } from './commands/types.ts';
 export type { GoodsEntry, GoodsReason, LedgerEntry, LedgerReason, MoneyEntry } from './ledger.ts';
 export type { SimEvent } from './events.ts';
@@ -39,5 +39,7 @@ export type { RoadsFrom } from './roads.ts';
 export { accessTiles, roadsFrom } from './roads.ts';
 export { childrenOf, residentsOf, workersOf } from './people.ts';
 export { buyPriceCents, mainlandPaysEnough, storedForSale } from './mainland.ts';
+export type { MaterialLine } from './materials.ts';
+export { materialLines, materialsCostCents } from './materials.ts';
 export type { EntityCapture, EntityChange, WorldChanges } from './changes.ts';
 export { applyChanges, captureEntities, diffEntities, islandFromEntities, worldEntities } from './changes.ts';

@@ -106,7 +106,7 @@ export function dispatchGoods(ctx: TickContext, island: IslandState): void {
 }
 
 /** Units on the roads to a building: of one good, or of every good when good is null. */
-function inbound(island: IslandState, to: number, good: GoodId | null): number {
+export function inbound(island: IslandState, to: number, good: GoodId | null): number {
   let total = 0;
   for (const shipment of island.transit) {
     if (shipment.to === to && (good === null || shipment.good === good)) total += shipment.amount;

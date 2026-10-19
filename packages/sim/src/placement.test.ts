@@ -2,7 +2,7 @@ import { content } from '@island/content';
 import { describe, expect, it } from 'vitest';
 import { SMALL, building, islandOf, smallWorld } from '../test/fixtures.ts';
 import { buildingDefOf } from './lookup.ts';
-import { checkPlacement, findDockSpot, footprintSize, occupancyGrid } from './placement.ts';
+import { checkPlacement, checkRoad, findDockSpot, footprintSize, occupancyGrid } from './placement.ts';
 import type { IslandState, Rotation } from './state.ts';
 import { createWorld } from './world.ts';
 
@@ -82,5 +82,34 @@ describe('findDockSpot', () => {
         expect(findDockSpot(generated, content), `seed ${seed} slot ${generated.slot}`).not.toBeNull();
       }
     }
+  });
+});
+
+describe('checkRoad', () => {
+  // DEFAULT_MAP: a road along row 3 from x=2 to x=5, water at the rim.
+  it('counts only new tiles once and prices them', () => {
+    const report = checkRoad(island(), SMALL, [[2, 5], [3, 5], [2, 5], [2, 3]]);
+    expect(report).toMatchObject({ ok: true, reason: null, problems: [], costCents: 2 * SMALL.rules.roadPricePerTileCents, shortfallCents: 0 });
+    expect(report.newTiles).toEqual([5 * 8 + 2, 5 * 8 + 3]);
+  });
+
+  it('lists every kind of bad tile in order and refuses with the first', () => {
+    const report = checkRoad(island(), SMALL, [[2, 5], [0, 0], [8, 0]]);
+    expect(report.ok).toBe(false);
+    expect(report.reason).toBe('bad-terrain');
+    expect(report.problems).toEqual(['bad-terrain', 'out-of-bounds']);
+  });
+
+  it('names under-a-building, nothing new, too many, bad input and a coin shortfall', () => {
+    const w = smallWorld(undefined, 1_500);
+    const i = islandOf(w, 0);
+    i.buildings.push(building('cottage', 1, 2, 2));
+    expect(checkRoad(i, SMALL, [[2, 2]]).reason).toBe('tile-occupied');
+    expect(checkRoad(i, SMALL, [[2, 3]]).reason).toBe('nothing-to-build');
+    expect(checkRoad(i, SMALL, Array.from({ length: 65 }, () => [2, 5])).reason).toBe('too-many-tiles');
+    expect(checkRoad(i, SMALL, []).reason).toBe('bad-input');
+    expect(checkRoad(i, SMALL, [[2.5, 5]]).reason).toBe('bad-input');
+    expect(checkRoad(i, SMALL, 'x').reason).toBe('bad-input');
+    expect(checkRoad(i, SMALL, [[2, 5], [3, 5]])).toMatchObject({ ok: false, reason: 'not-enough-coins', costCents: 2_000, shortfallCents: 500 });
   });
 });

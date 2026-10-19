@@ -2,7 +2,7 @@ import type { Content, GoodDef, GoodId } from '@island/content';
 import { isBuilt, withDefs } from './buildings.ts';
 import { applyPermille } from './int.ts';
 import { credit, loseGoods, type LedgerEntry } from './ledger.ts';
-import type { IslandState, WorldState } from './state.ts';
+import type { IslandState, MarketState, WorldState } from './state.ts';
 import { stockOf } from './stock.ts';
 
 // Trading with the Mainland (spec 2.5, 4.5, 12.1). Sales come out of the island's stores (the dock and warehouses),
@@ -19,8 +19,8 @@ export function mainlandPaysEnough(world: WorldState, good: GoodDef): boolean {
 }
 
 /** What buying one unit from the Mainland costs now. */
-export function buyPriceCents(world: WorldState, content: Content, good: GoodId): number {
-  return applyPermille(world.market.prices[good], content.rules.buyMarkupPermille);
+export function buyPriceCents(market: MarketState, content: Content, good: GoodId): number {
+  return applyPermille(market.prices[good], content.rules.buyMarkupPermille);
 }
 
 /** Units of a good in the island's built stores. */

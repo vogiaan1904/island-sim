@@ -1,8 +1,6 @@
-import { buyPriceCents } from '../mainland.ts';
+import { materialLines, materialsCostCents } from '../materials.ts';
 import { pay } from '../ledger.ts';
 import { findBuildingDef } from '../lookup.ts';
-import { incoming } from '../passes/transport.ts';
-import { stockOf } from '../stock.ts';
 import { accept, claimedIsland, findBuilding, reject, type CommandContext } from './context.ts';
 import type { BuyMaterialsCommand, CommandResult } from './types.ts';
 
@@ -20,11 +18,10 @@ export function buyMaterials(ctx: CommandContext, command: BuyMaterialsCommand):
   const landmark = findBuildingDef(content, site.type)?.landmark;
   if (!landmark || site.constructionLeft === 0) return reject('not-a-landmark-site');
 
-  const order = landmark.materials
-    .map(({ good, amount }) => ({ good, amount: amount - stockOf(site.stock, good) - incoming(island, site.id, good) }))
-    .filter((item) => item.amount > 0);
-  if (order.length === 0) return reject('nothing-missing');
-  const costCents = order.reduce((sum, item) => sum + item.amount * buyPriceCents(world, content, item.good), 0);
+  const lines = materialLines(island, site, content).filter((line) => line.missing > 0);
+  if (lines.length === 0) return reject('nothing-missing');
+  const order = lines.map(({ good, missing }) => ({ good, amount: missing }));
+  const costCents = materialsCostCents(world.market, content, lines);
   if (island.coinsCents < costCents) return reject('not-enough-coins', costCents - island.coinsCents);
 
   pay(island, costCents, 'materials-purchase', ctx.ledger);

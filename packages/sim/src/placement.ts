@@ -1,4 +1,6 @@
 import type { BuildingDef, Content } from '@island/content';
+import { isWhole } from './commands/context.ts';
+import type { ReasonCode } from './commands/types.ts';
 import { NEIGHBORS4, inBounds, isLand, isRoad, tileIndex } from './grid.ts';
 import { buildingDefOf } from './lookup.ts';
 import type { IslandState, Rotation } from './state.ts';
@@ -119,4 +121,72 @@ export function findDockSpot(island: IslandState, content: Content): { x: number
     }
   }
   return null;
+}
+
+/** What a road drag would do: the same answer `place-road` acts on, so the client's preview runs exactly the server's rule. */
+export interface RoadReport {
+  ok: boolean;
+  /** The reason `place-road` refuses with (the first one it meets), or null when it would build. */
+  reason: ReasonCode | null;
+  /** Every kind of bad tile met, in the order first seen, so a preview can label them all. */
+  problems: Array<'bad-input' | 'out-of-bounds' | 'bad-terrain' | 'tile-occupied'>;
+  /** Tile indexes (row-major) that would become road: not road yet, no duplicates. */
+  newTiles: number[];
+  /** Price of the new tiles, in cents (0 while a tile is bad). */
+  costCents: number;
+  /** Cents missing for that price; 0 when affordable or while a tile is bad. */
+  shortfallCents: number;
+}
+
+/** `tiles` is untrusted: anything but 1..max [x, y] pairs of whole numbers is 'bad-input' or 'too-many-tiles'. */
+export function checkRoad(island: IslandState, content: Content, tiles: unknown): RoadReport {
+  const refused = (reason: ReasonCode): RoadReport => ({
+    ok: false,
+    reason,
+    problems: [],
+    newTiles: [],
+    costCents: 0,
+    shortfallCents: 0,
+  });
+  if (!Array.isArray(tiles) || tiles.length === 0) return refused('bad-input');
+  if (tiles.length > content.rules.maxRoadTilesPerCommand) return refused('too-many-tiles');
+
+  const size = content.rules.islandSize;
+  const occupancy = occupancyGrid(island, content);
+  const problems: RoadReport['problems'] = [];
+  const note = (problem: RoadReport['problems'][number]) => {
+    if (!problems.includes(problem)) problems.push(problem);
+  };
+  const newTiles: number[] = [];
+  const seen = new Set<number>();
+  for (const tile of tiles as unknown[]) {
+    if (!Array.isArray(tile) || tile.length !== 2) {
+      note('bad-input');
+      continue;
+    }
+    const [x, y] = tile as [unknown, unknown];
+    if (!isWhole(x) || !isWhole(y)) note('bad-input');
+    else if (!inBounds(size, x, y)) note('out-of-bounds');
+    else if (!isLand(island, size, x, y)) note('bad-terrain');
+    else {
+      const index = tileIndex(size, x, y);
+      if (occupancy[index] !== 0) note('tile-occupied');
+      else if (island.roads[index] !== '1' && !seen.has(index)) {
+        seen.add(index);
+        newTiles.push(index);
+      }
+    }
+  }
+  if (problems.length > 0) return { ...refused(problems[0]!), problems };
+  if (newTiles.length === 0) return refused('nothing-to-build');
+  const costCents = newTiles.length * content.rules.roadPricePerTileCents;
+  const shortfallCents = Math.max(0, costCents - island.coinsCents);
+  return {
+    ok: shortfallCents === 0,
+    reason: shortfallCents === 0 ? null : 'not-enough-coins',
+    problems,
+    newTiles,
+    costCents,
+    shortfallCents,
+  };
 }
