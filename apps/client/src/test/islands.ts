@@ -3,7 +3,7 @@ import type { IslandMessage } from '@island/protocol';
 import { applyCommand, createWorld, worldEntities, type IslandState, type WorldState } from '@island/sim';
 
 /**
- * A world on seed 42 with Alice's island claimed on slot 0 (her dock at 12,26), made with the sim's own commands, as
+ * A world on seed 42 with Alice's island claimed on slot 0 (her dock at 31,56), made with the sim's own commands, as
  * the server would make it. For tests that need a real island without a server.
  */
 export function aliceWorld(): WorldState {

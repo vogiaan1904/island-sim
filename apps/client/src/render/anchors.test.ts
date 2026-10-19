@@ -14,17 +14,17 @@ describe('bubble anchors', () => {
   const dock = islandOf(aliceWorld()).buildings[0]!;
 
   it('floats above the middle of the footprint', () => {
-    // The dock is 2 x 2 tiles from tile (12, 26): its middle is (52, 108) on the ground.
+    // The dock is 2 x 2 tiles from tile (31, 56): its middle is (128, 228) on the ground.
     const anchor = buildingAnchor(dock, content);
-    expect(anchor.x).toBe(52);
-    expect(anchor.z).toBe(108);
+    expect(anchor.x).toBe(128);
+    expect(anchor.z).toBe(228);
     expect(anchor.y).toBeGreaterThan(0);
   });
 
   it('uses the turned footprint, so a turned fishing hut is centered on its swapped size', () => {
-    const hut: BuildingState = { ...dock, id: 5, type: 'fishing-hut', x: 15, y: 26, rotation: 1 };
+    const hut: BuildingState = { ...dock, id: 5, type: 'fishing-hut', x: 34, y: 56, rotation: 1 };
     const anchor = buildingAnchor(hut, content);
-    expect([anchor.x, anchor.z]).toEqual([64, 106]);
+    expect([anchor.x, anchor.z]).toEqual([140, 226]);
   });
 
   it('floats higher over a bigger building', () => {
@@ -34,7 +34,7 @@ describe('bubble anchors', () => {
   });
 
   it('has an island anchor in the middle of the grid for rewards with no building to sit over', () => {
-    expect(islandAnchor(content)).toMatchObject({ x: 64, z: 64 });
+    expect(islandAnchor(content)).toMatchObject({ x: 128, z: 128 });
   });
 });
 

@@ -48,20 +48,20 @@ async function friends(overrides: Partial<ServerConfig> = {}) {
 }
 
 const ROAD: Array<[number, number]> = [];
-for (let y = 27; y >= 14; y -= 1) ROAD.push([14, y]);
-for (const y of [23, 19, 15]) for (let x = 8; x <= 20; x += 1) if (x !== 14) ROAD.push([x, y]);
+for (let y = 55; y >= 42; y -= 1) ROAD.push([32, y]);
+for (const y of [51, 47, 43]) for (let x = 26; x <= 38; x += 1) if (x !== 32) ROAD.push([x, y]);
 
 /** The pacing bot's first commands on seed 42 (packages/sim/test/scenarios.ts), without the slot. */
 const OUTPOST_START: PlayerCommand[] = [
   { type: 'place-road', tiles: ROAD },
   { type: 'set-auto-sell', good: 'wood', keep: 150 },
-  { type: 'place-building', building: 'fishing-hut', x: 15, y: 26, rotation: 1 },
+  { type: 'place-building', building: 'fishing-hut', x: 28, y: 52, rotation: 0 },
   { type: 'hire-commuters', count: 6 },
-  { type: 'place-building', building: 'farm', x: 11, y: 24, rotation: 0 },
-  { type: 'place-building', building: 'market', x: 12, y: 21, rotation: 0 },
-  { type: 'place-building', building: 'well', x: 10, y: 24, rotation: 0 },
-  { type: 'place-building', building: 'cottage', x: 15, y: 25, rotation: 0 },
-  { type: 'place-building', building: 'lumber-camp', x: 16, y: 24, rotation: 0 },
+  { type: 'place-building', building: 'farm', x: 33, y: 55, rotation: 0 },
+  { type: 'place-building', building: 'market', x: 30, y: 54, rotation: 0 },
+  { type: 'place-building', building: 'well', x: 31, y: 53, rotation: 0 },
+  { type: 'place-building', building: 'cottage', x: 31, y: 52, rotation: 0 },
+  { type: 'place-building', building: 'lumber-camp', x: 33, y: 52, rotation: 0 },
 ];
 
 const hash = (entities: Iterable<[string, unknown]>) => stateHash(Object.fromEntries(entities));
@@ -114,7 +114,7 @@ describe('an open island', () => {
     expect(island.summary.islands.map((i) => i.owner)).toEqual(['alice', 'bob']);
     expect(server.store.commandsAfter(runtime.id, 2).map((c) => JSON.parse(c.command))).toEqual([{ type: 'check-in', slot: 0 }]);
 
-    const result = await alice.command({ type: 'place-road', tiles: [[14, 26], [14, 25]] });
+    const result = await alice.command({ type: 'place-road', tiles: [[33, 56], [33, 55]] });
     expect(result).toEqual({ type: 'result', requestId: 1, ok: true, data: { tilesBuilt: 2 } });
     const update = await alice.next('update');
     expect(update).toMatchObject({ world: runtime.id, tick: 60, source: 4, removed: [], events: [] });
@@ -173,7 +173,7 @@ describe('an open island', () => {
     const visit = await bob.open(runtime.id, 0);
     expect([visit.own, visit.news]).toEqual([false, []]);
     expect(await bob.command({ type: 'hire-commuters', count: 1 })).toMatchObject({ ok: false, reason: 'not-your-island' });
-    await alice.command({ type: 'place-road', tiles: [[14, 26]] });
+    await alice.command({ type: 'place-road', tiles: [[33, 56]] });
     expect((await bob.next('update')).changed.map((c) => c.key)).toEqual(['island/0', 'roads/0']);
     carol.send({ type: 'open-island', world: runtime.id, slot: 0 });
     expect(await carol.next('error')).toEqual({ type: 'error', reason: 'not-a-member' });
@@ -238,8 +238,8 @@ describe('the news', () => {
     expect(first.news.map((e) => [e.type, e.slot])).toEqual([['island-claimed', 0]]);
     const [claimed] = first.news;
     alice.send({ type: 'mark-seen', key: { tick: claimed?.tick, source: claimed?.source, index: claimed?.index } });
-    await alice.command({ type: 'place-road', tiles: [[14, 24], [14, 25], [14, 26]] });
-    expect((await alice.command({ type: 'place-building', building: 'cottage', x: 13, y: 24, rotation: 0 })).ok).toBe(true);
+    await alice.command({ type: 'place-road', tiles: [[33, 54], [33, 55], [33, 56]] });
+    expect((await alice.command({ type: 'place-building', building: 'cottage', x: 32, y: 54, rotation: 0 })).ok).toBe(true);
     expect((await alice.open(runtime.id, 0)).news.map((e) => e.type)).toEqual(['construction-started']);
     alice.send({ type: 'mark-seen', key: { tick: 0, source: 0, index: 0 } });
     expect((await alice.open(runtime.id, 0)).news.map((e) => e.type)).toEqual(['construction-started']);

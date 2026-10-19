@@ -16,8 +16,8 @@ afterEach(async () => {
   running = [];
 });
 
-const road: Command = { type: 'place-road', slot: 0, tiles: Array.from({ length: 12 }, (_, i) => [14, 26 - i] as const) };
-const cottage: Command = { type: 'place-building', slot: 0, building: 'cottage', x: 13, y: 24, rotation: 0 };
+const road: Command = { type: 'place-road', slot: 0, tiles: Array.from({ length: 12 }, (_, i) => [33, 56 - i] as const) };
+const cottage: Command = { type: 'place-building', slot: 0, building: 'cottage', x: 32, y: 54, rotation: 0 };
 const hire: Command = { type: 'hire-commuters', slot: 0, count: 3 };
 
 /** Starts a server on a database file that outlives it, sharing one clock across restarts. */

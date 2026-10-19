@@ -35,7 +35,7 @@ describe('the labels on the ghost', () => {
 
   it('shows the verdict words over a building that can go where it is aimed', () => {
     const { game, container } = show();
-    aim(game, cottageAt(15, 25));
+    aim(game, cottageAt(34, 55));
     expect(screen.getByTestId('ghost-labels')).toHaveTextContent('Road access');
     expectNoEmoji(container);
   });
@@ -54,11 +54,11 @@ describe('the labels on the ghost', () => {
 
   it('is not there on a friend\'s island, nor while the building lands', () => {
     const visit = show(false);
-    aim(visit.game, cottageAt(15, 25));
+    aim(visit.game, cottageAt(34, 55));
     expect(screen.queryByTestId('ghost-labels')).not.toBeInTheDocument();
     visit.unmount();
     const { game } = show();
-    aim(game, { ...cottageAt(15, 25), phase: 'landing' as const });
+    aim(game, { ...cottageAt(34, 55), phase: 'landing' as const });
     expect(screen.queryByTestId('ghost-labels')).not.toBeInTheDocument();
   });
 });

@@ -15,15 +15,15 @@ let nextId = 100;
 
 function add(world: WorldState, type: BuildingId, patch: (b: BuildingState) => void = () => {}): BuildingState {
   const def = content.buildings.find((d) => d.id === type)!;
-  const building = { ...newBuilding(def, nextId++, 14, 14, 0), constructionLeft: 0, conditions: [] as ConditionId[] };
+  const building = { ...newBuilding(def, nextId++, 30, 52, 0), constructionLeft: 0, conditions: [] as ConditionId[] };
   patch(building);
   islandOf(world).buildings.push(building);
   return building;
 }
 
-/** The camera looks at the middle of the island from the opening distance, so every bubble is on screen. */
+/** The camera looks at the dock's corner of the island from the opening distance, so every bubble is on screen. */
 function lookAtMiddle(game: Game, distance = ISLAND_LIMITS.startDistance) {
-  game.store.getState().cameraGesture({ kind: 'fly-to', x: 64, z: 64, distance, instant: true });
+  game.store.getState().cameraGesture({ kind: 'fly-to', x: 128, z: 214, distance, instant: true });
 }
 
 function show(world: WorldState, own = true) {
@@ -245,7 +245,7 @@ describe('following the camera and zoom', () => {
     const bubble = screen.getByRole('button', { name: 'Farm: No workers' });
     const before = bubble.style.transform;
     expect(before).toMatch(/translate/);
-    act(() => game.store.getState().cameraGesture({ kind: 'fly-to', x: 90, z: 64, instant: true }));
+    act(() => game.store.getState().cameraGesture({ kind: 'fly-to', x: 154, z: 214, instant: true }));
     await waitFor(() => expect(bubble.style.transform).not.toBe(before));
   });
 
@@ -264,11 +264,11 @@ describe('following the camera and zoom', () => {
 
   it('shrinks to dots with only problems when zoomed out to the whole island, and comes back when zoomed in', async () => {
     const { game } = show(farmAndReward());
-    act(() => game.store.getState().cameraGesture({ kind: 'fly-to', x: 64, z: 64, distance: ISLAND_LIMITS.maxDistance, instant: true }));
+    act(() => game.store.getState().cameraGesture({ kind: 'fly-to', x: 128, z: 214, distance: ISLAND_LIMITS.maxDistance, instant: true }));
     await waitFor(() => expect(screen.getAllByRole('button')).toHaveLength(1));
     const dot = screen.getByRole('button', { name: 'Farm: No workers' });
     expect(dot).toHaveAttribute('data-detail', 'dots');
-    act(() => game.store.getState().cameraGesture({ kind: 'fly-to', x: 64, z: 70, distance: 110, instant: true }));
+    act(() => game.store.getState().cameraGesture({ kind: 'fly-to', x: 128, z: 220, distance: 110, instant: true }));
     await waitFor(() => expect(screen.getAllByRole('button')).toHaveLength(3));
     expect(screen.getByRole('button', { name: 'Farm: No workers' })).toHaveAttribute('data-detail', 'full');
   });

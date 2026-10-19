@@ -28,13 +28,13 @@ describe('golden scenario: first buildings', () => {
     expect(palmCove.buildings.every((b) => b.constructionLeft === 0)).toBe(true);
     expect(palmCove.rewards).toEqual(['first-farm']);
     expect(islandOf(world, 1).owner).toBe('bob');
-    expect(stateHash(world)).toBe('0cfd5199ca57f1');
+    expect(stateHash(world)).toBe('0cf149ea3391f7');
   });
 });
 
 describe('golden scenario: Outpost to Settlement', () => {
-  it('grows the island to 12 residents and finishes the Island Hall, starting Settlement at tick 14,465', () => {
-    const { world, log } = runScript(42, OUTPOST_TO_SETTLEMENT, 14_464);
+  it('grows the island to 12 residents and finishes the Island Hall, starting Settlement at tick 14,468', () => {
+    const { world, log } = runScript(42, OUTPOST_TO_SETTLEMENT, 14_467);
     expect(log).toHaveLength(25);
     const isle = islandOf(world, 0);
     expect(isle.stage).toBe('outpost');
@@ -45,7 +45,7 @@ describe('golden scenario: Outpost to Settlement', () => {
     const { events } = tickWorld(world, content);
     expect(events.map((e) => e.type)).toEqual(['construction-finished', 'stage-reached']);
     expect(isle.stage).toBe('settlement');
-    expect(stateHash(world)).toBe('15d0814b88f486');
+    expect(stateHash(world)).toBe('1c642b051d11dc');
   }, 60_000);
 });
 
@@ -71,6 +71,6 @@ describe('golden scenario: a stuck island recovers', () => {
     const isle = islandOf(world, 0);
     expect(residentsOf(isle)).toBe(12);
     expect(isle.coinsCents).toBeGreaterThan(15_000);
-    expect(stateHash(world)).toBe('05650f9d1a0a35');
+    expect(stateHash(world)).toBe('0fe591e72a7994');
   }, 60_000);
 });

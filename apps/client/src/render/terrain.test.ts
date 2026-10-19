@@ -8,8 +8,10 @@ const SIZE = content.rules.islandSize;
 const terrain = islandOf(aliceWorld()).terrain;
 
 /** The six vertices (two triangles) of one tile: positions and colors. */
+const CHUNKS = terrainChunks(terrain, SIZE);
+
 function tile(tx: number, ty: number) {
-  const chunks = terrainChunks(terrain, SIZE);
+  const chunks = CHUNKS;
   const chunk = chunks.find((c) => c.x0 === tx - (tx % TERRAIN_CHUNK_TILES) && c.y0 === ty - (ty % TERRAIN_CHUNK_TILES))!;
   const local = (ty - chunk.y0) * chunk.tiles + (tx - chunk.x0);
   const positions = Array.from(chunk.positions.slice(local * 18, local * 18 + 18));

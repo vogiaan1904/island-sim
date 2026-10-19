@@ -56,9 +56,9 @@ describe('the mirror store', () => {
     expect(state.island!.state).toEqual(runtime.world.islands[0]);
 
     const seen = player.received.length;
-    state = commandSent(state, 1, { type: 'place-road', tiles: [[14, 26], [14, 25]] });
+    state = commandSent(state, 1, { type: 'place-road', tiles: [[33, 56], [33, 55]] });
     expect(state.commands[1]).toMatchObject({ status: 'pending' });
-    await player.command({ type: 'place-road', tiles: [[14, 26], [14, 25]] });
+    await player.command({ type: 'place-road', tiles: [[33, 56], [33, 55]] });
     const target = runtime.world.tick + 12;
     tick(12);
     await player.next('update', (m) => m.source === 0 && m.tick === target);
@@ -66,14 +66,14 @@ describe('the mirror store', () => {
 
     expect(state.commands[1]).toEqual({
       requestId: 1,
-      command: { type: 'place-road', tiles: [[14, 26], [14, 25]] },
+      command: { type: 'place-road', tiles: [[33, 56], [33, 55]] },
       status: 'ok',
       data: { tilesBuilt: 2 },
     });
     expect(state.island!.tick).toBe(runtime.world.tick);
     expect(islandFromEntities(state.island!.entities, 0)).toEqual(runtime.world.islands[0]);
     expect(state.island!.state).toEqual(runtime.world.islands[0]);
-    expect(state.island!.state.roads[26 * 32 + 14]).toBe('1');
+    expect(state.island!.state.roads[56 * 64 + 33]).toBe('1');
   });
 
   it('settles a refused command with its reason and shortfall', async () => {
@@ -114,8 +114,8 @@ describe('the mirror store', () => {
     let state = feed(initialClientState(), player.received);
     expect(state.island!.summary.islands.map((i) => i.name)).toEqual(['Palm Cove', 'Coral Bay']);
     const seen = player.received.length;
-    await player.command({ type: 'place-road', tiles: [[14, 26], [14, 25]] });
-    await player.command({ type: 'place-building', building: 'cottage', x: 15, y: 25, rotation: 0 });
+    await player.command({ type: 'place-road', tiles: [[33, 56], [33, 55]] });
+    await player.command({ type: 'place-building', building: 'cottage', x: 34, y: 55, rotation: 0 });
     tick(1);
     await player.next('update', (m) => m.source === 0);
     state = feed(state, player.received.slice(seen));

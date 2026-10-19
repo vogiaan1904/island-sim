@@ -144,7 +144,7 @@ describe('findDockSpot', () => {
         expect(findDockSpot(generated, content), `seed ${seed} slot ${generated.slot}`).not.toBeNull();
       }
     }
-  });
+  }, 30_000);
 });
 
 describe('checkRoad', () => {
@@ -168,7 +168,7 @@ describe('checkRoad', () => {
     i.buildings.push(building('cottage', 1, 2, 2));
     expect(checkRoad(i, SMALL, [[2, 2]]).reason).toBe('tile-occupied');
     expect(checkRoad(i, SMALL, [[2, 3]]).reason).toBe('nothing-to-build');
-    expect(checkRoad(i, SMALL, Array.from({ length: 65 }, () => [2, 5])).reason).toBe('too-many-tiles');
+    expect(checkRoad(i, SMALL, Array.from({ length: SMALL.rules.maxRoadTilesPerCommand + 1 }, () => [2, 5])).reason).toBe('too-many-tiles');
     expect(checkRoad(i, SMALL, []).reason).toBe('bad-input');
     expect(checkRoad(i, SMALL, [[2.5, 5]]).reason).toBe('bad-input');
     expect(checkRoad(i, SMALL, 'x').reason).toBe('bad-input');

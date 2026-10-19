@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { aliceWorld, runTicks, worldDeps } from '../../test/support.ts';
 import type { RuntimeEvent } from './runtime.ts';
 
-const road: Command = { type: 'place-road', slot: 0, tiles: Array.from({ length: 12 }, (_, i) => [14, 26 - i] as const) };
+const road: Command = { type: 'place-road', slot: 0, tiles: Array.from({ length: 12 }, (_, i) => [33, 56 - i] as const) };
 const hire: Command = { type: 'hire-commuters', slot: 0, count: 4 };
-const fishingHut: Command = { type: 'place-building', slot: 0, building: 'fishing-hut', x: 15, y: 25, rotation: 0 };
+const fishingHut: Command = { type: 'place-building', slot: 0, building: 'fishing-hut', x: 34, y: 56, rotation: 0 };
 
 afterEach(() => {
   vi.useRealTimers();

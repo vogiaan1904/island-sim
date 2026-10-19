@@ -41,7 +41,7 @@ describe('place-road', () => {
     const cottage = { type: 'place-building', slot: 0, building: 'cottage', x: 2, y: 2, rotation: 0 } as Command;
     expect(applyCommand(world, SMALL, cottage, { sequence: 1 }).ok).toBe(true);
     expect(road(world, [[2, 2]])).toMatchObject({ ok: false, reason: 'tile-occupied' });
-    expect(road(smallWorld(), Array.from({ length: 65 }, () => [2, 2]))).toMatchObject({
+    expect(road(smallWorld(), Array.from({ length: SMALL.rules.maxRoadTilesPerCommand + 1 }, () => [2, 2]))).toMatchObject({
       ok: false,
       reason: 'too-many-tiles',
     });

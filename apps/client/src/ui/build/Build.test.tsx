@@ -123,7 +123,7 @@ describe('the placement panel', () => {
   it('shows the building, its price, a sentence about it, its size and the three controls', async () => {
     const { game, user } = show();
     await pick(user, 'Farm');
-    aim(game, 15, 22);
+    aim(game, 34, 52);
     const panel = screen.getByRole('region', { name: 'Placing Farm' });
     expect(within(panel).getByRole('heading', { name: 'Farm' })).toBeInTheDocument();
     expect(panel).toHaveTextContent('400');
@@ -143,7 +143,7 @@ describe('the placement panel', () => {
   it('labels the spot from the sim\'s own check, and blocks Place where it fails', async () => {
     const { game, user } = show();
     await pick(user, 'Cottage');
-    aim(game, 15, 25);
+    aim(game, 34, 55);
     expect(screen.getByRole('list', { name: 'Checks' })).toHaveTextContent('Road access');
     expect(screen.getByRole('button', { name: 'Place' })).toBeEnabled();
     aim(game, 0, 0);
@@ -154,7 +154,7 @@ describe('the placement panel', () => {
   it('disables Place with "Need N more coins" when the island is short', async () => {
     const { game, user } = show(15_050);
     await pick(user, 'Cottage');
-    aim(game, 15, 25);
+    aim(game, 34, 55);
     const place = screen.getByRole('button', { name: 'Need 50 more coins' });
     expect(place).toBeDisabled();
     await user.click(place);
@@ -175,9 +175,9 @@ describe('the placement panel', () => {
   it('sends the place-building command, and shows "placing" until the server answers', async () => {
     const { game, user } = show();
     await pick(user, 'Cottage');
-    aim(game, 15, 25);
+    aim(game, 34, 55);
     await user.click(screen.getByRole('button', { name: 'Place' }));
-    expect(game.session.command).toHaveBeenCalledWith({ type: 'place-building', building: 'cottage', x: 15, y: 25, rotation: 0 });
+    expect(game.session.command).toHaveBeenCalledWith({ type: 'place-building', building: 'cottage', x: 34, y: 55, rotation: 0 });
     expect(placement(game)).toMatchObject({ phase: 'placing', requestId: 7 });
     const place = screen.getByRole('button', { name: 'Placing' });
     expect(place).toBeDisabled();
@@ -189,7 +189,7 @@ describe('the placement panel', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const { game, user } = show();
     await pick(user, 'Cottage');
-    aim(game, 15, 25);
+    aim(game, 34, 55);
     await user.click(screen.getByRole('button', { name: 'Place' }));
     expect(placement(game)?.phase).toBe('placing');
     result(game, 7, { ok: true, data: { buildingId: 12 } });
@@ -202,21 +202,21 @@ describe('the placement panel', () => {
   it('keeps the ghost and says why when the server refuses, with no landing', async () => {
     const { game, user } = show();
     await pick(user, 'Cottage');
-    aim(game, 15, 25);
+    aim(game, 34, 55);
     await user.click(screen.getByRole('button', { name: 'Place' }));
     result(game, 7, { ok: false, reason: 'tile-occupied', shortfallCents: 0 });
-    expect(placement(game)).toMatchObject({ phase: 'aiming', x: 15, y: 25, refusal: { reason: 'tile-occupied' } });
+    expect(placement(game)).toMatchObject({ phase: 'aiming', x: 34, y: 55, refusal: { reason: 'tile-occupied' } });
     expect(screen.getByRole('alert')).toHaveTextContent('Something is already there');
     expect(screen.getByRole('button', { name: 'Place' })).toBeEnabled();
     // Moving the ghost clears the line.
-    aim(game, 15, 24);
+    aim(game, 34, 54);
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('goes back to aiming when the connection dropped before the answer', async () => {
     const { game, user } = show();
     await pick(user, 'Cottage');
-    aim(game, 15, 25);
+    aim(game, 34, 55);
     await user.click(screen.getByRole('button', { name: 'Place' }));
     act(() => game.store.getState().commandsLost());
     expect(placement(game)).toMatchObject({ phase: 'aiming', refusal: { reason: 'world-catching-up' } });
@@ -227,7 +227,7 @@ describe('the placement panel', () => {
     const { game, user } = show();
     vi.mocked(game.session.command).mockReturnValue(null);
     await pick(user, 'Cottage');
-    aim(game, 15, 25);
+    aim(game, 34, 55);
     await user.click(screen.getByRole('button', { name: 'Place' }));
     expect(placement(game)?.phase).toBe('aiming');
     expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -240,7 +240,7 @@ describe('the placement panel', () => {
 
   it('drops the placement when the island screen goes away', () => {
     const { game, unmount } = show();
-    act(() => game.store.getState().setView({ placement: startDraft('cottage', { x: 15, y: 25 }, content) }));
+    act(() => game.store.getState().setView({ placement: startDraft('cottage', { x: 34, y: 55 }, content) }));
     unmount();
     expect(placement(game)).toBeNull();
   });
@@ -248,7 +248,7 @@ describe('the placement panel', () => {
   it('shows no emoji', async () => {
     const { game, user, container } = show(15_050);
     await pick(user, 'Cottage');
-    aim(game, 25, 5);
+    aim(game, 44, 35);
     expectNoEmoji(container);
   });
 });

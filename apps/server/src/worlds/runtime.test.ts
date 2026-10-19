@@ -6,8 +6,8 @@ import { Worlds } from './registry.ts';
 import type { RuntimeEvent } from './runtime.ts';
 
 /** North from beside alice's dock on seed 42. */
-const road: Command = { type: 'place-road', slot: 0, tiles: Array.from({ length: 12 }, (_, i) => [14, 26 - i] as const) };
-const cottage: Command = { type: 'place-building', slot: 0, building: 'cottage', x: 13, y: 24, rotation: 0 };
+const road: Command = { type: 'place-road', slot: 0, tiles: Array.from({ length: 12 }, (_, i) => [33, 56 - i] as const) };
+const cottage: Command = { type: 'place-building', slot: 0, building: 'cottage', x: 32, y: 54, rotation: 0 };
 
 describe('Worlds.create', () => {
   it("claims the creator's island with the world's first logged command, after a snapshot of the empty world", () => {
@@ -53,7 +53,7 @@ describe('WorldRuntime', () => {
     const { runtime, clock, deps } = aliceWorld();
     runTicks(runtime, clock, 5);
     expect(runtime.apply(road, 'id-alice').ok).toBe(true);
-    expect(runtime.apply({ ...cottage, x: 14, y: 20 }, 'id-alice')).toMatchObject({ ok: false, reason: 'tile-occupied' });
+    expect(runtime.apply({ ...cottage, x: 33, y: 50 }, 'id-alice')).toMatchObject({ ok: false, reason: 'tile-occupied' });
     expect(runtime.apply(cottage, 'id-alice').ok).toBe(true);
     expect(deps.store.commandsAfter(runtime.id, 1).map((c) => [c.sequence, c.tick, c.accountId])).toEqual([
       [2, 5, 'id-alice'],

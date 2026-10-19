@@ -3,22 +3,37 @@ import { mulDivFloor } from './int.ts';
 import { draw, type RngHolder } from './rng.ts';
 
 /**
- * A seeded island in whole numbers only: a disc with a noisy rim, smoothed, kept as one connected piece with a
- * two-tile water margin. Land touching water becomes beach. Returns the row-major terrain string.
+ * A seeded island in whole numbers only: a disc whose rim reaches in and out by up to an eighth of the map, blended
+ * between random points an eighth of the map apart (so a bigger island keeps broad bays and headlands), smoothed, kept
+ * as one connected piece with a two-tile water margin and no inland ponds. Land touching water becomes beach. Returns the row-major
+ * terrain string.
  */
 export function generateIslandTerrain(rng: RngHolder, size: number): string {
   // Distances use doubled coordinates so tile centers (2x + 1) and the map center (size) stay whole.
   const radius = mulDivFloor(size, 11, 32) + draw(rng, 2);
-  const inner = 2 * (radius - 2);
-  const outer = 2 * (radius + 2);
+  const band = Math.max(2, mulDivFloor(size, 1, 8));
+  const step = Math.max(2, mulDivFloor(size, 1, 8));
+  const points = Math.floor(size / step) + 2;
+  const reach: number[] = [];
+  for (let i = 0; i < points * points; i += 1) reach.push(draw(rng, 2 * band + 1));
+  const at = (px: number, py: number) => reach[py * points + px] as number;
   let land: number[] = new Array<number>(size * size).fill(0);
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
-      const dx = 2 * x + 1 - size;
-      const dy = 2 * y + 1 - size;
-      const d2 = dx * dx + dy * dy;
-      if (d2 <= inner * inner) land[tileIndex(size, x, y)] = 1;
-      else if (d2 <= outer * outer) land[tileIndex(size, x, y)] = draw(rng, 2);
+      // How far the rim reaches here, blended between the four points around the tile (times step * step).
+      const px = Math.floor(x / step);
+      const py = Math.floor(y / step);
+      const fx = x - px * step;
+      const fy = y - py * step;
+      const blended =
+        at(px, py) * (step - fx) * (step - fy) +
+        at(px + 1, py) * fx * (step - fy) +
+        at(px, py + 1) * (step - fx) * fy +
+        at(px + 1, py + 1) * fx * fy;
+      const edge = 2 * (radius - band) * step * step + 2 * blended;
+      const dx = (2 * x + 1 - size) * step * step;
+      const dy = (2 * y + 1 - size) * step * step;
+      if (dx * dx + dy * dy <= edge * edge) land[tileIndex(size, x, y)] = 1;
     }
   }
   for (let pass = 0; pass < 4; pass += 1) land = smooth(land, size);
@@ -28,6 +43,7 @@ export function generateIslandTerrain(rng: RngHolder, size: number): string {
     }
   }
   land = keepCentralPiece(land, size);
+  land = fillPonds(land, size);
 
   let terrain = '';
   for (let y = 0; y < size; y += 1) {
@@ -60,6 +76,34 @@ function smooth(land: number[], size: number): number[] {
     }
   }
   return next;
+}
+
+/** Turns water that the open sea does not reach (4-neighbors from the map's edge) into land. */
+function fillPonds(land: number[], size: number): number[] {
+  const sea = new Array<number>(size * size).fill(0);
+  const queue: number[] = [];
+  for (let i = 0; i < size * size; i += 1) {
+    const x = i % size;
+    const y = Math.floor(i / size);
+    if ((x === 0 || y === 0 || x === size - 1 || y === size - 1) && land[i] === 0) {
+      sea[i] = 1;
+      queue.push(i);
+    }
+  }
+  for (let head = 0; head < queue.length; head += 1) {
+    const i = queue[head] as number;
+    for (const [ox, oy] of NEIGHBORS4) {
+      const nx = (i % size) + ox;
+      const ny = Math.floor(i / size) + oy;
+      if (!inBounds(size, nx, ny)) continue;
+      const n = tileIndex(size, nx, ny);
+      if (land[n] === 0 && sea[n] === 0) {
+        sea[n] = 1;
+        queue.push(n);
+      }
+    }
+  }
+  return sea.map((s) => (s === 1 ? 0 : 1));
 }
 
 /** Keeps only the land connected (4-neighbors) to the land tile nearest the center; ties go to the lower index. */

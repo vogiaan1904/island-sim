@@ -101,7 +101,7 @@ describe('the tile under a world point', () => {
   it('is the tile the point falls in, kept on the grid', () => {
     expect(tileAtWorld(0.5, 7.9, content)).toEqual({ x: 0, y: 1 });
     expect(tileAtWorld(63.9, 64, content)).toEqual({ x: 15, y: 16 });
-    expect(tileAtWorld(-20, 999, content)).toEqual({ x: 0, y: 31 });
+    expect(tileAtWorld(-20, 999, content)).toEqual({ x: 0, y: 63 });
   });
 });
 

@@ -160,11 +160,11 @@ export const content: Content = {
     { id: 'goal-completed', importance: 55 },
   ],
   rules: {
-    islandSize: 32,
+    islandSize: 64,
     slotCount: 10,
     startingCoinsCents: 500_000,
     roadPricePerTileCents: 1_000,
-    maxRoadTilesPerCommand: 64,
+    maxRoadTilesPerCommand: 128,
     islandName: { minLength: 2, maxLength: 24 },
     ticksPerDay: 1_440,
     activeIslandTicks: 241_920,

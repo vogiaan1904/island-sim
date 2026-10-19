@@ -6,8 +6,8 @@ import { LOOK, TILE_SIZE, type Rgb } from './look.ts';
 // A water tile whose two land sides meet at a corner gets that corner's half as flat beach, so a stepped coast reads as
 // a straight diagonal; every land tile stays whole, so nothing built hangs over the sea (decided in the look review).
 
-/** Tiles per chunk side: 16 gives 4 chunks (4 draw calls) for the 32-tile island. */
-export const TERRAIN_CHUNK_TILES = 16;
+/** Tiles per chunk side: 32 gives 4 chunks (4 draw calls) for the 64-tile island. */
+export const TERRAIN_CHUNK_TILES = 32;
 export const LAND_HEIGHT = 0;
 export const SEA_FLOOR_HEIGHT = -2.4;
 /** Where the water surface rests, below the land so the beach shows. */

@@ -27,7 +27,7 @@ describe('claim-island', () => {
       coinsCents: 500_000,
       lastCheckInTick: 0,
       buildings: [{ id: 1, type: 'dock', ...dockSpot, rotation: 0, constructionLeft: 0, conditions: [], stock: {} }],
-      staff: [{ id: 2, role: 'port-master', name: 'Kofi', look: 11 }],
+      staff: [{ id: 2, role: 'port-master', name: 'Ada', look: 5 }],
     });
     expect(world.nextId).toBe(3);
   });

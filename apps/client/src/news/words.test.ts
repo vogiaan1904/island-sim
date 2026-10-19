@@ -98,7 +98,7 @@ describe('where "Show me" flies', () => {
   });
 
   it('goes to the middle of the island when nothing says where, and for a building that is gone', () => {
-    const middle = { x: 64, z: 64 };
+    const middle = { x: 128, z: 128 };
     const bare = { ...island, buildings: [] };
     expect(eventPlace(bare, content, event('goal-completed', SAMPLE['goal-completed']))).toEqual(middle);
     expect(eventPlace(bare, content, event('construction-finished', { buildingId: 999, building: 'farm' }))).toEqual(middle);

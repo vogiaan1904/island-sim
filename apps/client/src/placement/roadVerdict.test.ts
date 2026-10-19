@@ -19,9 +19,9 @@ function freeLand(world: WorldState, n: number): Tile[] {
   const island = islandOf(world);
   const dock = island.buildings[0]!;
   const tiles: Tile[] = [];
-  for (let i = 0; i < 1024 && tiles.length < n; i += 1) {
-    const x = i % 32;
-    const y = Math.floor(i / 32);
+  for (let i = 0; i < content.rules.islandSize ** 2 && tiles.length < n; i += 1) {
+    const x = i % content.rules.islandSize;
+    const y = Math.floor(i / content.rules.islandSize);
     const underDock = x >= dock.x - 3 && x <= dock.x + 3 && y >= dock.y - 3 && y <= dock.y + 3;
     if (island.terrain[i] !== '0' && !underDock) tiles.push({ x, y });
   }
@@ -33,7 +33,7 @@ const column = (x: number, from: number, to: number): Tile[] => Array.from({ len
 describe('the road verdict', () => {
   it('prices a drag per new tile and gives the command the server takes', () => {
     const world = aliceWorld();
-    const tiles = column(16, 20, 24);
+    const tiles = column(35, 50, 54);
     const verdict = roadVerdict(islandOf(world), content, tiles);
     expect(verdict.ok).toBe(true);
     expect(verdict.costCents).toBe(5 * 1000);
@@ -47,15 +47,15 @@ describe('the road verdict', () => {
 
   it('does not charge for a tile that is already road, and refuses a drag that adds nothing', () => {
     const world = worldWithRoad();
-    const mixed = [...column(14, 20, 22), ...column(15, 22, 23)];
+    const mixed = [...column(33, 50, 52), ...column(34, 52, 53)];
     const verdict = roadVerdict(islandOf(world), content, mixed);
     expect(verdict.costCents).toBe(2 * 1000);
     expect(verdict.ok).toBe(true);
-    const nothing = roadVerdict(islandOf(world), content, column(14, 20, 22));
+    const nothing = roadVerdict(islandOf(world), content, column(33, 50, 52));
     expect(nothing.ok).toBe(false);
     expect(nothing.reason).toBe('nothing-to-build');
     expect(nothing.command).toBeNull();
-    expect(simSays(world, column(14, 20, 22)).answer).toMatchObject({ ok: false, reason: 'nothing-to-build' });
+    expect(simSays(world, column(33, 50, 52)).answer).toMatchObject({ ok: false, reason: 'nothing-to-build' });
   });
 
   it('says nothing while no tile has been dragged', () => {
@@ -80,7 +80,7 @@ describe('the road verdict', () => {
   it('names a tile that is off the island, in the water or under a building', () => {
     const world = worldWithRoad();
     const island = islandOf(world);
-    const off = roadVerdict(island, content, [{ x: 40, y: 3 }]);
+    const off = roadVerdict(island, content, [{ x: 70, y: 3 }]);
     expect(off.reason).toBe('out-of-bounds');
     expect(off.labels).toContainEqual({ id: 'in-bounds', ok: false, text: 'Off the island' });
     const water = roadVerdict(island, content, [{ x: 0, y: 0 }]);
@@ -133,21 +133,21 @@ describe('the removal verdict', () => {
 
   it('clears road for free and gives the command the server takes', () => {
     const world = worldWithRoad();
-    const verdict = removalVerdict(islandOf(world), content, column(14, 19, 21));
+    const verdict = removalVerdict(islandOf(world), content, column(33, 49, 51));
     expect(verdict).toMatchObject({ ok: true, costCents: 0, shortfallCents: 0, reason: null });
-    expect(verdict.command).toEqual({ type: 'remove-road', tiles: [[14, 19], [14, 20], [14, 21]] });
-    expect(removeSays(world, column(14, 19, 21)).ok).toBe(true);
+    expect(verdict.command).toEqual({ type: 'remove-road', tiles: [[33, 49], [33, 50], [33, 51]] });
+    expect(removeSays(world, column(33, 49, 51)).ok).toBe(true);
   });
 
   it('says a building would lose its road to the dock, as the sim refuses', () => {
     const world = worldWithRoad();
-    const placed = applyCommand(world, content, { type: 'place-building', slot: 0, building: 'cottage', x: 15, y: 18, rotation: 0 }, { sequence: 3 });
+    const placed = applyCommand(world, content, { type: 'place-building', slot: 0, building: 'cottage', x: 34, y: 48, rotation: 0 }, { sequence: 3 });
     expect(placed.ok).toBe(true);
-    const verdict = removalVerdict(islandOf(world), content, column(14, 20, 20));
+    const verdict = removalVerdict(islandOf(world), content, column(33, 50, 50));
     expect(verdict.ok).toBe(false);
     expect(verdict.command).toBeNull();
     expect(verdict.reason).toBe('cuts-off-building');
     expect(verdict.labels).toEqual([{ id: 'road-access', ok: false, text: 'A building would lose its road to the dock' }]);
-    expect(removeSays(world, column(14, 20, 20))).toMatchObject({ ok: false, reason: 'cuts-off-building' });
+    expect(removeSays(world, column(33, 50, 50))).toMatchObject({ ok: false, reason: 'cuts-off-building' });
   });
 });

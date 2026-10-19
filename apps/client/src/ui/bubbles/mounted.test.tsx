@@ -14,7 +14,7 @@ describe('the bubbles in the HUD', () => {
     islandOf(world).rewards = ['first-residents'] as GoalId[];
     const game = stubGame('playing');
     game.store.getState().receive(islandMessage(world));
-    game.store.getState().cameraGesture({ kind: 'fly-to', x: 64, z: 80, distance: ISLAND_LIMITS.startDistance, instant: true });
+    game.store.getState().cameraGesture({ kind: 'fly-to', x: 128, z: 214, distance: ISLAND_LIMITS.startDistance, instant: true });
     vi.mocked(game.session.command).mockImplementation((command) => {
       game.store.getState().commandSent(3, command);
       return 3;

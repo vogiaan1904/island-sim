@@ -85,14 +85,14 @@ describe('dragging a road along the grid', () => {
   it('stops at the most the sim takes in one command', () => {
     const limit = content.rules.maxRoadTilesPerCommand;
     let draft = draw(startRoadDraft(), 0, 0, true);
-    draft = draw(draft, 31, 0);
-    draft = draw(draft, 31, 31);
-    draft = draw(draft, 0, 31);
+    draft = draw(draft, 63, 0);
+    draft = draw(draft, 63, 63);
+    draft = draw(draft, 0, 63);
     expect(asRoad(draft).tiles).toHaveLength(limit);
   });
 
   it('keeps a tile off the grid on the nearest tile of it', () => {
-    expect(keys(draw(startRoadDraft(), -4, 99, true))).toEqual(['0,31']);
+    expect(keys(draw(startRoadDraft(), -4, 99, true))).toEqual(['0,63']);
   });
 
   it('forgets an old refusal as soon as the player draws', () => {

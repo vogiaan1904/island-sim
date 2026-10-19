@@ -14,7 +14,7 @@ export async function closeServers(): Promise<void> {
 }
 
 /**
- * A server with Alice's world on seed 42 (her dock at 12,26 on slot 0) and Bob's island on slot 1. Accounts alice and
+ * A server with Alice's world on seed 42 (her dock at 31,56 on slot 0) and Bob's island on slot 1. Accounts alice and
  * bob have the password 'password-1'. `tick` runs world ticks without waiting.
  */
 export async function aliceServer() {

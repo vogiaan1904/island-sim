@@ -38,7 +38,7 @@ describe('island instances', () => {
 });
 
 describe('the full Settlement island', () => {
-  const { world } = runScript(42, OUTPOST_TO_SETTLEMENT, 14_465);
+  const { world } = runScript(42, OUTPOST_TO_SETTLEMENT, 14_468);
   const island = islandOf(world);
   const instances = islandInstances(island, content);
 

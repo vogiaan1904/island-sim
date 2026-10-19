@@ -97,12 +97,12 @@ describe('the road panel', () => {
   it('shows the tiles and the cost as the road grows', async () => {
     const { game, user } = show();
     await pickRoad(user);
-    dragRoad(game, [16, 20], [16, 22]);
+    dragRoad(game, [35, 50], [35, 52]);
     const panel = screen.getByRole('region', { name: 'Placing Road' });
     expect(panel).toHaveTextContent('3 tiles');
     expect(panel).toHaveTextContent('30');
     expect(within(panel).getByRole('button', { name: 'Place' })).toBeEnabled();
-    dragRoad(game, [16, 22], [16, 24], false);
+    dragRoad(game, [35, 52], [35, 54], false);
     expect(panel).toHaveTextContent('5 tiles');
     expect(panel).toHaveTextContent('50');
   });
@@ -110,7 +110,7 @@ describe('the road panel', () => {
   it('says one tile in the singular', async () => {
     const { game, user } = show();
     await pickRoad(user);
-    dragRoad(game, [16, 20], [16, 20]);
+    dragRoad(game, [35, 50], [35, 50]);
     expect(screen.getByRole('region', { name: 'Placing Road' })).toHaveTextContent('1 tile');
     expect(screen.getByRole('region', { name: 'Placing Road' })).not.toHaveTextContent('1 tiles');
   });
@@ -118,9 +118,9 @@ describe('the road panel', () => {
   it('sends the place-road command with the dragged tiles, and shows "placing" until the server answers', async () => {
     const { game, user } = show();
     await pickRoad(user);
-    dragRoad(game, [16, 20], [16, 22]);
+    dragRoad(game, [35, 50], [35, 52]);
     await user.click(screen.getByRole('button', { name: 'Place' }));
-    expect(game.session.command).toHaveBeenCalledWith({ type: 'place-road', tiles: [[16, 20], [16, 21], [16, 22]] });
+    expect(game.session.command).toHaveBeenCalledWith({ type: 'place-road', tiles: [[35, 50], [35, 51], [35, 52]] });
     expect(placement(game)).toMatchObject({ kind: 'road', phase: 'placing', requestId: 7 });
     expect(screen.getByRole('button', { name: 'Placing' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Start over' })).toBeDisabled();
@@ -130,7 +130,7 @@ describe('the road panel', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const { game, user } = show();
     await pickRoad(user);
-    dragRoad(game, [16, 20], [16, 22]);
+    dragRoad(game, [35, 50], [35, 52]);
     await user.click(screen.getByRole('button', { name: 'Place' }));
     result(game, 7, { ok: true, data: { tilesBuilt: 3 } });
     expect(placement(game)).toMatchObject({ kind: 'road', phase: 'landing' });
@@ -142,7 +142,7 @@ describe('the road panel', () => {
   it('disables Place with "Need N more coins" when the road costs more than the island has', async () => {
     const { game, user } = show(2_500);
     await pickRoad(user);
-    dragRoad(game, [16, 20], [16, 22]);
+    dragRoad(game, [35, 50], [35, 52]);
     const place = screen.getByRole('button', { name: 'Need 5 more coins' });
     expect(place).toBeDisabled();
     await user.click(place);
@@ -160,11 +160,11 @@ describe('the road panel', () => {
   it('keeps the road and says why when the server refuses', async () => {
     const { game, user } = show();
     await pickRoad(user);
-    dragRoad(game, [16, 20], [16, 22]);
+    dragRoad(game, [35, 50], [35, 52]);
     await user.click(screen.getByRole('button', { name: 'Place' }));
     result(game, 7, { ok: false, reason: 'not-enough-coins', shortfallCents: 1_000 });
     expect(placement(game)).toMatchObject({ phase: 'aiming', refusal: { reason: 'not-enough-coins' } });
-    expect(placement(game)).toMatchObject({ tiles: [{ x: 16, y: 20 }, { x: 16, y: 21 }, { x: 16, y: 22 }] });
+    expect(placement(game)).toMatchObject({ tiles: [{ x: 35, y: 50 }, { x: 35, y: 51 }, { x: 35, y: 52 }] });
     expect(screen.getByRole('alert')).toHaveTextContent('Need 10 more coins');
     expect(screen.getByRole('button', { name: 'Place' })).toBeEnabled();
   });
@@ -172,11 +172,11 @@ describe('the road panel', () => {
   it('starts over with the tiles gone and Cancel drops the whole road', async () => {
     const { game, user } = show();
     await pickRoad(user);
-    dragRoad(game, [16, 20], [16, 22]);
+    dragRoad(game, [35, 50], [35, 52]);
     await user.click(screen.getByRole('button', { name: 'Start over' }));
     expect(placement(game)).toMatchObject({ kind: 'road', tiles: [] });
     expect(screen.getByRole('button', { name: 'Place' })).toBeDisabled();
-    dragRoad(game, [16, 20], [16, 21]);
+    dragRoad(game, [35, 50], [35, 51]);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(placement(game)).toBeNull();
   });
@@ -200,7 +200,7 @@ describe('switching between drawing and looking around', () => {
   it('keeps the dragged tiles while looking around', async () => {
     const { game, user } = show();
     await pickRoad(user);
-    dragRoad(game, [16, 20], [16, 22]);
+    dragRoad(game, [35, 50], [35, 52]);
     await user.click(screen.getByRole('button', { name: 'Look around' }));
     expect(screen.getByRole('region', { name: 'Placing Road' })).toHaveTextContent('3 tiles');
     expect(screen.getByRole('button', { name: 'Place' })).toBeEnabled();
@@ -216,12 +216,12 @@ describe('removing road', () => {
     await user.click(remove);
     expect(placement(game)).toMatchObject({ kind: 'road', removing: true });
     expect(screen.getByText('Drag over road to remove it')).toBeInTheDocument();
-    dragRoad(game, [13, 19], [15, 19]);
+    dragRoad(game, [32, 49], [34, 49]);
     const panel = screen.getByRole('region', { name: 'Placing Remove road' });
     expect(panel).toHaveTextContent('1 tile');
     expect(panel).toHaveTextContent('Removing road is free');
     await user.click(within(panel).getByRole('button', { name: 'Remove' }));
-    expect(game.session.command).toHaveBeenCalledWith({ type: 'remove-road', tiles: [[14, 19]] });
+    expect(game.session.command).toHaveBeenCalledWith({ type: 'remove-road', tiles: [[33, 49]] });
   });
 });
 
@@ -229,7 +229,7 @@ describe('roads and emoji', () => {
   it('shows no emoji', async () => {
     const { game, user, container } = show(2_500);
     await pickRoad(user);
-    dragRoad(game, [16, 20], [16, 22]);
+    dragRoad(game, [35, 50], [35, 52]);
     expectNoEmoji(container);
   });
 });

@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { aliceWorld, runTicks } from '../../test/support.ts';
 import { CONTENT_HASH, recoverWorld } from './recovery.ts';
 
-const road: Command = { type: 'place-road', slot: 0, tiles: Array.from({ length: 12 }, (_, i) => [14, 26 - i] as const) };
-const cottage: Command = { type: 'place-building', slot: 0, building: 'cottage', x: 13, y: 24, rotation: 0 };
-const secondCottage: Command = { ...cottage, x: 15, y: 24 };
+const road: Command = { type: 'place-road', slot: 0, tiles: Array.from({ length: 12 }, (_, i) => [33, 56 - i] as const) };
+const cottage: Command = { type: 'place-building', slot: 0, building: 'cottage', x: 32, y: 54, rotation: 0 };
+const secondCottage: Command = { ...cottage, x: 34, y: 54 };
 
 describe('recoverWorld', () => {
   it('rebuilds the exact live state from the newest snapshot and the commands logged after it', () => {
