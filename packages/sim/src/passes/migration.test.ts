@@ -99,3 +99,50 @@ describe('leaving', () => {
     expect(residents(happy, 1)).toBe(4);
   });
 });
+
+describe('the ferry manifest', () => {
+  const manifest = (world: WorldState) => islandOf(world, 0).ferry;
+
+  it('lists the morning newcomers by the home they moved into, and the commuters who came', () => {
+    const world = emptyTown(420);
+    islandOf(world, 0).commuters.hired = 2;
+    tickWorld(world, SMALL);
+    expect(manifest(world)).toEqual({
+      tick: world.tick,
+      off: { commuters: 2, homes: [{ home: 1, people: 4 }, { home: 7, people: 4 }] },
+      on: { commuters: 0, homes: [] },
+    });
+    expect(residents(world, 1)).toBe(4);
+    expect(residents(world, 7)).toBe(4);
+  });
+
+  it('lists the evening leavers by the home they left, the commuters going home and the evening newcomers', () => {
+    const world = town(1020);
+    buildingOf(world, 5).stock = {};
+    const home = buildingOf(world, 1).home;
+    if (home) home.happiness = 200;
+    islandOf(world, 0).commuters = { hired: 3, present: 3 };
+    tickWorld(world, SMALL);
+    expect(manifest(world)).toEqual({
+      tick: world.tick,
+      off: { commuters: 0, homes: [] },
+      on: { commuters: 3, homes: [{ home: 1, people: 4 }] },
+    });
+    const evening = emptyTown(1020);
+    tickWorld(evening, SMALL);
+    expect(manifest(evening)?.off.homes).toEqual([{ home: 1, people: 4 }, { home: 7, people: 4 }]);
+  });
+
+  it('is written for a trip with nobody on it, and kept until the next trip', () => {
+    const world = town(420);
+    tickWorld(world, SMALL);
+    const empty = { tick: world.tick, off: { commuters: 0, homes: [] }, on: { commuters: 0, homes: [] } };
+    expect(manifest(world)).toEqual(empty);
+    for (let i = 0; i < 300; i += 1) tickWorld(world, SMALL);
+    expect(manifest(world)).toEqual(empty);
+  });
+
+  it('is null before the first trip', () => {
+    expect(manifest(town(600))).toBeNull();
+  });
+});

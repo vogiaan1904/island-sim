@@ -62,3 +62,9 @@ export function migrateV2(data: Data): Data {
 export function migrateV3(data: Data): Data {
   return data;
 }
+
+/** Version 4 to 5 (slice1-alive ticket 02): every island gains its ferry manifest, empty until the next trip. */
+export function migrateV4(data: Data): Data {
+  const islands = (data.islands as Data[]).map((island) => ({ ...island, ferry: null }));
+  return { ...data, islands };
+}

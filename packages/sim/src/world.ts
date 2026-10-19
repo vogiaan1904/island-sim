@@ -47,6 +47,7 @@ export function emptyIsland(slot: number, position: { x: number; y: number }, te
     buildings: [],
     lastCheckInTick: null,
     commuters: { hired: 0, present: 0 },
+    ferry: null,
     cargo: [],
     transit: [],
     autoSell: {},

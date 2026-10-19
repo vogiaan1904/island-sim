@@ -76,6 +76,27 @@ describe('the mirror store', () => {
     expect(state.island!.state.roads[56 * 64 + 33]).toBe('1');
   });
 
+  it('receives the ferry manifest in an update after a trip, and in the full state', async () => {
+    const { runtime, player, tick } = await aliceOnline();
+    await player.open(runtime.id, 0);
+    let state = feed(initialClientState(), player.received);
+    expect(state.island!.state.ferry).toBeNull();
+
+    const seen = player.received.length;
+    const morningFerry = 60; // the world starts at 06:00; the morning ferry docks at 07:00
+    const target = morningFerry + 1;
+    tick(target - runtime.world.tick);
+    await player.next('update', (m) => m.source === 0 && m.tick === target);
+    state = feed(state, player.received.slice(seen));
+    expect(state.island!.state.ferry).toEqual({ tick: morningFerry, off: { commuters: 0, homes: [] }, on: { commuters: 0, homes: [] } });
+    expect(state.island!.state).toEqual(runtime.world.islands[0]);
+
+    const reopened = player.received.length;
+    await player.open(runtime.id, 0);
+    state = feed(state, player.received.slice(reopened));
+    expect(state.island!.state.ferry).toEqual(runtime.world.islands[0]?.ferry);
+  });
+
   it('settles a refused command with its reason and shortfall', async () => {
     const { runtime, player } = await aliceOnline();
     await player.open(runtime.id, 0);

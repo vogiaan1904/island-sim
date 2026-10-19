@@ -84,6 +84,23 @@ export interface CargoState {
   to: number;
 }
 
+/** People who stepped off or boarded one ferry trip: commuters, and newcomers or leavers counted by their home. */
+export interface FerryPassengers {
+  commuters: number;
+  /** In home id order. */
+  homes: Array<{ home: number; people: number }>;
+}
+
+/**
+ * The island's last ferry trip (glossary: ferry manifest; ADR 0001). The sim's ferry happens in one tick and leaves no
+ * trace of who moved where, so the client reads this to show the right people walking off and on.
+ */
+export interface FerryManifest {
+  tick: number;
+  off: FerryPassengers;
+  on: FerryPassengers;
+}
+
 export interface KeyStaffState {
   id: number;
   role: KeyStaffRole;
@@ -111,6 +128,8 @@ export interface IslandState {
   lastCheckInTick: number | null;
   /** Mainland laborers: how many are hired, and how many came on today's morning ferry and are on the island. */
   commuters: { hired: number; present: number };
+  /** The last ferry trip, replaced by every trip; null before the first one. */
+  ferry: FerryManifest | null;
   /** Bought goods waiting for the next ferry, oldest first. */
   cargo: CargoState[];
   /** Goods on the roads, sorted by id. */

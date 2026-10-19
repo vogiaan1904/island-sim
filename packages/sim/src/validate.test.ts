@@ -45,6 +45,22 @@ describe('validateWorld', () => {
       if (bobDock) bobDock.id = dockOf(w).id;
     }, /used twice/],
     ['an invalid island name', (w) => { islandOf(w, 0).name = 'x'; }, /invalid island name/],
+    ['a ferry manifest from the future', (w) => {
+      islandOf(w, 0).ferry = { tick: w.tick + 1, off: { commuters: 0, homes: [] }, on: { commuters: 0, homes: [] } };
+    }, /ferry/],
+    ['a ferry manifest with a negative count', (w) => {
+      islandOf(w, 0).ferry = { tick: w.tick, off: { commuters: -1, homes: [] }, on: { commuters: 0, homes: [] } };
+    }, /ferry/],
+    ['a ferry manifest with homes out of order', (w) => {
+      const homes = [{ home: 9, people: 1 }, { home: 3, people: 1 }];
+      islandOf(w, 0).ferry = { tick: w.tick, off: { commuters: 0, homes }, on: { commuters: 0, homes: [] } };
+    }, /ferry/],
+    ['a ferry manifest carrying more than its seats', (w) => {
+      islandOf(w, 0).ferry = { tick: w.tick, off: { commuters: 12, homes: [{ home: 1, people: 1 }] }, on: { commuters: 0, homes: [] } };
+    }, /ferry/],
+    ['an unclaimed island with a ferry manifest', (w) => {
+      islandOf(w, 1).ferry = { tick: w.tick, off: { commuters: 0, homes: [] }, on: { commuters: 0, homes: [] } };
+    }, /unclaimed island/],
     ['a dock holding more than its storage', (w) => { dockOf(w).stock = { wood: 31 }; }, /more than its storage/],
     ['an unknown good in stock', (w) => { dockOf(w).stock = { gold: 1 } as never; }, /unknown good gold/],
     ['a zero amount in stock', (w) => { dockOf(w).stock = { fish: 0 }; }, /fish must be a whole amount/],

@@ -130,6 +130,7 @@ function validateIsland(raw: unknown, slot: number, ctx: Ctx): void {
   else validateBuildings(buildings, at, placed, ctx);
 
   validateCommuters(raw.commuters, at, ctx);
+  validateFerry(raw.ferry, at, ctx);
   validateCargo(raw.cargo, at, placed, ctx);
   validateTransit(raw.transit, at, placed, ctx);
   validateSiteTotals(raw, at, placed, ctx);
@@ -144,6 +145,7 @@ function validateIsland(raw: unknown, slot: number, ctx: Ctx): void {
       coins === 0 &&
       lastCheckIn === null &&
       isEmptyList(buildings) &&
+      raw.ferry === null &&
       isEmptyList(raw.cargo) &&
       isEmptyList(raw.transit) &&
       isEmptyList(raw.staff) &&
@@ -303,6 +305,29 @@ function validateCommuters(raw: unknown, at: string, ctx: Ctx): void {
   const seats = ctx.content.rules.ferrySeats;
   if (!isRecord(raw) || !isCount(raw.hired, seats) || !isCount(raw.present, seats)) {
     ctx.problems.push(`${at}: commuters must be hired and present counts from 0 to ${seats}`);
+  }
+}
+
+/** The ferry manifest: null, or one trip's tick (not in the future) and its people off and on, within the seats. */
+function validateFerry(raw: unknown, at: string, ctx: Ctx): void {
+  if (raw === null) return;
+  const seats = ctx.content.rules.ferrySeats;
+  const passengers = (side: unknown): boolean => {
+    if (!isRecord(side) || !isCount(side.commuters, seats) || !Array.isArray(side.homes)) return false;
+    let total = side.commuters;
+    let lastHome = 0;
+    for (const entry of side.homes as unknown[]) {
+      if (!isRecord(entry) || !isWhole(entry.home) || entry.home <= lastHome || !isCount(entry.people, seats) || entry.people === 0) {
+        return false;
+      }
+      lastHome = entry.home;
+      total += entry.people;
+    }
+    return total <= seats;
+  };
+  const ok = isRecord(raw) && isCount(raw.tick, ctx.tick) && passengers(raw.off) && passengers(raw.on);
+  if (!ok) {
+    ctx.problems.push(`${at}: ferry must be null or a past trip's tick with commuters and people per home (ascending ids), off and on, within ${seats} seats`);
   }
 }
 

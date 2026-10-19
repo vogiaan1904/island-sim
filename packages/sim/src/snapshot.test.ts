@@ -164,6 +164,17 @@ describe('migration from sim version 3', () => {
     const v3 = { ...v4, simVersion: 3 };
     const world = loadWorld(JSON.stringify(v3), content);
     expect(world).toEqual({ ...v4, simVersion: SIM_VERSION });
-    expect(SIM_VERSION).toBe(4);
+  });
+});
+
+describe('migration from sim version 4', () => {
+  it('gives every island an empty ferry manifest', () => {
+    const v5 = JSON.parse(serializeWorld(claimedWorld())) as { islands: Array<Record<string, unknown>> };
+    const islands = v5.islands.map(({ ferry: _ferry, ...rest }) => rest);
+    const v4 = { ...v5, simVersion: 4, islands };
+    const world = loadWorld(JSON.stringify(v4), content);
+    expect(world).toEqual({ ...v5, simVersion: SIM_VERSION });
+    expect(world.islands.every((island) => island.ferry === null)).toBe(true);
+    expect(SIM_VERSION).toBe(5);
   });
 });

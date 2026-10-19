@@ -53,6 +53,7 @@ const HEADER_FIELDS = [
   'coinsCents',
   'lastCheckInTick',
   'commuters',
+  'ferry',
   'cargo',
   'autoSell',
   'staff',
