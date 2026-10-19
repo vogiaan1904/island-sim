@@ -18,6 +18,8 @@ function setup(props: Partial<WorldsScreenProps> = {}) {
     onJoin: vi.fn(async () => null),
     onRegenerate: vi.fn(async () => null),
     onLogOut: vi.fn(async () => null),
+    summaries: {},
+    onVisit: vi.fn(),
     ...props,
   };
   const view = render(<WorldsScreen {...all} />);
@@ -144,5 +146,32 @@ describe('the world screen', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Log out' }));
     expect(onLogOut).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole('alert')).toHaveTextContent("The island can't be reached right now");
+  });
+});
+
+describe('visiting a friend from the world screen', () => {
+  const summaries = {
+    w1: [
+      { slot: 0, name: 'Palm Cove', owner: 'lena', stage: 'outpost', residents: 0 },
+      { slot: 3, name: 'Reef Haven', owner: 'Pia', stage: 'outpost', residents: 0 },
+    ],
+  } as const;
+
+  it("lists the other islands of a world with their name and owner, and visits the one picked", async () => {
+    const { onVisit, container } = setup({ summaries });
+    const [mine, theirs] = screen.getAllByRole('listitem');
+    const group = within(mine!).getByRole('group', { name: 'Visit a friend' });
+    expect(within(group).getAllByRole('button')).toHaveLength(1);
+    const visit = within(group).getByRole('button', { name: 'Visit Reef Haven' });
+    expect(visit).toHaveTextContent("Pia's island");
+    expect(within(theirs!).queryByRole('group', { name: 'Visit a friend' })).not.toBeInTheDocument();
+    await userEvent.click(visit);
+    expect(onVisit).toHaveBeenCalledWith('w1', 3);
+    expectNoEmoji(container);
+  });
+
+  it('offers nothing to visit in a world with only the own island, or one not opened yet', () => {
+    setup({ summaries: { w1: [summaries.w1[0]] } });
+    expect(screen.queryByRole('group', { name: 'Visit a friend' })).not.toBeInTheDocument();
   });
 });

@@ -3,6 +3,8 @@ import { GameProvider, useGame, useGameState, type Game } from './session/game.t
 import { CalmStatus, RESTING_LINE } from './ui/CalmStates.tsx';
 import { PlacementPanel } from './ui/build/PlacementPanel.tsx';
 import { Hud } from './ui/hud/Hud.tsx';
+import { Arrival } from './ui/visit/Arrival.tsx';
+import { VisitBanner } from './ui/visit/VisitBanner.tsx';
 import { LoadingScreen } from './ui/LoadingScreen.tsx';
 import { LoginScreen } from './ui/LoginScreen.tsx';
 import { NoticeScreen } from './ui/NoticeScreen.tsx';
@@ -67,6 +69,7 @@ function WorldsPhase() {
   const { session } = useGame();
   const account = useGameState((state) => state.session.account);
   const worlds = useGameState((state) => state.session.worlds);
+  const summaries = useGameState((state) => state.session.summaries);
   return (
     <WorldsScreen
       username={account?.username ?? ''}
@@ -76,6 +79,8 @@ function WorldsPhase() {
       onJoin={(code, islandName) => session.joinWorld(code, islandName)}
       onRegenerate={(id) => session.regenerateInvite(id)}
       onLogOut={() => session.logOut()}
+      summaries={summaries}
+      onVisit={(id, slot) => session.visit(id, slot)}
     />
   );
 }
@@ -90,6 +95,8 @@ function IslandScreen() {
       </Suspense>
       <Hud />
       <PlacementPanel />
+      <VisitBanner />
+      <Arrival />
       <CalmStatus />
       {!ready && (
         <div className="screen-overlay">

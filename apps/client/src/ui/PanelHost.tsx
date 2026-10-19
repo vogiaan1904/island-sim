@@ -10,7 +10,10 @@ import './PanelHost.css';
  */
 export function PanelHost({ bodies = PANEL_BODIES }: { bodies?: PanelBodies }) {
   const { store } = useGame();
-  const open = useGameState((state) => state.view.openPanel);
+  const requested = useGameState((state) => state.view.openPanel);
+  const visiting = useGameState((state) => state.island !== null && !state.island.own);
+  // Only Settings (the player's own account) belongs to a visitor; the owner's panels never show on a friend's island.
+  const open = visiting && requested !== 'settings' ? null : requested;
   if (open === null) return null;
   const Body = bodies[open];
   const title = PANEL_TITLES[open];

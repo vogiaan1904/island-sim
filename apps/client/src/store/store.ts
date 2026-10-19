@@ -1,4 +1,4 @@
-import type { AccountInfo, PlayerCommand, ServerMessage, WorldInfo } from '@island/protocol';
+import type { AccountInfo, IslandSummary, PlayerCommand, ServerMessage, WorldInfo } from '@island/protocol';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { applyGesture, step, type Gesture } from '../camera/controller.ts';
 import { ISLAND_LIMITS } from '../camera/limits.ts';
@@ -22,6 +22,16 @@ export interface SessionState {
    * meanwhile; the UI only adds a small calm line and sends no commands.
    */
   reconnecting: boolean;
+  /**
+   * The islands of each world the player opened since the page loaded, from the island message's summary and its
+   * updates (the world list from /api/me has none). The world screen lists them to visit.
+   */
+  summaries: Readonly<Record<string, readonly IslandSummary[]>>;
+  /**
+   * A trip the player just started: 'visit' to a friend's island, 'home' back to their own. The arrival (a fade and a
+   * short camera flight, `ui/visit/Arrival.tsx`) plays when that island's full state is in, then clears it.
+   */
+  arriving: 'visit' | 'home' | null;
 }
 
 /** The store's actions. Island data changes only through `receive`; nothing else writes the mirror. */
@@ -51,7 +61,7 @@ export type GameStore = StoreApi<GameState>;
 export function createGameStore(): GameStore {
   return createStore<GameState>()((set) => ({
     ...initialClientState(),
-    session: { phase: 'checking', account: null, worlds: [], reconnecting: false },
+    session: { phase: 'checking', account: null, worlds: [], reconnecting: false, summaries: {}, arriving: null },
     receive: (message) => set((state) => applyMessage(state, message)),
     commandSent: (requestId, command) => set((state) => commandSent(state, requestId, command)),
     clearIsland: () => set({ island: null, commands: {} }),

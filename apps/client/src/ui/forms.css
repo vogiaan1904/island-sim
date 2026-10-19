@@ -239,6 +239,30 @@
   grid-column: 1 / -1;
 }
 
+/* Visiting a friend from the world card: one small button per other island, name and owner side by side. */
+.world-visit {
+  display: grid;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+
+.world-visit-button {
+  justify-content: flex-start;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.world-visit-name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.world-visit-owner {
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 500;
+}
+
 .invite {
   display: grid;
   gap: 0.375rem;

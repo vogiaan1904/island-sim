@@ -15,6 +15,8 @@ export function stubGame(phase: SessionPhase = 'checking'): Game {
     createWorld: vi.fn(async () => null),
     joinWorld: vi.fn(async () => null),
     openWorld: vi.fn(),
+    visit: vi.fn(),
+    home: vi.fn(),
     showWorlds: vi.fn(async () => {}),
     regenerateInvite: vi.fn(async () => null),
     logOut: vi.fn(async () => null),

@@ -1,0 +1,103 @@
+/* Visiting a friend (island-ui): the banner with the way home, and the veil that clears on arrival. Colors from tokens.css. */
+.visit-banner {
+  position: fixed;
+  z-index: 6;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 8px 8px 18px;
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--surface);
+  border: 2.5px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 4px 0 var(--shadow);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.visit-text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.visit-label,
+.visit-owner {
+  font-size: 0.8rem;
+}
+
+.visit-name {
+  overflow: hidden;
+  font-size: 1.05rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visit-home {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 2.5px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.visit-home:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--shadow);
+}
+
+.visit-home:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 3px;
+}
+
+/* In the wide layout a panel may sit on the right; the banner stays at the bottom left, clear of it. */
+@media (min-aspect-ratio: 5/4) {
+  .visit-banner {
+    left: max(16px, env(safe-area-inset-left));
+    transform: none;
+  }
+}
+
+.arrival-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  background: var(--sky);
+  animation-name: arrival-clear;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+@keyframes arrival-clear {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrival-fade {
+    animation: none;
+    opacity: 0;
+  }
+}

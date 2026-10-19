@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import type { WorldInfo } from '@island/protocol';
+import type { IslandSummary, WorldInfo } from '@island/protocol';
 import type { ClientApiReason } from '../connection/api.ts';
 import { apiReasonText } from './apiReasons.ts';
 import { Field } from './Field.tsx';
 import { RULE_TEXT, checkInviteCode, checkIslandName } from './fieldRules.ts';
-import { CheckIcon, CopyIcon, LogOutIcon, PlayIcon, RefreshIcon } from './WorldIcons.tsx';
+import { CheckIcon, CopyIcon, EyeIcon, LogOutIcon, PlayIcon, RefreshIcon } from './WorldIcons.tsx';
 import './forms.css';
 
 export interface WorldsScreenProps {
@@ -16,6 +16,10 @@ export interface WorldsScreenProps {
   onJoin(inviteCode: string, islandName: string): Promise<ClientApiReason | null>;
   onRegenerate(worldId: string): Promise<ClientApiReason | null>;
   onLogOut(): Promise<ClientApiReason | null>;
+  /** The islands of each world the player has opened this session, by world id; a world not in it lists no visits. */
+  summaries: Readonly<Record<string, readonly IslandSummary[]>>;
+  /** Visit another player's island (read-only). */
+  onVisit(worldId: string, slot: number): void;
 }
 
 /** The invite code in two groups of five, easier to read out or retype; the server ignores spaces. */
@@ -27,7 +31,7 @@ function spaced(code: string): string {
  * The world screen (style A): the player's worlds to pick from, a creator's invite code with copy and a new code, and
  * the forms to create a world or join one. It is the screen for a player with no island or several worlds.
  */
-export function WorldsScreen({ username, worlds, onOpen, onCreate, onJoin, onRegenerate, onLogOut }: WorldsScreenProps) {
+export function WorldsScreen({ username, worlds, onOpen, onCreate, onJoin, onRegenerate, onLogOut, summaries, onVisit }: WorldsScreenProps) {
   const [logOutError, setLogOutError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -54,7 +58,7 @@ export function WorldsScreen({ username, worlds, onOpen, onCreate, onJoin, onReg
         {worlds.length > 0 && (
           <ul className="world-list">
             {worlds.map((world) => (
-              <WorldCard key={world.id} world={world} onOpen={onOpen} onRegenerate={onRegenerate} />
+              <WorldCard key={world.id} world={world} onOpen={onOpen} onRegenerate={onRegenerate} friends={friendsIn(world, summaries)} onVisit={onVisit} />
             ))}
           </ul>
         )}
@@ -74,7 +78,20 @@ export function WorldsScreen({ username, worlds, onOpen, onCreate, onJoin, onReg
   );
 }
 
-function WorldCard({ world, onOpen, onRegenerate }: { world: WorldInfo; onOpen(id: string): void; onRegenerate(id: string): Promise<ClientApiReason | null> }) {
+/** The other players' islands of a world, when the player has opened that world this session. */
+function friendsIn(world: WorldInfo, summaries: Readonly<Record<string, readonly IslandSummary[]>>): readonly IslandSummary[] {
+  return (summaries[world.id] ?? []).filter((island) => island.slot !== world.slot);
+}
+
+interface WorldCardProps {
+  world: WorldInfo;
+  friends: readonly IslandSummary[];
+  onOpen(id: string): void;
+  onRegenerate(id: string): Promise<ClientApiReason | null>;
+  onVisit(worldId: string, slot: number): void;
+}
+
+function WorldCard({ world, friends, onOpen, onRegenerate, onVisit }: WorldCardProps) {
   return (
     <li className="world-card">
       <img className="world-picture" src="/icons/building_island-hall_a.png" alt="" width="256" height="256" />
@@ -83,6 +100,17 @@ function WorldCard({ world, onOpen, onRegenerate }: { world: WorldInfo; onOpen(i
         <p className="world-owner">{`${world.creator}'s world`}</p>
         {world.status !== 'running' && <p className="world-note">This world is resting. It will wake up soon.</p>}
         {world.inviteCode !== null && <InviteCode worldId={world.id} code={world.inviteCode} onRegenerate={onRegenerate} />}
+        {friends.length > 0 && (
+          <div className="world-visit" role="group" aria-label="Visit a friend">
+            {friends.map((island) => (
+              <button key={island.slot} className="form-small-button world-visit-button" type="button" aria-label={`Visit ${island.name}`} onClick={() => onVisit(world.id, island.slot)}>
+                <EyeIcon />
+                <span className="world-visit-name">{island.name}</span>
+                <span className="world-visit-owner">{`${island.owner}'s island`}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <button className="form-button world-open" type="button" aria-label={`Open ${world.islandName}`} onClick={() => onOpen(world.id)}>
         <PlayIcon />

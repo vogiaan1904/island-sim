@@ -46,7 +46,8 @@ export function StageCelebration() {
     [],
   );
 
-  if (island === null || shown === null) return null;
+  // A friend's stage is theirs to celebrate: a visitor sees no port master and no badge pop.
+  if (island === null || !island.own || shown === null) return null;
   const speaker = portMasterOf(island.state);
   return (
     <div className="celebrate" role="status">

@@ -48,6 +48,10 @@ export interface Session {
   joinWorld(inviteCode: string, islandName: string): Promise<ClientApiReason | null>;
   /** Opens the player's own island in one of their worlds (from the world screen). */
   openWorld(worldId: string): void;
+  /** Visits another player's island in a world the player has opened this session (read-only); does nothing for an island not in its list or the player's own. */
+  visit(worldId: string, slot: number): void;
+  /** From a visit, back to the player's own island in the same world. */
+  home(): void;
   /** Leaves the open island for the world screen, with the list of worlds fresh from the server. */
   showWorlds(): Promise<void>;
   /** A new invite code for a world the player created; null on success (the store's world list then has it). */
@@ -117,7 +121,7 @@ export function createSession(store: GameStore, clock: GameClock, services: Sess
   const end = (phase: 'signed-out' | 'update-required') => {
     clearTimer();
     opened = null;
-    store.getState().setSession(phase === 'signed-out' ? { phase, account: null, worlds: [], reconnecting: false } : { phase, reconnecting: false });
+    store.getState().setSession(phase === 'signed-out' ? { phase, account: null, worlds: [], reconnecting: false, summaries: {}, arriving: null } : { phase, reconnecting: false });
   };
 
   const receive = (message: ServerMessage) => {
@@ -128,6 +132,12 @@ export function createSession(store: GameStore, clock: GameClock, services: Sess
     }
     if (message.type === 'update') clock.arrive(message.tick, services.now());
     store.getState().receive(message);
+    if (message.type === 'island' || (message.type === 'update' && message.summary !== undefined)) {
+      const island = store.getState().island;
+      if (island !== null && island.world === message.world) {
+        store.getState().setSession({ summaries: { ...store.getState().session.summaries, [island.world]: island.summary.islands } });
+      }
+    }
     if (message.type === 'island') {
       const { phase } = store.getState().session;
       store.getState().setSession(phase === 'opening' || phase === 'resting' ? { phase: 'playing', reconnecting: false } : { reconnecting: false });
@@ -238,9 +248,13 @@ export function createSession(store: GameStore, clock: GameClock, services: Sess
     retire();
   };
 
-  const connectAndOpen = async (world: WorldInfo) => {
+  /** What a new island must not inherit: the panel, the card and the placement belong to the island just left. */
+  const closeOwnerViews = () => store.getState().setView({ openPanel: null, tappedBuilding: null, placement: null });
+
+  const connectAndOpen = async (world: { id: string; slot: number }) => {
     leave();
     attempt = 0;
+    closeOwnerViews();
     store.getState().clearIsland();
     store.getState().setSession({ phase: 'opening', reconnecting: false });
     opened = { world: world.id, slot: world.slot };
@@ -253,6 +267,19 @@ export function createSession(store: GameStore, clock: GameClock, services: Sess
     }
     connection = result.connection;
     connection.open(world.id, world.slot);
+  };
+
+  /** Opens this island: on the socket already open for the world, else on a new one (from the world screen, or after a drop). */
+  const switchTo = (target: { id: string; slot: number }) => {
+    if (connection === null || opened === null || opened.world !== target.id) {
+      void connectAndOpen(target);
+      return;
+    }
+    clearTimer();
+    attempt = 0;
+    closeOwnerViews();
+    opened = { world: target.id, slot: target.slot };
+    connection.open(target.id, target.slot);
   };
 
   /** The player's account and worlds from the server, into the store; the reason when the server cannot say. */
@@ -317,10 +344,27 @@ export function createSession(store: GameStore, clock: GameClock, services: Sess
       const world = store.getState().session.worlds.find((w) => w.id === worldId);
       if (world !== undefined) void connectAndOpen(world);
     },
+    visit(worldId, slot) {
+      const state = store.getState();
+      const world = state.session.worlds.find((w) => w.id === worldId);
+      if (world === undefined || world.slot === slot) return;
+      if (!state.session.summaries[worldId]?.some((island) => island.slot === slot)) return;
+      state.setSession({ arriving: 'visit' });
+      switchTo({ id: worldId, slot });
+    },
+    home() {
+      const state = store.getState();
+      const island = state.island;
+      if (island === null || island.own) return;
+      const world = state.session.worlds.find((w) => w.id === island.world);
+      if (world === undefined) return;
+      state.setSession({ arriving: 'home' });
+      switchTo(world);
+    },
     async showWorlds() {
       leave();
       store.getState().clearIsland();
-      store.getState().setSession({ phase: 'worlds', reconnecting: false });
+      store.getState().setSession({ phase: 'worlds', reconnecting: false, arriving: null });
       await refreshWorlds();
     },
     async regenerateInvite(worldId) {
@@ -335,7 +379,7 @@ export function createSession(store: GameStore, clock: GameClock, services: Sess
       if (!result.ok) return result.reason;
       leave();
       store.getState().clearIsland();
-      store.getState().setSession({ phase: 'signed-out', account: null, worlds: [], reconnecting: false });
+      store.getState().setSession({ phase: 'signed-out', account: null, worlds: [], reconnecting: false, summaries: {}, arriving: null });
       return null;
     },
     async changePassword(currentPassword, newPassword) {

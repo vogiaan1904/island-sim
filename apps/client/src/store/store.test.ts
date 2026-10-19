@@ -86,7 +86,7 @@ describe('the game store', () => {
   it('keeps the session phase and account apart from the island', () => {
     const store = createGameStore();
     store.getState().setSession({ phase: 'signed-out' });
-    expect(store.getState().session).toEqual({ phase: 'signed-out', account: null, worlds: [], reconnecting: false });
+    expect(store.getState().session).toEqual({ phase: 'signed-out', account: null, worlds: [], reconnecting: false, summaries: {}, arriving: null });
   });
 
   it('forgets pending commands when the connection drops but keeps the settled ones', () => {
