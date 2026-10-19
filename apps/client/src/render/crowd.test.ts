@@ -182,3 +182,106 @@ describe('the crowd: carriers', () => {
     expect(carriersAt(island, NOON + 19)).toEqual([]);
   });
 });
+
+describe('the crowd: work at the buildings', () => {
+  const NOON = 720;
+  const staffed = (residents: number) => {
+    const island = village();
+    const farm = island.buildings.find((b) => b.id === 103);
+    if (farm?.work) farm.work.residents = residents;
+    return island;
+  };
+  const working = (island: IslandState, minute: number) => movers(island, minute).filter((m) => m.legs.startsWith('interact'));
+
+  it('shows two workers at a fully staffed workplace, one when understaffed, none without workers', () => {
+    expect(working(staffed(4), NOON)).toHaveLength(2);
+    expect(working(staffed(2), NOON)).toHaveLength(1);
+    expect(working(staffed(0), NOON)).toHaveLength(0);
+  });
+
+  it('stands them by the building\'s front once their commute has arrived, until the shift ends', () => {
+    const island = staffed(4);
+    expect(working(island, 425)).toEqual([]);
+    const [worker] = working(island, NOON);
+    const farmFrontZ = 55 * TILE_SIZE;
+    expect(Math.abs((worker as Mover).z - farmFrontZ)).toBeLessThan(2.5);
+    expect(working(island, 1030)).toEqual([]);
+  });
+
+  it('puts two builders at a site during the day shift, none at night', () => {
+    const island = village();
+    const site = built('well', 105, 30, 54);
+    site.constructionLeft = 30;
+    island.buildings.push(site);
+    expect(working(island, NOON)).toHaveLength(2);
+    expect(working(island, 1200)).toEqual([]);
+  });
+
+  it('puts no builders at a landmark still waiting for its materials', () => {
+    const island = village();
+    const hall = built('island-hall', 106, 24, 50);
+    hall.constructionLeft = 1_000;
+    island.buildings.push(hall);
+    expect(working(island, NOON)).toEqual([]);
+    hall.stock = { wood: 150 };
+    expect(working(island, NOON)).toHaveLength(2);
+  });
+});
+
+describe('the crowd: the evening market walk', () => {
+  /** A cottage of 4 (3 adults, 1 child) beside a market 3 road tiles away, and a far cottage the market does not reach. */
+  function market(): IslandState {
+    const island = structuredClone(islandOf(aliceWorld()));
+    const roads = [...island.roads];
+    for (let x = 20; x <= 40; x += 1) roads[ROAD_ROW * SIZE + x] = '1';
+    island.roads = roads.join('');
+    for (const [id, x] of [[101, 22], [104, 39]] as const) {
+      const home = built('cottage', id, x, 54);
+      if (home.home) home.home.residents = 4;
+      island.buildings.push(home);
+    }
+    island.buildings.push(built('market', 107, 24, 53));
+    return island;
+  }
+  /** Everyone walking at a minute of a given day. */
+  const walkingOn = (island: IslandState, day: number, minute: number) => {
+    const plan = crowdPlan(island, content);
+    const out = newMovers(plan);
+    const count = moversAt(plan, at(minute) + day * content.rules.ticksPerDay, { x: 0, z: 0 }, out, 200);
+    return out.slice(0, count).map((m) => ({ ...m }));
+  };
+
+  it('sends one adult from each home the market serves, there and back before the 18:00 meal', () => {
+    const island = market();
+    let seen = 0;
+    for (let day = 0; day < 6; day += 1) {
+      for (let minute = 1030; minute < 1080; minute += 0.5) {
+        const adults = walkingOn(island, day, minute).filter((m) => m.scale === 1);
+        expect(adults.length).toBeLessThanOrEqual(1);
+        for (const m of adults) expect(m.x).toBeLessThan(30 * TILE_SIZE);
+        seen += adults.length;
+      }
+      expect(walkingOn(island, day, 1080)).toEqual([]);
+      expect(walkingOn(island, day, 1100)).toEqual([]);
+    }
+    expect(seen).toBeGreaterThan(0);
+  });
+
+  it('brings the children along on some days, always beside their adult', () => {
+    const island = market();
+    let childDays = 0;
+    for (let day = 0; day < 12; day += 1) {
+      let childToday = false;
+      for (let minute = 1030; minute < 1080; minute += 0.5) {
+        const walking = walkingOn(island, day, minute);
+        for (const child of walking.filter((m) => m.scale < 1)) {
+          childToday = true;
+          expect(walking.some((a) => a.scale === 1 && Math.hypot(a.x - child.x, a.z - child.z) < 3)).toBe(true);
+        }
+      }
+      if (childToday) childDays += 1;
+    }
+    expect(childDays).toBeGreaterThan(0);
+    expect(childDays).toBeLessThan(12);
+  });
+});
