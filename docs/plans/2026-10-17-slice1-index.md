@@ -48,6 +48,10 @@ the islands keep running while you're away, and you can watch each other's islan
 - Plans 5 and 6 (from plan 4): no crowd level of detail for people ships; if phones need one, decide it on measured
   performance. The animation manifest does not say which clips loop (idle, walk, sprint and the wheelchair moves do).
 - Later (from plan 4): building level variants and the damaged look; terrain and water colors should follow the look.
+- Slice 2 (from the `slice1-alive` grilling): friends' islands far away need their positions in the world summary,
+  and the archipelago spacing in `packages/sim/src/world.ts` (48 tiles between slots, plus jitter) predates the 64-tile
+  islands (decision 29), so placed islands would overlap. Fix both before drawing the far-away shapes or the visit
+  flight from them.
 - Soft lock (plan 2 decision 15): **closed by `slice1-client` tickets 01 and 02.** Mainland help gives a stuck island a
   grant at the morning ferry, and a building waiting for money keeps its workers and runs at half output (spec 12.1;
   `island-game-logic`, `slice1-rules.md`). `SIM_VERSION` is 4. Wages are still paid before upkeep (Known gaps in `slice1-rules.md`).
@@ -95,7 +99,7 @@ Blender open with the MCP server started.
   (`slice1-alive`, not built.)
 - Plus the plan 5 items under "Carried over" above.
 
-**Plan 5, `slice1-alive`** (next; not grilled). Its `/grill-with-docs` runs on the real code of `slice1-client` and the
+**Plan 5, `slice1-alive`** (grilled 2026-10-19; spec `.scratch/slice1-alive/spec.md`, ADR 0001). Its `/grill-with-docs` runs on the real code of `slice1-client` and the
 updated skills (`island-3d-client` lists what is built), after the user's two checks (ticket 08, ticket 21). Open
 questions:
 - Crowd scale-down: how many full characters, the cheaper level of detail for distant people, the walker cap per
