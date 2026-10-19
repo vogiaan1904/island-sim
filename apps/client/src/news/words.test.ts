@@ -41,6 +41,12 @@ describe('one sentence for every event type', () => {
     expect(eventWords([event('mainland-help', { cents: 10_000, hired: 2 })])).toBe('The Mainland sent 100 coins to get us moving again.');
   });
 
+  it('tells the player to hire commuters when none were hired when the help came', () => {
+    expect(eventWords([event('mainland-help', { cents: 10_000, hired: 0 })])).toBe(
+      'The Mainland sent 100 coins to get us moving again. Hire commuters in Staff so workers come on the ferry.',
+    );
+  });
+
   it('says what happened with real names', () => {
     expect(eventWords([event('construction-finished', SAMPLE['construction-finished'])])).toBe('The farm is finished.');
     expect(eventWords([event('stage-reached', SAMPLE['stage-reached'])])).toBe('We reached the Settlement stage.');

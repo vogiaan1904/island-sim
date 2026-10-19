@@ -44,10 +44,14 @@ describe('the calm status over the island', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('says the same while the world is catching up', () => {
-    const { game } = showStatus();
+  it('says the island is catching up, not resting, while its world catches up, and nothing once it runs', () => {
+    const { game, container } = showStatus();
     act(() => game.store.getState().receive({ type: 'status', world: 'w-test', status: 'catching-up' }));
-    expect(screen.getByRole('status')).toHaveTextContent('This island is resting, back soon');
+    expect(screen.getByRole('status')).toHaveTextContent(/^The island is catching up, one moment$/);
+    expect(screen.queryByText(/resting/)).not.toBeInTheDocument();
+    expectNoEmoji(container);
+    act(() => game.store.getState().receive({ type: 'status', world: 'w-test', status: 'running' }));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('shows the resting line before reconnecting when both apply, as one line', () => {

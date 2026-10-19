@@ -69,7 +69,11 @@ const WORDS: Record<EventTypeId, Words> = {
     const because = events.at(-1)?.data['short'] === 'seats' ? 'the ferry was full' : "we couldn't pay them";
     return `${plural(n, 'commuter', 'commuters')} stayed home because ${because}.`;
   },
-  'mainland-help': (events) => `The Mainland sent ${coinsText(sum(events, 'cents'))} coins to get us moving again.`,
+  'mainland-help': (events) => {
+    const sent = `The Mainland sent ${coinsText(sum(events, 'cents'))} coins to get us moving again.`;
+    // The grant comes whether or not anyone is hired; with nobody hired, the way out is the Staff panel.
+    return count(events.at(-1)?.data ?? {}, 'hired') === 0 ? `${sent} Hire commuters in Staff so workers come on the ferry.` : sent;
+  },
   'cargo-arrived': (events) => `The ferry unloaded ${plural(sum(events, 'units'), 'good', 'goods')}.`,
   'goal-completed': (events) => {
     const goal = events.at(-1)?.data['goal'];
