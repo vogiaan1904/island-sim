@@ -8,6 +8,7 @@ import { useGame, useGameState } from '../session/game.tsx';
 import { Buildings } from './Buildings.tsx';
 import { CameraRig } from './CameraRig.tsx';
 import { useFrameLoop } from './frameLoop.ts';
+import { People } from './People.tsx';
 import { PlacementGhost } from './PlacementGhost.tsx';
 import { QualityProbe } from './QualityProbe.tsx';
 import { DayNight, Sun } from './Sun.tsx';
@@ -25,7 +26,7 @@ function Ready({ onReady }: { onReady: () => void }) {
 }
 
 /**
- * The 3D island: terrain, water, the buildings and the sun, seen from the free camera (`CameraRig`). The default export, so the app loads three.js in its own chunk.
+ * The 3D island: terrain, water, the buildings, the people and the sun, seen from the free camera (`CameraRig`). The default export, so the app loads three.js in its own chunk.
  */
 export default function IslandCanvas({ onReady }: { onReady: () => void }) {
   const { store } = useGame();
@@ -63,10 +64,11 @@ export default function IslandCanvas({ onReady }: { onReady: () => void }) {
           <Ready onReady={onReady} />
           <QualityProbe guessed={guessed} />
         </Suspense>
-        {/* Its own boundary, so a model that is still loading never hides the island. */}
+        {/* Their own boundaries, so a model that is still loading never hides the island. */}
         <Suspense fallback={null}>
           <PlacementGhost />
         </Suspense>
+        <Suspense fallback={null}>{island !== null && <People island={island} />}</Suspense>
       </Canvas>
     </div>
   );

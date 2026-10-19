@@ -88,7 +88,8 @@ describe('createWorld', () => {
     });
   });
 
-  it('generates usable islands for many seeds', () => {
+  // 500 generated 64-tile islands: about 2.3 s alone and more while the whole suite runs in parallel, so it has its own timeout.
+  it('generates usable islands for many seeds', { timeout: 20_000 }, () => {
     for (let seed = 0; seed < 50; seed += 1) {
       for (const island of createWorld(seed, content).islands) {
         const where = `seed ${seed} slot ${island.slot}`;
