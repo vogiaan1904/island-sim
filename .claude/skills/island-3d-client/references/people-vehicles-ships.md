@@ -1,8 +1,9 @@
 # People, vehicles and ships
 
-Planned design from spec 6.2, decision 26 and the defaults in spec 12.1, 12.5 and 12.6, for `slice1-alive`. No client
-code for people, vehicles or ships exists yet (the slice 1 client draws buildings, roads and sites only); the
-characters, the animation texture and the accessories do (plan 4). The
+Design from spec 6.2, decision 26 and the defaults in spec 12.1, 12.5 and 12.6. **People and the ferry are built
+(`slice1-alive`); vehicles, drivers and other ships are not** (they come with Village and later). Section 11 lists
+the built values; the sections before it keep the design reasons. The characters, the animation texture and the
+accessories come from plan 4. The
 bake, the crowd model, scaffolds and bag props (Blender side) are `island-blender`; this file covers how the client
 uses them and how movers are derived from sim flows.
 
@@ -234,7 +235,34 @@ function moverAt(flow: FlowView, slot: number, gameMinutes: number, out: MoverPo
 
 ## 10. Open items
 
-- Clothing tint mask, accessory and wheelchair shares, whether slot looks repeat daily.
-- Which non-work flows include children; which arm pose goes with a bag.
-- Seat offsets for drivers; the fixed direction of the Mainland.
-- Caps per detail level and quality tier, and the scale-down function.
+- Clothing tints (need a mask, `island-blender`); a goods prop for carriers (they hold the bag today).
+- Seat offsets for drivers (with vehicles).
+- A cheaper level of detail for distant people, only if the phone measurement (`slice1-alive` ticket 14) asks for it.
+
+## 11. As built (`slice1-alive`)
+
+- **Where:** `render/clips.ts` (the manifest, `CHARACTERS`, rows per rig variant), `render/crowd.ts` (`crowdPlan`
+  per island state, `moversAt` per frame into a reused pool, `peopleShown`), `scene/characterMaterial.ts` (the
+  vertex shader and its depth twin), `scene/People.tsx` (12 character meshes plus the wheelchair and the bag, posed
+  per instance with `aLegs` and `aArms`: first row, frames, loop or layered flag, phase).
+- **Scale:** every person the sim counts is one character; at most 200 on screen, nearest to the camera target first.
+  People hide at 0.6 of the farthest camera distance (the bubbles' dot switch) and come back below 0.55. Shadows on
+  Medium and High (Low has no shadow map). People cost at most 14 draw calls, and the same in the shadow pass.
+- **Walks:** along the sim's own `roadPath` at the road speed (one tile per game minute, about 1.6 m/s real), with a
+  hashed sideways offset of up to 0.6 m and a start stagger of up to 4 minutes; phase from distance (a walk cycle is
+  1.1 m). A door is the footprint's edge nearest the walk's first road tile.
+- **Flows:** residents' commute from `assignWorkers` (07:00 there, 17:00 back); carriers, one per 5 units and at most
+  4, in single file 1.2 m apart, the last arriving on `arriveTick` (arms `holding-both` and the bag); up to 2 workers
+  by a staffed workplace's front (1 while understaffed) from its first commuter's arrival to the shift's end; 2
+  builders at a site during the shift, none at a landmark still missing materials; the market walk, one adult per home
+  its market reaches, leaving 17:15 to 17:26 (hashed per home and day), children along on about 40% of days; ferry
+  passengers from `island.ferry` (below). Nobody walks at night.
+- **Looks:** the character is a hash of (slot, home, person index), workers first then children, so a home's people
+  are the same every day; commuters by seat. About 3% use a wheelchair. Children are 0.75 in size. No tints.
+- **The ferry:** `render/ferry.ts` and `scene/Ferry.tsx`. The Mainland lies due south: a straight lane from 200 m
+  south of the island to a berth just off the pier's outer end. In over 20 game minutes, at the berth from the sim's
+  ferry minute for at least 25 minutes (longer until the manifest trip's last boarding passenger arrives), out over 20
+  minutes, turning round first; bobbing with `render/waves.ts` (the same formula as the water shader). Passengers walk
+  between the bow and the dock across the pier, then the road path: newcomers with bags and their children to their
+  homes from 2 minutes after docking, commuters to their workplaces; leavers and commuters set off at docking toward
+  it. They pass through the dock building.

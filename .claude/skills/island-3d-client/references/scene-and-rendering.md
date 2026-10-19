@@ -3,7 +3,9 @@
 Design from spec 6.2 (approved section 4b) and the defaults in spec 12.4 to 12.6. **Built in slice 1** (client tickets
 09, 10, 12, 13, 15, 20): terrain, water, instanced buildings, roads, scaffolds and the pier, day and night, shadows,
 quality tiers, the placement ghost and road preview, world anchors for bubbles. Each section says "As built" where it
-is real. **Not built:** distant islands, people, vehicles, ships, glows, smoke, Views, per-building window light,
+is real. `slice1-alive` added people and the ferry (`people-vehicles-ships.md`), nature props (`render/nature.ts`:
+clumps on grass, palms on the beach, nothing on buildings, roads, the ghost or within 3 tiles of the dock) and the
+frame driver. **Not built:** distant islands, vehicles, other ships, glows, smoke, Views, per-building window light,
 shore foam. File names below are in `apps/client/src`; the folder map is in `SKILL.md`. Library details must be
 checked against the installed versions. Anything marked "open" is still undecided.
 
@@ -126,8 +128,8 @@ Spec 12.5:
   (generated in `sim`) and the world summary. Draw them as one cheap mesh (or one instanced draw call) with no
   people, vehicles or detail; full detail only exists while you visit.
 - **The Mainland lies off-screen in a fixed direction**, where the ferries come from. It is never drawn; ferries and
-  Mainland ships sail in from and out to that edge. Which direction is open until the ferry is built (north is -z; the
-  dock is on the south shore). Distant islands are not built.
+  Mainland ships sail in from and out to that edge. **Decided:** due south (+z), where the dock's shore faces.
+  Distant islands are not built (slice 2).
 - The camera limits keep the view around your own island, so these shapes are horizon dressing, not places to fly
   to by panning.
 
@@ -162,8 +164,9 @@ night strength from the rules' sunrise and sunset, 30 minutes of twilight each s
 (pixel ratio cap per tier: Low 1, Medium 1.5, High 2, never above 2; shadow map Low off, Medium 1024, High 2048; the
 device guess; the 2 s frame probe that steps down once), `render/shadow.ts` (shadow center on the ground point the camera
 looks at, snapped to texels in light space). In the scene: `DayNight` (frame priority -1) fills `daylight` and `toSun`
-in `scene/Sun.tsx`, `windowGlow` in `scene/palette.ts` makes slot 0 glow in the shared material, `useFrameLoop`
-sets the canvas frameloop to `never` while hidden. The shadow map still updates every frame. Shadow numbers: the shadow camera covers 60 units
+in `scene/Sun.tsx`, `windowGlow` in `scene/palette.ts` makes slot 0 glow in the shared material, the canvas runs with
+`frameloop="never"` and `FrameDriver` (`scene/frameLoop.ts`) draws each due frame: at most 60 fps (also on 90 and 120 Hz
+screens), 30 while watching, none while hidden. The shadow map still updates every frame. Shadow numbers: the shadow camera covers 60 units
 each way from its focus (`SHADOW_HALF_EXTENT`), sits 250 units from it along the light, bias -0.0004, normal bias 0.05.
 Windows: every slot-0 texel glows at once with `windowGlow.value` (the night strength); lighting only occupied homes
 and staggering their switch-on by a hash of the building id are open. Whether shadows fade out at whole-island zoom
@@ -181,7 +184,7 @@ steps.
   when built, so every viewer sees the same step. `constructionRise(step)` is step / 4 and becomes the instance's
   `rise`: the building model is scaled vertically to that share of its height inside the scaffold (no shader discard,
   so finished buildings pay nothing). A landmark site waiting for materials stays at step 0.
-- Workers at the site are movers from the construction flow (`people-vehicles-ships.md`; not built), using
+- Workers at the site are movers from the construction flow (`people-vehicles-ships.md`), using
   `interact-left` and `interact-right`. Prices are paid up front (spec 2.3, 12.1), so ordinary construction does not
   wait for money. A landmark waits while materials are missing (they are carried from storage; missing ones can be
   bought on the landmark's card, spec 12.1); while a site waits, no workers are busy there.

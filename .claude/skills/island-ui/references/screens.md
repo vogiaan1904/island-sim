@@ -2,7 +2,7 @@
 
 Read the section for the piece you are working on. Approved pieces come from spec 6.1, spec 12 (resolved details)
 and the approved mockups; pieces marked **not designed yet** have no approved mockup and need the user's look when
-they are available. **Built in slice 1:** every screen except Views (6, slice 3), watch mode (8), the Add to Home Screen hint and the button sounds;
+they are available. **Built in slice 1:** every screen except Views (6, slice 3) and the Add to Home Screen hint; watch mode (8) and the button sounds came with `slice1-alive`;
 `SKILL.md`, "As built", lists the files. Where a section below still says "not designed
 yet", the screen was built from style A blocks and waits for the user's look review (ticket 21).
 
@@ -226,6 +226,9 @@ ferries and rush hour) are `island-3d-client`'s.
   newcomers."). The mockup also showed a small "Watching" marker top left and a way out top right; keep any such
   marker tiny.
 - Touch anywhere (any input on desktop) to stop: the UI fades back in.
+- **As built:** no "Watching" marker and no close button: the caption alone, and the first touch ends it. Captions are
+  short and say what is on screen, with no numbers ("The morning ferry comes in", "Newcomers arrive by ferry",
+  "Building the Island Hall", "By the dock").
 
 ## 9. Panels: Staff, Trade, Build picker, Log, Settings
 

@@ -7,11 +7,15 @@ description: How to build, change and review the 3D side of the Island Sim clien
 
 > **Status (2026-10-19): the slice 1 island is built** (`slice1-client`, tickets 03 to 20): terrain, water, instanced
 > buildings, roads, scaffolds and the pier, day and night with lit windows, one sun and a shadow map, the free camera on
-> touch, trackpad, mouse and keyboard, the placement and road ghosts, the world anchors for bubbles, visiting. **Not built, and
-> planned in the references for `slice1-alive`:** people, vehicles, the ferry boat, nature props, distant islands,
-> watch mode, ambience sound. **Not built (plan 6):** service worker, Wake Lock, context-loss recovery. Draw calls
-> and frame rate have not been measured on a phone, and the camera feel (ticket 08) and the look (ticket 21) wait for
-> the user, so every number marked "ticket 08" or "ticket 21" below may still move. Where this skill and the design
+> touch, trackpad, mouse and keyboard, the placement and road ghosts, the world anchors for bubbles, visiting.
+> **`slice1-alive` built:** people (Mini Characters posed in the vertex shader: commutes, carriers, workers, builders,
+> the market walk, ferry passengers), the ferry from the Mainland in the south, nature props, the camera starting
+> over the dock, watch mode with the Wake Lock, the frame driver (60 fps cap, 30 while watching), the ambience and the
+> button sounds. **Not built:** vehicles and drivers (Village), friends' islands far away (slice 2: the world summary
+> has no positions and the archipelago spacing predates 64-tile islands), smoke and glows, a cheaper level of detail
+> for people, clothing tints, a goods prop for carriers. **Plan 6:** service worker, context-loss recovery. Draw calls
+> and frame rate have not been measured on a phone (`slice1-alive` ticket 14), and the look waits for the user (ticket
+> 21 of `slice1-client`, ticket 13 of `slice1-alive`), so numbers marked that way may still move. Where this skill and the design
 > spec (`docs/design/2026-10-16-island-sim-design.md`) disagree, the spec wins.
 
 ## What this skill covers
@@ -112,12 +116,16 @@ store/store.ts   one Zustand vanilla store: island mirror (store/mirror.ts, pure
    v
 render/   pure render data, no React or three imports, unit-tested: instances.ts, island.ts, roads.ts,
    |      construction.ts, terrain.ts, daylight.ts, ghost.ts, roadPreview.ts, anchors.ts, quality.ts, shadow.ts,
-   |      look.ts, models.ts (the only place a model URL is made)
+   |      look.ts, models.ts (the only place a model URL is made), clips.ts (the character manifest), crowd.ts
+   |      (who walks where: crowdPlan per state, moversAt per frame), ferry.ts (route and pose), nature.ts, waves.ts
    v
-scene/    R3F components: IslandCanvas > CameraRig, DayNight, Sun, Water, Terrain, Buildings > ModelInstances,
-          PlacementGhost, RoadGhost, QualityProbe; frameLoop.ts stops rendering while the page is hidden
-camera/   pure controller.ts (state + gesture -> state), input.ts (event meaning), useCameraInput.ts (the binding)
+scene/    R3F components: IslandCanvas > FrameDriver, CameraRig, DayNight, Sun, Water, Terrain, Buildings >
+          ModelInstances, Nature, People (characterMaterial.ts), Ferry, PlacementGhost, RoadGhost, QualityProbe
+camera/   pure controller.ts (state + gesture -> state), input.ts (event meaning), useCameraInput.ts (the binding),
+          start.ts (the dock as the start target), watch.ts (watch mode's director)
 glide/    clock.ts (the gliding game clock), counter.ts (gliding numbers)
+audio/    mix.ts (pure bed gains), engine.ts (the one audio context), sounds.ts (catalog URLs), Ambience.tsx,
+          UiSounds.tsx; ui/watch/ holds the Watch component and its captions (island-ui)
 ```
 
 | Folder in `apps/client/src` | Holds |
@@ -280,11 +288,12 @@ Read only the one the task needs.
 Slice 1 settled the camera numbers, quality tiers, terrain chunks, construction steps and the light (values in the
 references, marked where ticket 08 or 21 may retune them). What remains:
 
-- **slice1-alive:** the crowd scale-down rule, the neighborhood walker cap, level-of-detail distances and hysteresis,
-  which parts of a character a tint may change, how the client knows where a driver sits, watch mode (how moments are
-  ranked, how long the camera holds each), ambience sound sources, file format and location, the look of glows, smoke
-  and distant islands, and in which fixed direction the Mainland lies (the dock is on the south shore; the ferry is
-  not built).
+- **Settled by slice1-alive** (values in the references): everyone the sim counts is one person on screen (up to 200,
+  nearest first; hidden at 0.6 of the farthest distance, back below 0.55), the Mainland lies due south, watch mode's
+  order and holds, the sound files and the mix.
+- **Still open:** a cheaper level of detail for people (only if the phone measurement asks for it), clothing tints
+  (needs a mask from `island-blender`), a goods prop for carriers (they hold the bag), driver seats (with vehicles),
+  the look of glows and smoke, distant islands (slice 2), and the look-check notes in `slice1-alive` ticket 13.
 - **Phone measurements:** frame cost and draw calls per quality tier on the user's phones, whether the start check's
   24 ms threshold fits them, and whether 90/120 Hz screens are capped at 60 fps.
 - **Ticket 08 and 21 (the user):** the camera feel numbers in `camera/controller.ts` (`TUNING`, `SMOOTH_TIME`) and the

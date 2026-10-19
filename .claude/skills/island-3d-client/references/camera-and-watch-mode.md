@@ -1,7 +1,7 @@
 # Camera, gestures and watch mode
 
 Design from spec 6.1, 6.2 (decision 16) and the defaults in spec 12.5. **Built in slice 1** (client tickets 07, 12, 13,
-20): everything except watch mode and the Watch button (section 11), which are planned for `slice1-alive`. Section 12
+20); watch mode and the Watch button (section 11) in `slice1-alive`. Section 12
 holds the decided numbers. Sections 3 to 10 keep their design reasons; where a section says "proposal", the built
 choice is given next to it.
 
@@ -35,7 +35,7 @@ predictability as a regression, the same as a crash.
 | Turn (full 360 degrees) | Two-finger twist | Right-drag left/right, Q and E |
 | Tilt (straight down to near eye level) | Two fingers moving up or down side by side | Right-drag up/down |
 | Face north | Tap the compass | Click the compass |
-| Watch mode (not built; `slice1-alive`) | Tap Watch; touch to stop | Press V; any input stops |
+| Watch mode | Tap Watch; touch to stop | Press V; any input stops |
 
 Every movement glides to a stop; the camera stays around the island and never goes below the ground; zooming in
 tilts slightly by itself (spec 6.1).
@@ -104,7 +104,7 @@ Changing what a gesture does is a design change: ask the user.
   (`view.controlsChoice` against `view.controlsDetected`, `resolveControls`; saved by `store/settings.ts`).
 - **Right drag**: left/right turns, up/down tilts. Suppress the context menu on the canvas.
 - **WASD and arrow keys: move** relative to the current heading (W and Up move up the screen), at a speed scaled by
-  the camera's distance so it feels the same at every zoom. **Q and E: turn.** V (watch mode) is not bound yet. The keys are ignored
+  the camera's distance so it feels the same at every zoom. **Q and E: turn.** V starts watch mode (`ui/watch/Watch.tsx`). The keys are ignored
   while a text field, select or editable element has focus, or ctrl, meta or alt is held, and are kept clear of the UI's
   shortcuts (`island-ui`).
 - **Compass: face north** (`ui/Compass.tsx`, a button named "Face north"). It sends `face-north`: the azimuth goes to the
@@ -182,7 +182,19 @@ phones. Friends' islands on the horizon are not reachable by panning; visits use
 - Read-only: no placement ghost, no building or road commands (the server checks ownership; the UI hides owner
   controls, spec 12.3). Watch mode works the same.
 
-## 11. Watch mode (planned for `slice1-alive`; nothing of it is built)
+## 11. Watch mode
+
+**As built (`slice1-alive` ticket 08):** `camera/watch.ts` `pickMoment` is the director: a due ferry first (from 8
+game minutes before docking until 5 after it sails), then the most important event of importance 30 or more seen this
+session (or in the last game hour), each once, at its building or the dock, then a tour of busy spots per 10-tick
+window (staffed workplaces and sites in the shift, the market 17:15 to 17:55, lit homes at night, else the dock).
+Events and tour spots hold 10 ticks (about 25 s). `ui/watch/Watch.tsx` steps every 500 ms: it flies to the moment at
+tilt 0.85 and turns 0.015 rad a step; the rig glides with a 1.2 s smooth time while watching. V (not while typing or
+placing) and the HUD's Watch button set `view.cameraMode` to `'watch'` and close any panel or card; any pointer,
+touch, wheel or key in the capture phase ends it and is stopped. The Wake Lock is held while watching (section 8 of
+`state-and-pwa.md`); `scene/frameLoop.ts` draws 30 fps. The camera starts over the dock on opening an island, and
+visits and trips home fly to it (`camera/start.ts`, `ui/visit/Arrival.tsx`).
+
 
 - **Enter**: the Watch button (`island-ui`) or V. **Exit**: any touch on a phone, any input on desktop.
 - **The UI fades** (`island-ui` does the fade; the 3D side exposes the watch state in view state).

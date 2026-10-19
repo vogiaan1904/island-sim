@@ -10,8 +10,8 @@ React Three Fiber canvas). This skill holds the approved look and the rules ever
 
 **Status (2026-10-19): built in slice 1** (`slice1-client`, tickets 05 to 20): sign-in and sign-up, worlds, HUD, build
 picker and placement panel, cards, bubbles, Staff, Trade, news, Log, the stage celebration, Settings, the calm states
-and visiting. "As built" below lists where each piece lives and what to reuse. **Not built:** Watch and its caption,
-Views (slice 3), UI button sounds and the ambience (`slice1-alive`), the "Add to Home Screen" hint (plan 6). The look
+and visiting; watch mode's button, caption and fade and the button sounds in `slice1-alive`. "As built" below lists
+where each piece lives and what to reuse. **Not built:** Views (slice 3), the "Add to Home Screen" hint (plan 6). The look
 review (ticket 21) and the camera feel (ticket 08) wait for the user, so colors, sizes and wording below may still
 change after it.
 
@@ -128,7 +128,7 @@ Full rules, the blocked character ranges, a check you can run, and player-typed 
   residents toward the target, then the landmark. Never a level number, never the player's title (there is none).
 - **Counters**, top right: whole coins and residents; commuters too during Outpost. They glide between ticks.
 - **Goal icons**, left edge: the next stage target and current needs, each with a small progress bar.
-- **Compass**, a small **gear** next to it (opens Settings), and **Watch**, right side. (Watch is not built yet.)
+- **Compass**, a small **gear** next to it (opens Settings), and **Watch**, right side.
 - **Bottom round buttons**: Staff (hire commuters and key staff), Trade, **Build** (big, center), Views, Log.
   **No tab bar.** These buttons open a card, panel or mode over the island; they do not switch pages. The **Views
   button appears with the first view** (Goods flow, slice 3); until then it is not shown.
@@ -263,7 +263,16 @@ Facts worth knowing before a change:
 - Android back: `ui/cards/useBackClosesCard.ts` closes the open card first.
 - Reduced motion (`prefers-reduced-motion`) is honored in the panel slide, the arrival veil, the bubbles, the gliding
   numbers and the news.
-- The Views button and Watch are absent, and the tests assert it.
+- The Views button is absent, and the tests assert it.
+- Watch mode (`slice1-alive`): the round **Watch** button with the eye icon sits under the compass
+  (`WatchButton` in `ui/watch/Watch.tsx`, hidden while placing); V starts it too. The HUD fades with
+  `.hud[data-watching='true']` (600 ms, and lets every touch through); the one-line caption is a pill at the bottom
+  (`.watch-caption`, `role="status"`), its words from `ui/watch/caption.ts` ("The morning ferry comes in", "The farm
+  is finished", "At work at the lumber camp", "Night over the island"). Any touch, click, wheel or key ends it and does
+  nothing else. Entering closes an open panel or card.
+- Button sounds (`audio/UiSounds.tsx`): a soft tap for every button press and for a card opening from the island, the
+  landing sound when the server accepts a placement, a chime when a reward is collected; half gain over the ambience,
+  through the shared engine, so the Settings sound switch (`view.muted`) silences them at once with the ambience.
 - Screens with no approved mockup were built from the style A blocks: Staff, Trade, Build picker, Log, Settings,
   sign-in, world screen, visiting. Ticket 21 is the user's review of them.
 
@@ -272,7 +281,6 @@ Facts worth knowing before a change:
 - The user's look review (ticket 21): palette values in `tokens.css`, the font choice (system rounded versus a
   self-hosted font), sizes, and the wording of unmocked screens.
 - Keyboard shortcuts for the bottom buttons (none decided; Escape closes placement only).
-- The Watch button, its caption and the fade, with watch mode (`slice1-alive`); button sounds and where the sound
-  files live (`slice1-alive`).
+- The user's look and ear on watch mode's caption and the button sounds (`slice1-alive` ticket 13).
 - Views and their picker and legend (slice 3); level stars and Upgrade (slice 2).
 - Whether the card picture should be a separate render from the Build picker's building icon (with `island-blender`).

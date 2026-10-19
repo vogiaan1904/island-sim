@@ -1,8 +1,8 @@
 # Ambience sound
 
-Planned design from spec 6.2 and 12.5, for `slice1-alive`. No sound code and no sound files exist yet; the only trace
-is the mute switch in Settings (`view.muted`, saved on the device in `store/settings.ts`), which nothing listens to yet.
-Proposals are marked as such.
+Design from spec 6.2 and 12.5, **built in `slice1-alive`** (tickets 09 to 12): the files in
+`apps/client/public/sounds/` (built by `pnpm assets sounds` from the picks in `assets/SOURCES.md`), `audio/mix.ts`,
+`audio/engine.ts`, `audio/Ambience.tsx` and `audio/UiSounds.tsx`. "As built" below gives the values.
 
 ## What and who
 
@@ -44,8 +44,22 @@ Proposals are marked as such.
 - Where the processed files live in `apps/client/public/` and their format are open.
 - Screenshot and end-to-end tests run with sound off (`state-and-pwa.md`, test hooks).
 
+## As built
+
+- **Files:** four ambience loops (waves, birds, town, a night frog chorus; CC0 and public domain from Wikimedia
+  Commons) and three button sounds (Kenney Interface Sounds), AAC `.m4a` (every phone browser decodes it). Loops are
+  26 to 32 s, their last 2 s crossfaded into their start and their length a whole number of AAC frames, so they
+  repeat without a gap; ambience at -26 LUFS, button sounds peaking at -6 dB. 1.5 MB in all; `pnpm assets check`
+  holds them to the catalog, 20 to 40 s per loop, under 1 s per button sound and 2 MB in all.
+- **Mix (`audio/mix.ts`):** from the camera's target, its distance, the daylight's `night` and the island within 10
+  tiles of the target (the share of water, buildings and residents): waves 0.15 + 0.85 x coast x (0.4 + 0.6 x close),
+  birds by day, the night chorus at night, the town with how built-up it is, quieter by night and from afar. Applied
+  every 250 ms with a 0.4 s time constant, also while watch mode drifts the camera.
+- **Engine (`audio/engine.ts`):** one context, made on the first pointer, key or touch (never before), the beds
+  looping under their gains, a master gain that mute sets to 0 at once, suspended while the page is hidden, silent
+  where there is no Web Audio (jsdom). Button sounds play at half gain through it (`island-ui`).
+
 ## Open items
 
-- Sound sources, file format, location and loop lengths.
-- The exact mix curves and the island summary they read.
-- Whether night or weather changes the beds beyond the bird and town levels.
+- Weather beds, and how the beds change as the island grows past Settlement.
+- The user's ear on the picks (`slice1-alive` ticket 13).

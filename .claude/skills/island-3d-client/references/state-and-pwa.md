@@ -2,8 +2,8 @@
 
 Design from spec 5.3, 6.2 and the defaults in spec 12.3 to 12.5. **Built in slice 1:** the mirror and view state
 (section 1), the gliding clock and counters (4), full states and reconnects (5), no rendering while hidden (6), browser
-gestures (9), safe areas and pixel ratio (10). **Not built** (plan 6 unless noted): context-loss recovery (7), Wake Lock
-(8, with watch mode in `slice1-alive`), service worker and model caching (11), test hooks (12). The sync protocol
+gestures (9), safe areas and pixel ratio (10); the Wake Lock in watch mode (8) in `slice1-alive`. **Not built**
+(plan 6): context-loss recovery (7), service worker and model caching (11), test hooks (12). The sync protocol
 (message shapes, versions) is `island-server`; the manifest, the "Add to Home Screen" hint, cards, Settings and
 safe-area insets for the HUD are app shell and `island-ui`. This file covers what the renderer needs from them.
 
@@ -118,8 +118,9 @@ connection was closed and the client gets the full state again, spec 5.3), and w
   advancing frames by hand); pick the approach that holds a steady 30 on iOS and Android, and record it here.
 - Background: nothing rendered. On `visibilitychange` to hidden, stop the frame loop, timers that drive animation,
   and the ambience (`sound.md`); on visible, resume. Browsers mostly pause animation frames in the background anyway;
-  stop explicitly so nothing else keeps running. **As built:** `scene/frameLoop.ts` `useFrameLoop()` gives the Canvas
-  `frameloop="never"` while `document.visibilityState` is hidden. Everything animated reads the wall clock, so the island
+  stop explicitly so nothing else keeps running. **As built:** the Canvas has `frameloop="never"` and
+  `scene/frameLoop.ts` `FrameDriver` calls R3F's `advance` from requestAnimationFrame when `frameDue` says so (60 fps,
+  30 while watching, never while `document.visibilityState` is hidden); the audio engine suspends on hidden. Everything animated reads the wall clock, so the island
   is where it should be on return.
 
 ## 7. WebGL context loss
@@ -145,6 +146,9 @@ iOS can drop the 3D context while the app is in the background, and the app must
   again.
 - It can be unsupported or refused (for example in low-power mode): carry on quietly without it.
 - Verify on the user's iPhone both in Safari and as an installed home-screen app.
+- **As built:** `ui/watch/Watch.tsx` requests it on entering, releases it on leaving and requests it again on
+  `visibilitychange` to visible; a refusal is ignored. It needs a secure page: `pnpm preview --lan` (plain http) has
+  none, the deployed https build does.
 
 ## 9. Browser and back gestures
 
