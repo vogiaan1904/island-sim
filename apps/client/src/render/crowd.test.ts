@@ -3,6 +3,7 @@ import { buildingDefOf, newBuilding, type IslandState } from '@island/sim';
 import { describe, expect, it } from 'vitest';
 import { aliceWorld, islandOf } from '../test/islands.ts';
 import { crowdPlan, moversAt, newMovers, peopleShown, type Mover } from './crowd.ts';
+import { ferryPose, newFerryPose } from './ferry.ts';
 import { TILE_SIZE } from './look.ts';
 
 const SIZE = content.rules.islandSize;
@@ -283,5 +284,69 @@ describe('the crowd: the evening market walk', () => {
     }
     expect(childDays).toBeGreaterThan(0);
     expect(childDays).toBeLessThan(12);
+  });
+});
+
+describe('the crowd: ferry passengers', () => {
+  const DOCK_X = 31 * TILE_SIZE;
+  const MORNING = at(content.rules.shiftStartMinute);
+  const EVENING = at(content.rules.shiftEndMinute);
+  const none = { commuters: 0, homes: [] };
+  const withBags = (island: IslandState, ticks: number) => {
+    const plan = crowdPlan(island, content);
+    const out = newMovers(plan);
+    const count = moversAt(plan, ticks, { x: 0, z: 0 }, out, 200);
+    return out.slice(0, count).map((m) => ({ ...m }));
+  };
+
+  it('walks the morning newcomers off the ferry with bags, with their children, to the homes they moved into', () => {
+    const island = village();
+    island.ferry = { tick: MORNING, off: { commuters: 0, homes: [{ home: 101, people: 4 }] }, on: none };
+    expect(withBags(island, MORNING + 1).filter((m) => m.accessory === 'bag')).toEqual([]);
+    const walking = withBags(island, MORNING + 6);
+    const adults = walking.filter((m) => m.accessory === 'bag');
+    const children = walking.filter((m) => m.scale < 1);
+    expect(adults).toHaveLength(3);
+    expect(children).toHaveLength(1);
+    // Cottage 101 is west of the dock: everyone with a bag goes that way.
+    for (const m of adults) expect(m.x).toBeLessThan(DOCK_X + 2 * TILE_SIZE);
+    expect(withBags(island, MORNING + 40).filter((m) => m.accessory === 'bag')).toEqual([]);
+  });
+
+  it('skips a home the manifest names that the island no longer has', () => {
+    const island = village();
+    island.ferry = { tick: MORNING, off: { commuters: 0, homes: [{ home: 999, people: 4 }] }, on: none };
+    expect(withBags(island, MORNING + 6).filter((m) => m.accessory === 'bag')).toEqual([]);
+  });
+
+  it('walks the morning commuters off the ferry to the workplaces that take them', () => {
+    const island = village();
+    const home = island.buildings.find((b) => b.id === 101);
+    if (home?.home) home.home.residents = 0;
+    island.ferry = { tick: MORNING, off: { commuters: 2, homes: [] }, on: none };
+    const walking = withBags(island, MORNING + 6);
+    expect(walking).toHaveLength(2);
+    for (const m of walking) expect(m.accessory).toBeNull();
+    // The farm is east of the dock, and they head there.
+    const later = withBags(island, MORNING + 8);
+    for (const m of later) expect(m.x).toBeGreaterThan(walking[0]!.x - 1);
+  });
+
+  it('walks the evening leavers with bags and the commuters to the ferry, which waits for the last of them', () => {
+    const island = village();
+    const home = island.buildings.find((b) => b.id === 101);
+    if (home?.home) home.home.residents = 2;
+    island.ferry = { tick: EVENING, off: none, on: { commuters: 2, homes: [{ home: 101, people: 2 }] } };
+    const plan = crowdPlan(island, content);
+    const leaving = withBags(island, EVENING + 3).filter((m) => m.accessory === 'bag');
+    expect(leaving).toHaveLength(2);
+    const ferry = newFerryPose();
+    let lastAboard = EVENING;
+    for (let t = EVENING; t < EVENING + 60; t += 0.25) {
+      if (withBags(island, t).some((m) => m.accessory === 'bag')) lastAboard = t;
+    }
+    ferryPose(plan.ferry!, lastAboard, ferry);
+    expect(ferry).toMatchObject({ visible: true });
+    expect(ferry.z).toBeCloseTo(plan.ferry!.route.berth.z);
   });
 });

@@ -4,6 +4,7 @@ import { Color, ShaderMaterial, Vector3 } from 'three';
 import { useGame } from '../session/game.tsx';
 import { LOOK, TILE_SIZE, sunDirection } from '../render/look.ts';
 import { WATER_LEVEL } from '../render/terrain.ts';
+import { WAVE_GLSL } from '../render/waves.ts';
 import { daylight, toSun } from './Sun.tsx';
 
 // One water surface around the island with a cheap wave in its vertex shader. Its time is the gliding game clock
@@ -14,10 +15,7 @@ const vertexShader = /* glsl */ `
   varying vec3 vNormal;
   varying vec3 vWorld;
 
-  // Two slow crossing swells; height in world units, phase in radians. One tick is 2.5 s of real time.
-  float wave(vec2 p) {
-    return 0.12 * sin(p.x * 0.21 + uTime * 1.3) + 0.08 * sin(p.y * 0.27 - uTime * 1.1 + p.x * 0.05);
-  }
+  ${WAVE_GLSL}
 
   void main() {
     vec4 world = modelMatrix * vec4(position, 1.0);

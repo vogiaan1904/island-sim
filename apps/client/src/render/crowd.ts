@@ -2,6 +2,7 @@ import type { Content } from '@island/content';
 import { TICK_MS } from '@island/protocol';
 import { assignWorkers, childrenOf, findBuildingDef, roadPath, servicesInReach, stockOf, workersOf, type BuildingState, type IslandState } from '@island/sim';
 import { ANIMATION_FPS, CHARACTERS, clip, cycleFrames, type ClipName } from './clips.ts';
+import { MIN_STAY_MINUTES, ferryRoute, ferrySchedule, type FerryRoute, type FerrySchedule, type Point } from './ferry.ts';
 import { placedFootprint, rotationY } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
 
@@ -74,6 +75,8 @@ interface Station {
 export interface CrowdPlan {
   walks: Walk[];
   stations: Station[];
+  /** The ferry's lane and timetable, or null when the island has no pier. */
+  ferry: FerrySchedule | null;
   startMinute: number;
   ticksPerDay: number;
 }
@@ -111,6 +114,11 @@ const MARKET_SPREAD = 11;
 const MARKET_STAY = 5;
 /** On about this share of days a home's children come along. */
 const CHILDREN_COME_PERCENT = 40;
+/** Ferry passengers step off from this many game minutes after docking, one family or commuter after another. */
+const STEP_OFF_MINUTES = 2;
+const STEP_OFF_GAP = 0.35;
+/** Boarding passengers set off within this many game minutes of the ferry docking. */
+const BOARD_SPREAD = 3;
 /** Clip frames that play per game tick at the clips' own speed. */
 const FRAMES_PER_TICK = (ANIMATION_FPS * TICK_MS) / 1000;
 
@@ -160,15 +168,25 @@ function door(content: Content, building: BuildingState, toward: { x: number; z:
   };
 }
 
-/** The walk from one building to another along the sim's road path, at the sim's road speed; null when no road joins them. */
-function walkBetween(content: Content, island: IslandState, from: BuildingState, to: BuildingState, look: Look, start: Start): Walk | null {
+/** The line walked from one building's door to another's along the sim's road path; null when no road joins them. */
+function lineBetween(content: Content, island: IslandState, from: BuildingState, to: BuildingState): Point[] | null {
   const tiles = roadPath(island, content, from, to);
   if (tiles === null) return null;
   const size = content.rules.islandSize;
   const centers = tiles.map((t) => ({ x: ((t % size) + 0.5) * TILE_SIZE, z: (Math.floor(t / size) + 0.5) * TILE_SIZE }));
-  const first = centers[0] as { x: number; z: number };
-  const last = centers[centers.length - 1] as { x: number; z: number };
-  const line = [door(content, from, first), ...centers, door(content, to, last)];
+  const first = centers[0] as Point;
+  const last = centers[centers.length - 1] as Point;
+  return [door(content, from, first), ...centers, door(content, to, last)];
+}
+
+/** The walk from one building to another along the sim's road path, at the sim's road speed; null when no road joins them. */
+function walkBetween(content: Content, island: IslandState, from: BuildingState, to: BuildingState, look: Look, start: Start): Walk | null {
+  const line = lineBetween(content, island, from, to);
+  return line === null ? null : walkAlong(content, line, look, start);
+}
+
+/** A walk through world points at the sim's road speed, kept a little to one side so walkers do not overlap. */
+function walkAlong(content: Content, line: readonly Point[], look: Look, start: Start): Walk {
   const side = hash32(look.key, 7);
   const dx = (unit(side) * 2 - 1) * SIDE_STEP;
   const dz = (unit(side >>> 7) * 2 - 1) * SIDE_STEP;
@@ -318,6 +336,93 @@ function marketWalks(island: IslandState, content: Content, walks: Walk[]): void
   }
 }
 
+/** Splits a group of ferry passengers into adults and children, as a home splits its residents. */
+function family(people: number, content: Content): { adults: number; children: number } {
+  const children = childrenOf(people, content.rules);
+  return { adults: people - children, children };
+}
+
+/**
+ * The people of the last ferry trip (the ferry manifest, ADR 0001), walking across the pier and through the dock. Off
+ * the boat: newcomers with bags (and their children) to the homes they moved into, commuters to the workplaces that
+ * take them. Onto it: leavers with bags from the homes they left, commuters from their workplaces. Returns how long the
+ * trip has to wait at the pier for its last boarding passenger, in game minutes.
+ */
+function ferryPassengers(island: IslandState, content: Content, route: FerryRoute, walks: Walk[], arrivals: Map<number, number>): number {
+  const manifest = island.ferry;
+  const dock = island.buildings.find((b) => b.type === 'dock');
+  if (manifest === null || dock === undefined) return 0;
+  const byId = new Map(island.buildings.map((b) => [b.id, b]));
+  const pier = [route.bow, route.pier];
+  const minuteOfTrip = (((manifest.tick + content.rules.startMinute) % content.rules.ticksPerDay) + content.rules.ticksPerDay) % content.rules.ticksPerDay;
+  let group = 0;
+  let lastAboard = 0;
+
+  const stepOff = (to: BuildingState, look: Look, lag: number, carrying: boolean): Walk | null => {
+    const line = lineBetween(content, island, dock, to);
+    if (line === null) return null;
+    const delay = STEP_OFF_MINUTES + group * STEP_OFF_GAP + lag;
+    const walk = walkAlong(content, [...pier, ...line], look, { tick: manifest.tick + delay });
+    walk.carrying = carrying;
+    walks.push(walk);
+    return walk;
+  };
+  const board = (from: BuildingState, look: Look, lag: number, carrying: boolean): void => {
+    const line = lineBetween(content, island, from, dock);
+    if (line === null) return;
+    const delay = unit(hash32(look.key, 6)) * BOARD_SPREAD + lag;
+    const walk = walkAlong(content, [...line, route.pier, route.bow], look, { tick: manifest.tick + delay });
+    walk.carrying = carrying;
+    walks.push(walk);
+    lastAboard = Math.max(lastAboard, delay + (walk.along[walk.along.length - 1] as number) / walk.speed);
+  };
+
+  // Newcomers: the home's newest people, adults among its workers and children among its children.
+  for (const { home: id, people } of manifest.off.homes) {
+    const home = byId.get(id);
+    if (home?.home == null) continue;
+    const { adults, children } = family(people, content);
+    const workers = workersOf(home.home, content.rules);
+    const kids = childrenOf(home.home.residents, content.rules);
+    for (let a = 0; a < adults; a += 1) stepOff(home, lookOf(island.slot, id, Math.max(0, workers - adults) + a), a * 0.15, true);
+    for (let c = 0; c < children; c += 1) stepOff(home, lookOf(island.slot, id, workers + Math.max(0, kids - children) + c, true), (adults + c) * 0.15, false);
+    group += 1;
+  }
+  // Leavers: people the home no longer has, with looks of their own.
+  for (const { home: id, people } of manifest.on.homes) {
+    const home = byId.get(id);
+    if (home === undefined) continue;
+    const { adults, children } = family(people, content);
+    for (let a = 0; a < adults; a += 1) board(home, lookOf(island.slot, id, 100 + a), a * 0.15, true);
+    for (let c = 0; c < children; c += 1) board(home, lookOf(island.slot, id, 100 + adults + c, true), (adults + c) * 0.15, false);
+  }
+  // Commuters: the same people per seat every day, to and from the workplaces that take them.
+  const seatLook = (seat: number): Look => {
+    const h = hash32(island.slot, 5, seat);
+    return { key: h, character: h % CHARACTERS.length, scale: 1, wheelchair: false };
+  };
+  for (const [count, off] of [[manifest.off.commuters, true], [manifest.on.commuters, false]] as const) {
+    if (count === 0) continue;
+    let seat = 0;
+    for (const { workplace, commuters } of assignWorkers(island, content, count)) {
+      const work = byId.get(workplace);
+      if (work === undefined) continue;
+      for (let k = 0; k < commuters; k += 1, seat += 1) {
+        if (!off) {
+          board(work, seatLook(seat), 0, false);
+          continue;
+        }
+        const walk = stepOff(work, seatLook(seat), 0, false);
+        group += 1;
+        if (walk === null || 'daily' in walk.start) continue;
+        const arrive = minuteOfTrip + (walk.start.tick - manifest.tick) + (walk.along[walk.along.length - 1] as number) / walk.speed;
+        arrivals.set(workplace, Math.min(arrivals.get(workplace) ?? Number.POSITIVE_INFINITY, arrive));
+      }
+    }
+  }
+  return lastAboard;
+}
+
 /** Every walk the island's people make, from its state alone. Planned again whenever the state changes. */
 export function crowdPlan(island: IslandState, content: Content): CrowdPlan {
   const walks: Walk[] = [];
@@ -326,8 +431,15 @@ export function crowdPlan(island: IslandState, content: Content): CrowdPlan {
   residentsCommute(island, content, walks, arrivals);
   carriers(island, content, walks);
   marketWalks(island, content, walks);
+  const route = ferryRoute(island, content);
+  let ferry: FerrySchedule | null = null;
+  if (route !== null) {
+    const wait = ferryPassengers(island, content, route, walks, arrivals);
+    const stay = island.ferry === null ? null : { tick: island.ferry.tick, minutes: Math.max(MIN_STAY_MINUTES, Math.ceil(wait) + 1) };
+    ferry = ferrySchedule(route, content, stay);
+  }
   stations(island, content, arrivals, working);
-  return { walks, stations: working, startMinute: content.rules.startMinute, ticksPerDay: content.rules.ticksPerDay };
+  return { walks, stations: working, ferry, startMinute: content.rules.startMinute, ticksPerDay: content.rules.ticksPerDay };
 }
 
 /** A pool of movers big enough for every walk in the plan, made once and reused every frame. */

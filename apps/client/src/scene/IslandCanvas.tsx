@@ -1,12 +1,14 @@
 import { content } from '@island/content';
 import { Canvas } from '@react-three/fiber';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { CAMERA_FOV } from '../camera/controller.ts';
+import { crowdPlan } from '../render/crowd.ts';
 import { TILE_SIZE } from '../render/look.ts';
 import { guessQuality, pixelRatioFor } from '../render/quality.ts';
 import { useGame, useGameState } from '../session/game.tsx';
 import { Buildings } from './Buildings.tsx';
 import { CameraRig } from './CameraRig.tsx';
+import { Ferry } from './Ferry.tsx';
 import { useFrameLoop } from './frameLoop.ts';
 import { People } from './People.tsx';
 import { PlacementGhost } from './PlacementGhost.tsx';
@@ -26,7 +28,7 @@ function Ready({ onReady }: { onReady: () => void }) {
 }
 
 /**
- * The 3D island: terrain, water, the buildings, the people and the sun, seen from the free camera (`CameraRig`). The default export, so the app loads three.js in its own chunk.
+ * The 3D island: terrain, water, the buildings, the people, the ferry and the sun, seen from the free camera (`CameraRig`). The default export, so the app loads three.js in its own chunk.
  */
 export default function IslandCanvas({ onReady }: { onReady: () => void }) {
   const { store } = useGame();
@@ -46,6 +48,8 @@ export default function IslandCanvas({ onReady }: { onReady: () => void }) {
   }, [store, guessed]);
   const quality = chosen ?? guessed;
   const frameloop = useFrameLoop();
+  // Who walks where and the ferry's timetable, planned once per island update (render/crowd.ts).
+  const plan = useMemo(() => (island === null ? null : crowdPlan(island, content)), [island]);
   return (
     <div className="island-canvas">
       <Canvas
@@ -68,7 +72,8 @@ export default function IslandCanvas({ onReady }: { onReady: () => void }) {
         <Suspense fallback={null}>
           <PlacementGhost />
         </Suspense>
-        <Suspense fallback={null}>{island !== null && <People island={island} />}</Suspense>
+        <Suspense fallback={null}>{plan !== null && <People plan={plan} />}</Suspense>
+        <Suspense fallback={null}>{plan?.ferry != null && <Ferry schedule={plan.ferry} />}</Suspense>
       </Canvas>
     </div>
   );

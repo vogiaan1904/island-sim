@@ -1,5 +1,3 @@
-import { content } from '@island/content';
-import type { IslandState } from '@island/sim';
 import { useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
@@ -20,7 +18,7 @@ import { cameraPose } from '../camera/controller.ts';
 import { ISLAND_LIMITS } from '../camera/limits.ts';
 import { getLivePose } from '../camera/livePose.ts';
 import { CHARACTERS, JOINTS, characterModel, clip, variantRow, type ClipName } from '../render/clips.ts';
-import { PEOPLE_CAP, crowdPlan, moversAt, newMovers, peopleShown, type Mover } from '../render/crowd.ts';
+import { PEOPLE_CAP, moversAt, newMovers, peopleShown, type CrowdPlan, type Mover } from '../render/crowd.ts';
 import { modelUrl } from '../render/models.ts';
 import { useGame } from '../session/game.tsx';
 import { useCharacterMaterials } from './characterMaterial.ts';
@@ -133,7 +131,7 @@ function finish(mesh: InstancedMesh | null, count: number): void {
  * joint-animation texture. Who walks where is planned when the island changes; every frame only fills the instance
  * buffers from the gliding game time, nearest to the camera first, and nobody shows when zoomed out to the whole island.
  */
-export function People({ island }: { island: IslandState }) {
+export function People({ plan }: { plan: CrowdPlan }) {
   const { clock, store } = useGame();
   const { material, depth } = useCharacterMaterials();
   const gltfs = useGLTF(CHARACTERS.map((_, i) => modelUrl(characterModel(i))), false, true);
@@ -142,7 +140,6 @@ export function People({ island }: { island: IslandState }) {
   const geometries = useMemo(() => gltfs.map((g) => characterGeometry(g.scene)), [gltfs]);
   const wheelchairGeometry = useMemo(() => accessoryGeometry(wheelchair.scene, ROOT), [wheelchair]);
   const bagGeometry = useMemo(() => accessoryGeometry(bag.scene, ARM_RIGHT), [bag]);
-  const plan = useMemo(() => crowdPlan(island, content), [island]);
   const pool = useMemo(() => newMovers(plan), [plan]);
   const meshes = useRef<Array<InstancedMesh | null>>([]);
   const wheelchairs = useRef<InstancedMesh | null>(null);
