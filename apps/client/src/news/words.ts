@@ -1,9 +1,9 @@
 import type { BuildingId, Content, EventTypeId, GoalId, StageId } from '@island/content';
-import { footprintSize, type IslandState, type SimEvent } from '@island/sim';
-import { footprintCenter } from '../render/instances.ts';
+import { type IslandState, type SimEvent } from '@island/sim';
+import { placedFootprint } from '../render/instances.ts';
 import { TILE_SIZE } from '../render/look.ts';
 import type { IconName } from '../ui/icons.tsx';
-import { BUILDING_NAMES, STAGE_NAMES } from '../ui/names.ts';
+import { BUILDING_NAMES, STAGE_NAMES, theBuilding } from '../ui/names.ts';
 import { coinsText } from '../ui/coins.ts';
 
 // What an event says, shows and points at, for the news card, the Log and the celebration (island-ui, text-tone.md).
@@ -28,8 +28,7 @@ const isStageId = (value: unknown): value is StageId => typeof value === 'string
 /** "the farm", "the Island Hall": the name in a sentence, from the content id. */
 function the(building: unknown): string {
   if (!isBuildingId(building)) return 'a building';
-  const name = BUILDING_NAMES[building];
-  return `the ${/[A-Z]/.test(name.slice(1)) ? name : name.toLowerCase()}`;
+  return theBuilding(building);
 }
 
 function plural(n: number, one: string, many: string): string {
@@ -122,10 +121,8 @@ export function eventPlace(island: IslandState, content: Content, event: SimEven
   const middle = (content.rules.islandSize / 2) * TILE_SIZE;
   const centerOf = (type: BuildingId | null, id: number | null) => {
     const found = island.buildings.find((b) => (id === null ? b.type === type : b.id === id));
-    const def = found === undefined ? undefined : content.buildings.find((d) => d.id === found.type);
-    if (found === undefined || def === undefined) return null;
-    const { w, h } = footprintSize(def, found.rotation);
-    return footprintCenter(found.x, found.y, w, h);
+    const placed = found === undefined ? null : placedFootprint(content, found);
+    return placed === null ? null : { x: placed.x, z: placed.z };
   };
   const named = event.data['buildingId'];
   if (typeof named === 'number') {

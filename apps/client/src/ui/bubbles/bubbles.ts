@@ -1,10 +1,9 @@
-import type { GoalId, NeedId } from '@island/content';
+import type { GoalId } from '@island/content';
 import { isBuilt, type BuildingState } from '@island/sim';
 import type { Limits } from '../../camera/controller.ts';
 import { buildingAnchor, islandAnchor, type Anchor } from '../../render/anchors.ts';
 import { problemOf, statusOf, type CardContext, type Picture } from '../cards/conditions.ts';
-import type { IconName } from '../icons.tsx';
-import { BUILDING_NAMES, NEED_WORDS } from '../names.ts';
+import { BUILDING_NAMES, NEED_ICONS, NEED_WORDS } from '../names.ts';
 import { coinsHeld, countText } from '../coins.ts';
 
 // Which bubbles float over the island and where (island-ui, screens.md section 2). Pure: no React, no store. What
@@ -46,11 +45,6 @@ export interface RewardBubble extends BubbleBase {
 }
 
 export type Bubble = BuildingBubble | RewardBubble;
-
-const NEED_ICONS: Record<NeedId, IconName> = {
-  food: 'bread',
-  water: 'droplet',
-};
 
 const SOLO: Stack = { index: 0, of: 1 };
 

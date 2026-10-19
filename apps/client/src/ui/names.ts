@@ -1,4 +1,5 @@
 import type { BuildingId, GoodId, KeyStaffRole, NeedId, StageId } from '@island/content';
+import type { IconName } from './icons.tsx';
 
 // What the player reads for content ids. The content data has ids only, so the names live here, one record per kind,
 // typed so a new id in content fails the build until it has a name (island-ui, text-tone.md). Later tickets (cards,
@@ -32,6 +33,18 @@ export const NEED_WORDS: Record<NeedId, string> = {
   food: 'food',
   water: 'water',
 };
+
+/** The picture of a need: the icon on its goal tile and on the bubble over a home. */
+export const NEED_ICONS: Record<NeedId, IconName> = {
+  food: 'bread',
+  water: 'droplet',
+};
+
+/** "the farm", "the Island Hall": a building's name inside a sentence (proper names keep their capitals). */
+export function theBuilding(id: BuildingId): string {
+  const name = BUILDING_NAMES[id];
+  return `the ${/[A-Z]/.test(name.slice(1)) ? name : name.toLowerCase()}`;
+}
 
 /** The picture of a good, rendered from its 3D model (`/icons/good_<id>_a.png`). */
 export function goodPicture(good: GoodId): string {

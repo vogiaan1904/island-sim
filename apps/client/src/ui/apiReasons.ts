@@ -1,4 +1,5 @@
 import type { ClientApiReason } from '../connection/api.ts';
+import { RULE_TEXT } from './fieldRules.ts';
 
 // Why the server refused an /api request, in the player's words (island-ui text tone: kind, specific, with the way
 // out). The one place these lines live; the sign-up and world screens (ticket 06) add theirs here.
@@ -13,7 +14,7 @@ const TEXT: Partial<Record<ClientApiReason, string>> = {
   'world-full': 'This world is full. Ask your friend if they have room somewhere else.',
   'world-resting': 'This world is resting, try again soon.',
   'already-has-island': 'You already have an island in that world.',
-  'bad-island-name': "That island name doesn't work. Use 2 to 24 letters, digits, spaces, - or '.",
+  'bad-island-name': `That island name doesn't work. ${RULE_TEXT.islandName}`,
   'bad-request': "Something in the form doesn't look right. Check the names and try again.",
   'not-signed-in': 'You were signed out. Log in again to continue.',
   'no-such-world': "That world can't be found any more.",

@@ -1,4 +1,5 @@
 import type { Reason } from '@island/protocol';
+import { apiReasonText } from './apiReasons.ts';
 import { needMoreText } from './coins.ts';
 
 // Why a command was refused, in the player's words (island-ui, text-tone.md "Rejections and errors"). The sim and the
@@ -10,9 +11,10 @@ const WORDS: Record<Reason, string> = {
   'bad-input': "That didn't look right, try again",
   'no-such-island': "That island isn't here",
   'island-not-claimed': "That island isn't claimed yet",
-  'world-full': 'This world is full',
-  'already-has-island': 'You already have an island here',
-  'bad-island-name': "That island name doesn't work",
+  // Reasons the server's HTTP side also gives: one wording, with the way out, in apiReasons.
+  'world-full': apiReasonText('world-full'),
+  'already-has-island': apiReasonText('already-has-island'),
+  'bad-island-name': apiReasonText('bad-island-name'),
   'unknown-building': "We don't know that building",
   'not-player-buildable': "That one can't be built by hand",
   'not-available-yet': 'Not available yet',

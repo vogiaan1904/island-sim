@@ -1,4 +1,5 @@
 import { content } from '@island/content';
+import { findBuildingDef } from '@island/sim';
 import { useEffect, useMemo } from 'react';
 import { clearRoad, lostDraft, penTo, rotateDraft, sendingDraft, settleDraft, type PlacementDraft } from '../../placement/draft.ts';
 import { roadVerdict } from '../../placement/roadVerdict.ts';
@@ -61,7 +62,7 @@ export function PlacementPanel() {
 
   if (draft === null || verdict === null || island === null || !island.own || draft.phase === 'landing') return null;
   const name = draft.kind === 'road' ? 'Road' : BUILDING_NAMES[draft.building];
-  const def = draft.kind === 'road' ? undefined : content.buildings.find((d) => d.id === draft.building);
+  const def = draft.kind === 'road' ? undefined : findBuildingDef(content, draft.building) ?? undefined;
   const placing = draft.phase === 'placing';
 
   const place = () => {

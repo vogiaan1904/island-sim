@@ -1,5 +1,6 @@
 import type { Content } from '@island/content';
-import { footprintSize, type IslandState } from '@island/sim';
+import type { IslandState } from '@island/sim';
+import { buildingAtTile } from '../render/instances.ts';
 import { TILE_SIZE } from '../render/look.ts';
 import { groundPoint, type Pose, type Viewport } from './controller.ts';
 
@@ -20,11 +21,5 @@ export function tapTarget(island: IslandState, content: Content, pose: Pose, vie
   const x = Math.floor(ground.x / TILE_SIZE);
   const y = Math.floor(ground.z / TILE_SIZE);
   if (x < 0 || y < 0 || x >= content.rules.islandSize || y >= content.rules.islandSize) return null;
-  for (const building of island.buildings) {
-    const def = content.buildings.find((d) => d.id === building.type);
-    if (def === undefined) continue;
-    const { w, h } = footprintSize(def, building.rotation);
-    if (x >= building.x && x < building.x + w && y >= building.y && y < building.y + h) return { tile: { x, y }, buildingId: building.id };
-  }
-  return { tile: { x, y }, buildingId: null };
+  return { tile: { x, y }, buildingId: buildingAtTile(island, content, x, y)?.id ?? null };
 }

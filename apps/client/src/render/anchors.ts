@@ -1,7 +1,7 @@
 import type { Content } from '@island/content';
-import { footprintSize, type BuildingState } from '@island/sim';
+import type { BuildingState } from '@island/sim';
 import { CAMERA_FOV, type Pose, type Viewport } from '../camera/controller.ts';
-import { footprintCenter } from './instances.ts';
+import { placedFootprint } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
 
 // Where the 2D things that belong to the island hang in the world, and where they land on the screen: bubbles over
@@ -21,11 +21,9 @@ const HEIGHT_PER_TILE = 3;
 
 /** The point just above the roof of a building, over the middle of its (turned) footprint. */
 export function buildingAnchor(building: BuildingState, content: Content): Anchor {
-  const def = content.buildings.find((d) => d.id === building.type);
-  if (def === undefined) return islandAnchor(content);
-  const { w, h } = footprintSize(def, building.rotation);
-  const middle = footprintCenter(building.x, building.y, w, h);
-  return { x: middle.x, y: BASE_HEIGHT + HEIGHT_PER_TILE * Math.max(w, h), z: middle.z };
+  const placed = placedFootprint(content, building);
+  if (placed === null) return islandAnchor(content);
+  return { x: placed.x, y: BASE_HEIGHT + HEIGHT_PER_TILE * Math.max(placed.w, placed.h), z: placed.z };
 }
 
 /** The middle of the island's grid, a little above the ground: for a bubble with no building to sit over. */

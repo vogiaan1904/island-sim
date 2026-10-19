@@ -3,7 +3,7 @@ import type { BuildingState, IslandState } from '@island/sim';
 import { describe, expect, it } from 'vitest';
 import { aliceWorld, islandOf } from '../test/islands.ts';
 import { constructionRise } from './construction.ts';
-import { buildingAtTile, buildingInstances, pierInstances, rotationY, scaffoldInstances } from './instances.ts';
+import { buildingAtTile, buildingInstances, pierInstances, placedFootprint, rotationY, scaffoldInstances } from './instances.ts';
 
 function withBuilding(island: IslandState, building: Partial<BuildingState> & Pick<BuildingState, 'id' | 'type' | 'x' | 'y' | 'rotation'>): IslandState {
   const dock = island.buildings[0]!;
@@ -127,5 +127,16 @@ describe('finding a building from a tile', () => {
     expect(buildingAtTile(island, content, 16, 26)?.id).toBe(5);
     expect(buildingAtTile(island, content, 16, 27)).toBeUndefined();
     expect(buildingAtTile(island, content, 0, 0)).toBeUndefined();
+  });
+});
+
+describe('placed footprint', () => {
+  it('gives the turned size and the world center, the one chain every caller used to repeat', () => {
+    expect(placedFootprint(content, { type: 'fishing-hut', x: 15, y: 26, rotation: 1 })).toMatchObject({ w: 2, h: 1, x: 64, z: 106 });
+    expect(placedFootprint(content, { type: 'dock', x: 12, y: 26, rotation: 0 })?.def.id).toBe('dock');
+  });
+
+  it('is null for a type the content does not know', () => {
+    expect(placedFootprint(content, { type: 'castle' as 'dock', x: 0, y: 0, rotation: 0 })).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 import type { BuildingDef, BuildingId, Content, GoodId } from '@island/content';
 import type { PlayerCommand } from '@island/protocol';
 import {
-  footprintSize,
+  buildingDefOf,
   HIGH_PRIORITY,
   isBuilt,
   materialLines,
@@ -13,9 +13,9 @@ import {
   type IslandState,
   type MarketState,
 } from '@island/sim';
-import { footprintCenter } from '../../render/instances.ts';
+import { placedFootprint } from '../../render/instances.ts';
 import type { IconName } from '../icons.tsx';
-import { BUILDING_NAMES, GOOD_NAMES } from '../names.ts';
+import { GOOD_NAMES, theBuilding } from '../names.ts';
 import { needMoreText } from '../coins.ts';
 
 // What a building's conditions mean to the player: the most important one in words, the cause of a problem with the
@@ -65,21 +65,14 @@ export interface Problem {
 }
 
 function defOf(content: Content, building: BuildingState): BuildingDef {
-  const def = content.buildings.find((d) => d.id === building.type);
-  if (def === undefined) throw new Error(`no building definition for ${building.type}`);
-  return def;
+  return buildingDefOf(content, building.type);
 }
 
 /** Where the scene draws the building: the center of its footprint. "Show me" and Fix fly here. */
 export function buildingSpot(building: BuildingState, content: Content): Spot {
-  const { w, h } = footprintSize(defOf(content, building), building.rotation);
-  return footprintCenter(building.x, building.y, w, h);
-}
-
-/** "the farm", "the Island Hall": the name as a sentence uses it. */
-function theName(def: BuildingDef): string {
-  const name = BUILDING_NAMES[def.id];
-  return `the ${def.landmark === null ? name.toLowerCase() : name}`;
+  const placed = placedFootprint(content, building);
+  if (placed === null) throw new Error(`no building definition for ${building.type}`);
+  return { x: placed.x, z: placed.z };
 }
 
 function sentence(text: string): string {
@@ -178,7 +171,7 @@ function staffingFix(building: BuildingState, def: BuildingDef, ctx: CardContext
     return {
       kind: 'command',
       command: { type: 'set-priority', buildingId: building.id, priority: HIGH_PRIORITY },
-      says: `Fix puts ${theName(def)} first in line for workers.`,
+      says: `Fix puts ${theBuilding(def.id)} first in line for workers.`,
       fallback: here,
     };
   }
@@ -228,7 +221,7 @@ export function problemOf(building: BuildingState, ctx: CardContext): Problem | 
   const def = defOf(ctx.content, building);
   const condition = building.conditions.find((c) => c !== 'under-construction');
   if (condition === undefined) return null;
-  const name = theName(def);
+  const name = theBuilding(def.id);
   const self: Picture = { kind: 'building', id: def.id };
   switch (condition) {
     case 'waiting-for-money':

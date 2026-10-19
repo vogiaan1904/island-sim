@@ -1,5 +1,5 @@
-import type { BuildingDef, Content } from '@island/content';
-import { footprintSize, isBuilt, type BuildingState, type IslandState, type Rotation } from '@island/sim';
+import type { BuildingDef, BuildingId, Content } from '@island/content';
+import { findBuildingDef, footprintSize, isBuilt, type BuildingState, type IslandState, type Rotation } from '@island/sim';
 import { constructionRise, constructionStep } from './construction.ts';
 import { TILE_SIZE } from './look.ts';
 import { PIER_MODEL, buildingModel, scaffoldModel } from './models.ts';
@@ -38,8 +38,21 @@ export function footprintCenter(x: number, y: number, w: number, h: number): { x
   return { x: (x + w / 2) * TILE_SIZE, z: (y + h / 2) * TILE_SIZE };
 }
 
-function defOf(content: Content, building: BuildingState): BuildingDef | undefined {
-  return content.buildings.find((d) => d.id === building.type);
+/** A building's definition, the size of its footprint turned as placed, and the footprint's world center. */
+export interface PlacedFootprint {
+  def: BuildingDef;
+  w: number;
+  h: number;
+  x: number;
+  z: number;
+}
+
+/** Where a building of this type stands and how big it is, or null for a type the content does not know. The one place footprint size and center are put together. */
+export function placedFootprint(content: Content, spot: { type: BuildingId; x: number; y: number; rotation: Rotation }): PlacedFootprint | null {
+  const def = findBuildingDef(content, spot.type);
+  if (def === null) return null;
+  const { w, h } = footprintSize(def, spot.rotation);
+  return { def, w, h, ...footprintCenter(spot.x, spot.y, w, h) };
 }
 
 function inIdOrder(island: IslandState): BuildingState[] {
@@ -60,10 +73,10 @@ function add(instances: Map<string, ModelInstance[]>, file: string, instance: Mo
 export function buildingInstances(island: IslandState, content: Content): ModelInstances {
   const instances = new Map<string, ModelInstance[]>();
   for (const building of inIdOrder(island)) {
-    const def = defOf(content, building);
-    if (def === undefined) continue;
-    const { w, h } = footprintSize(def, building.rotation);
-    const at = { id: building.id, ...footprintCenter(building.x, building.y, w, h), rotationY: rotationY(building.rotation) };
+    const placed = placedFootprint(content, building);
+    if (placed === null) continue;
+    const { def } = placed;
+    const at = { id: building.id, x: placed.x, z: placed.z, rotationY: rotationY(building.rotation) };
     if (isBuilt(building)) {
       add(instances, buildingModel(building.type), at);
       continue;
@@ -82,12 +95,12 @@ export function scaffoldInstances(island: IslandState, content: Content): ModelI
   const instances = new Map<string, ModelInstance[]>();
   for (const building of inIdOrder(island)) {
     if (isBuilt(building)) continue;
-    const def = defOf(content, building);
-    if (def === undefined) continue;
-    const { w, h } = footprintSize(def, building.rotation);
-    add(instances, scaffoldModel(def.footprint.w, def.footprint.h), {
+    const placed = placedFootprint(content, building);
+    if (placed === null) continue;
+    add(instances, scaffoldModel(placed.def.footprint.w, placed.def.footprint.h), {
       id: building.id,
-      ...footprintCenter(building.x, building.y, w, h),
+      x: placed.x,
+      z: placed.z,
       rotationY: rotationY(building.rotation),
     });
   }
@@ -118,9 +131,9 @@ export function pierInstances(island: IslandState, content: Content): ModelInsta
   const size = content.rules.islandSize;
   for (const building of inIdOrder(island)) {
     if (building.type !== 'dock' || !isBuilt(building)) continue;
-    const def = defOf(content, building);
-    if (def === undefined) continue;
-    const { w, h } = footprintSize(def, building.rotation);
+    const placed = placedFootprint(content, building);
+    if (placed === null) continue;
+    const { w, h } = placed;
     for (let turn = 0; turn < 4; turn += 1) {
       const water = sideTiles(building.x, building.y, w, h, (building.rotation + turn) % 4).find(([tx, ty]) => isWater(island, size, tx, ty));
       if (water === undefined) continue;
@@ -139,9 +152,9 @@ export function pierInstances(island: IslandState, content: Content): ModelInsta
 /** The building (or site) standing on tile (tx, ty), if any. */
 export function buildingAtTile(island: IslandState, content: Content, tx: number, ty: number): BuildingState | undefined {
   return island.buildings.find((building) => {
-    const def = defOf(content, building);
-    if (def === undefined) return false;
-    const { w, h } = footprintSize(def, building.rotation);
+    const placed = placedFootprint(content, building);
+    if (placed === null) return false;
+    const { w, h } = placed;
     return tx >= building.x && tx < building.x + w && ty >= building.y && ty < building.y + h;
   });
 }

@@ -1,7 +1,6 @@
 import type { Content } from '@island/content';
-import { footprintSize } from '@island/sim';
 import type { BuildingDraft } from '../placement/draft.ts';
-import { footprintCenter, rotationY } from './instances.ts';
+import { placedFootprint, rotationY } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
 import { buildingModel } from './models.ts';
 
@@ -22,11 +21,9 @@ export interface GhostInstance {
 }
 
 export function ghostInstance(draft: BuildingDraft, content: Content): GhostInstance {
-  const def = content.buildings.find((d) => d.id === draft.building);
-  if (def === undefined) throw new Error(`unknown building ${draft.building}`);
-  const { w, h } = footprintSize(def, draft.rotation);
-  const center = footprintCenter(draft.x, draft.y, w, h);
-  return { file: buildingModel(draft.building), x: center.x, z: center.z, rotationY: rotationY(draft.rotation), width: w * TILE_SIZE, depth: h * TILE_SIZE };
+  const placed = placedFootprint(content, { type: draft.building, x: draft.x, y: draft.y, rotation: draft.rotation });
+  if (placed === null) throw new Error(`unknown building ${draft.building}`);
+  return { file: buildingModel(draft.building), x: placed.x, z: placed.z, rotationY: rotationY(draft.rotation), width: placed.w * TILE_SIZE, depth: placed.h * TILE_SIZE };
 }
 
 /** How long the landing plays, in seconds: the bounce first, the dust to the end. */

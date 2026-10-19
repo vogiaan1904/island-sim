@@ -1,6 +1,6 @@
 import type { BuildingDef, BuildingId, Content } from '@island/content';
 import type { PlayerCommand } from '@island/protocol';
-import { checkPlacement, type IslandState, type PlacementCheckId, type ReasonCode, type Rotation } from '@island/sim';
+import { checkPlacement, findBuildingDef, type IslandState, type PlacementCheckId, type ReasonCode, type Rotation } from '@island/sim';
 import { BUILDING_NAMES } from '../ui/names.ts';
 import { coinsHeld, coinsShort, needMoreText } from '../ui/coins.ts';
 
@@ -43,10 +43,6 @@ export interface PlacementVerdict {
   command: PlayerCommand | null;
 }
 
-function defOf(content: Content, id: BuildingId): BuildingDef | undefined {
-  return content.buildings.find((def) => def.id === id);
-}
-
 function stageOrder(content: Content, island: IslandState): number {
   return content.stages.find((stage) => stage.id === island.stage)?.order ?? 0;
 }
@@ -72,8 +68,8 @@ const REASON_FOR_CHECK: Record<PlacementCheckId, ReasonCode> = {
 };
 
 export function buildingVerdict(island: IslandState, content: Content, aim: BuildingAim): PlacementVerdict {
-  const def = defOf(content, aim.building);
-  if (def === undefined) return { ok: false, labels: [], costCents: 0, shortfallCents: 0, reason: 'unknown-building', command: null };
+  const def = findBuildingDef(content, aim.building);
+  if (def === null) return { ok: false, labels: [], costCents: 0, shortfallCents: 0, reason: 'unknown-building', command: null };
   const blocked = unavailable(island, content, def);
   if (blocked !== null) {
     return {

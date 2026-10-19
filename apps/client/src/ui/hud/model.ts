@@ -1,7 +1,7 @@
 import type { BuildingDef, Content, GoalDef, GoalId, NeedId, StageId } from '@island/content';
-import { isBuilt, residentsOf, type IslandState } from '@island/sim';
+import { findBuildingDef, isBuilt, residentsOf, type IslandState } from '@island/sim';
 import type { IconName } from '../icons.tsx';
-import { BUILDING_NAMES, NEED_WORDS } from '../names.ts';
+import { BUILDING_NAMES, NEED_ICONS, NEED_WORDS } from '../names.ts';
 import { coinsHeld } from '../coins.ts';
 
 // What the HUD shows, worked out from the island and the content data alone (no React, no store): every number the
@@ -117,7 +117,7 @@ function goalTile(goal: GoalDef, island: IslandState, content: Content, resident
     };
   }
   const built = island.buildings.filter((b) => b.type === target.building && isBuilt(b)).length;
-  const def = content.buildings.find((b) => b.id === target.building);
+  const def = findBuildingDef(content, target.building);
   const name = BUILDING_NAMES[target.building];
   const phrase = def?.landmark ? `the ${name}` : `a ${name.toLowerCase()}`;
   return {
@@ -128,8 +128,6 @@ function goalTile(goal: GoalDef, island: IslandState, content: Content, resident
     fraction: Math.min(1, built / target.count),
   };
 }
-
-const NEED_ICONS: Record<NeedId, IconName> = { food: 'bread', water: 'droplet' };
 
 /** One tile per need that some home lacks, filled by the share of lived-in homes where it is met. */
 function needTiles(island: IslandState, content: Content): GoalTile[] {

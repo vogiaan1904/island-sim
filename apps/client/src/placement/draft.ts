@@ -1,6 +1,6 @@
 import type { BuildingId, Content } from '@island/content';
 import type { Reason } from '@island/protocol';
-import { footprintSize, type Rotation } from '@island/sim';
+import { buildingDefOf, footprintSize, type Rotation } from '@island/sim';
 import { TILE_SIZE } from '../render/look.ts';
 import type { CommandState } from '../store/mirror.ts';
 
@@ -55,9 +55,7 @@ export interface Tile {
 }
 
 function sizeOf(content: Content, building: BuildingId, rotation: Rotation): { w: number; h: number } {
-  const def = content.buildings.find((d) => d.id === building);
-  if (def === undefined) throw new Error(`unknown building ${building}`);
-  return footprintSize(def, rotation);
+  return footprintSize(buildingDefOf(content, building), rotation);
 }
 
 /** A new draft with the footprint centered on this tile (the lower-right of the two middle tiles for an even size). */

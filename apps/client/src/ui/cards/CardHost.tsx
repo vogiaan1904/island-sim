@@ -1,7 +1,7 @@
 import { content } from '@island/content';
 import type { BuildingDef, GoodId } from '@island/content';
 import type { MarketState } from '@island/sim';
-import { isBuilt, type BuildingState } from '@island/sim';
+import { buildingDefOf, isBuilt, type BuildingState } from '@island/sim';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGame, useGameState } from '../../session/game.tsx';
 import { Icon } from '../icons.tsx';
@@ -71,7 +71,7 @@ function PictureTile({ picture, size = 40 }: { picture: Picture; size?: number }
 
 function BuildingCard({ building, state, own, onClose }: { building: BuildingState; state: CardContext; own: boolean; onClose: () => void }) {
   const { store } = useGame();
-  const def = state.content.buildings.find((d) => d.id === building.type) as BuildingDef;
+  const def = buildingDefOf(state.content, building.type);
   const name = BUILDING_NAMES[def.id];
   const status = statusOf(building, state);
   const problem = useMemo(() => problemOf(building, state), [building, state.island, state.market]);
