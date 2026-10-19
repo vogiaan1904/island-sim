@@ -78,7 +78,7 @@ a goods tile, a cost on a button), never as a wall.
 Chosen 2026-10-15 (D23), plus the Goods flow view borrowed from direction C. Take only C's view, not C's slim dark
 HUD or its data bar. Feels like Township, Hay Day, SimCity BuildIt, but calm, and never like a pay-to-win mobile game.
 
-- Chunky round buttons and rounded cards with **thick dark outlines** and a hard drop shadow.
+- Chunky round buttons and rounded cards with **no dark outline** and a soft blurred shadow (`--lift`, decision 30).
 - Bright colors on white or cream surfaces; one rounded, friendly font.
 - A **small bounce or sparkle on touch** with a soft button sound; bubbles bob gently; coins fly to the counter.
 - Calm: no screen shake, no flashing, no urgent timers or nagging badges.
@@ -202,7 +202,7 @@ friendly words. Full guide with examples: `references/text-tone.md`.
 - [ ] Nothing new is always visible without the user's approval; nothing is shown before its feature exists.
 
 **Style A**
-- [ ] Round or rounded shapes, thick dark outline, hard drop shadow, bright colors from the shared tokens (no
+- [ ] Round or rounded shapes, no dark outline, the soft lift (`--lift`), bright colors from the shared tokens (no
       one-off hex values).
 - [ ] A small bounce or sparkle and a soft sound on touch; calm motion; no shake, flashing or urgent timers.
 - [ ] Honors reduced motion and the sound setting.
@@ -236,7 +236,7 @@ Paths are under `apps/client/src`. Reuse these; do not write a second table, for
 
 | Need | Use |
 |---|---|
-| Colors, font, outline, shadow | `styles/tokens.css` (custom properties: `--ink`, `--surface`, `--card`, `--teal`, `--yellow`, `--green`, `--red`, `--picture-tile`, `--goods-tile`, `--shadow`, `--font`, and the problem and waiting pairs), `styles/global.css`. The font is the system rounded stack (`ui-rounded`, `SF Pro Rounded`, `Nunito`, `Segoe UI`, `system-ui`); no web font is loaded. Components use the tokens, never a hex value |
+| Colors, font, outline, shadow | `styles/tokens.css` (custom properties: `--ink`, `--surface`, `--card`, `--teal`, `--yellow`, `--green`, `--red`, `--picture-tile`, `--goods-tile`, `--shadow`, `--lift`, `--lift-pressed`, `--edge`, `--font`, and the problem and waiting pairs), `styles/global.css`. The font is the system rounded stack (`ui-rounded`, `SF Pro Rounded`, `Nunito`, `Segoe UI`, `system-ui`); no web font is loaded. Components use the tokens, never a hex value |
 | Layout switch | CSS `@media (min-aspect-ratio: 5/4)`: wide. Everything else is narrow. `ui/hud/Hud.css` and `ui/PanelHost.css` use the same query; wide panels are `min(22rem, 42vw)` on the right |
 | Panels | `view.openPanel` (`PanelId`: staff, trade, build, log, settings); `store.togglePanel(id)`; `ui/PanelHost.tsx` draws the open one with its Close; register a body with one line in `PANEL_BODIES` in `ui/panels.ts` |
 | Names of things | `ui/names.ts`: `STAGE_NAMES`, `BUILDING_NAMES`, `GOOD_NAMES`, `NEED_WORDS`, `NEED_ICONS`, `ROLE_NAMES`, `PORT_MASTER_TRAITS`, `theBuilding(id)`. Typed `Record`s keyed by content id, so a new id fails the build until it has a name |

@@ -6,4 +6,4 @@ new world from the world screen.
 
 **Blocked by:** 01.
 
-**Status:** ready-for-human
+**Status:** done

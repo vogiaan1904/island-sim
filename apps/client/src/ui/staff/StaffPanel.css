@@ -20,9 +20,8 @@
   gap: 0.6rem;
   padding: 0.75rem;
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 16px;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
 }
 
 .staff-head {
@@ -38,7 +37,6 @@
   width: 72px;
   height: 72px;
   background: var(--picture-tile);
-  border: 2.5px solid var(--ink);
   border-radius: 16px;
 }
 
@@ -48,7 +46,6 @@
   height: 72px;
   object-fit: cover;
   background: var(--picture-tile);
-  border: 2.5px solid var(--ink);
   border-radius: 50%;
   box-shadow: inset 0 0 0 3px var(--surface);
 }
@@ -105,9 +102,8 @@
   font-weight: 700;
   color: #fff;
   background: var(--green);
-  border: 2.5px solid var(--ink);
   border-radius: 14px;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -115,7 +111,6 @@
 .staff-go:disabled {
   color: var(--muted);
   background: var(--track);
-  border-color: var(--muted);
   box-shadow: none;
   cursor: default;
 }
@@ -190,7 +185,7 @@
   height: 44px;
   padding: 0;
   background: var(--track);
-  border: 2.5px solid var(--ink);
+  border: 2px solid var(--edge);
   border-radius: 999px;
   cursor: pointer;
   touch-action: manipulation;
@@ -207,7 +202,7 @@
   width: 32px;
   height: 32px;
   background: #fff;
-  border: 2.5px solid var(--ink);
+  border: 2px solid var(--edge);
   border-radius: 50%;
   transition: transform 150ms ease-out;
 }

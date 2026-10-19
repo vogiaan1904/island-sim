@@ -86,6 +86,6 @@ The 3D island takes most of the phone's budget (spec 6.2: 60 fps target, never u
 
 - React components read small slices of the store, so a tick does not re-render the whole HUD. The 3D side reads
   mutable buffers, not React state (spec 6.2).
-- Animate with transforms and opacity only; avoid large blurred shadows and backdrop blur over the canvas (style
-  A's hard shadows are cheap).
+- Animate with transforms and opacity only; avoid backdrop blur over the canvas. The soft lift is a small blurred
+  shadow on static pieces; never animate its size.
 - Counters glide with a light animation, not a re-render per frame.

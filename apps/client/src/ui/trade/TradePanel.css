@@ -22,9 +22,8 @@
   gap: 0.5rem;
   padding: 0.75rem;
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 16px;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
 }
 
 .trade-top {
@@ -40,7 +39,6 @@
   width: 72px;
   height: 72px;
   background: #fff3d1;
-  border: 2.5px solid var(--ink);
   border-radius: 16px;
 }
 
@@ -120,9 +118,8 @@
   font-weight: 700;
   color: var(--ink);
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 14px;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -134,13 +131,12 @@
 
 .trade-sell:active:not(:disabled) {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--shadow);
+  box-shadow: var(--lift-pressed);
 }
 
 .trade-sell:disabled {
   color: var(--muted);
   background: var(--track);
-  border-color: var(--muted);
   box-shadow: none;
   cursor: default;
 }

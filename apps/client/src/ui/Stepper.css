@@ -15,9 +15,8 @@
   padding: 0;
   color: var(--ink);
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 50%;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
   cursor: pointer;
   touch-action: manipulation;
   transition: transform 120ms ease-out;
@@ -25,13 +24,12 @@
 
 .stepper-button:active:not(:disabled) {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--shadow);
+  box-shadow: var(--lift-pressed);
 }
 
 .stepper-button:disabled {
   color: var(--muted);
   background: var(--track);
-  border-color: var(--muted);
   box-shadow: none;
   cursor: default;
 }

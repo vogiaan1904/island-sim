@@ -8,7 +8,7 @@ User rule from 2026-10-15 (D22), and its own non-goal in spec 1 ("including symb
 phones draw as emoji"): **no emoji in the UI, only icons.** It applies to the game, to mockups and to docs.
 Two reasons it matters beyond taste:
 
-- Emoji look different on every phone and break the style A look (thick outlines, one palette).
+- Emoji look different on every phone and break the style A look (one palette, one line weight).
 - Many ordinary-looking **symbol characters are drawn as colored emoji on some phones**, depending on the font
   and on invisible variation selectors. A check mark that is a neat glyph on a laptop can be a green box on an
   iPhone. So "it's just a symbol, not an emoji" is not a safe argument: draw it as an icon.
@@ -60,7 +60,7 @@ As in the mockups, and as built in `ui/icons.tsx` (Lucide shapes):
 - 24 x 24 grid, 2 px stroke, round caps and joins, no fill, color from `currentColor`.
 - One stroke weight across the UI; a slightly heavier stroke (about 2.4 to 3) only for small bold glyphs such as the
   X on a close button or the check on Place.
-- Icons sit inside the outlined style A shapes (circle, pill, tile); they are not used bare as buttons.
+- Icons sit inside the style A shapes (circle, pill, tile); they are not used bare as buttons.
 - Use the icon set from one place: `apps/client/src/ui/icons.tsx`, `<Icon name size />`, keys in `LINE_ICONS`. Never
   paste ad hoc SVG paths into a screen. License: Lucide (ISC), text in `ui/icons.LICENSE.md`.
 

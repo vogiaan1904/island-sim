@@ -5,4 +5,8 @@ approves it or asks for changes.
 
 **Blocked by:** 01.
 
-**Status:** ready-for-human
+**Status:** done
+
+## Comments
+
+- 2026-10-19: the player approved the sample ("yes do it").

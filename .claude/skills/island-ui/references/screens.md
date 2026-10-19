@@ -60,11 +60,11 @@ Spec 6.1 "In the world", 12.1 and 12.4. Research principle 2. The main way the i
 
 | Kind | Comes from | Look in the approved mockup | Tap |
 |---|---|---|---|
-| Problem | the building's most important condition (12.1): the bakery needs flour, the windmill has no workers | white round bubble, dark outline, tail pointing down at the building, the missing thing in warm red-orange (the good's picture, or a line icon for workers, power or money), a small red badge on its corner; bobs gently | opens that building's card |
-| Wish | an unmet need (12.1): homes want a park | thought bubble (a trail of small circles instead of a tail), white with dark outline, the wished thing in green; calm, no bob | opens the card of the homes, which explains the wish |
+| Problem | the building's most important condition (12.1): the bakery needs flour, the windmill has no workers | white round bubble with a soft lift, tail pointing down at the building, the missing thing in warm red-orange (the good's picture, or a line icon for workers, power or money), a small red badge on its corner; bobs gently | opens that building's card |
+| Wish | an unmet need (12.1): homes want a park | thought bubble (a trail of small circles instead of a tail), white with a soft lift, the wished thing in green; calm, no bob | opens the card of the homes, which explains the wish |
 | Reward | a finished goal (12.1) | yellow round bubble with a tail, gift icon, a small sparkle; bobs gently | sends the "collect" command; on accept, coins fly to the counter |
 
-- Every bubble floats above its building and carries a hard drop shadow like everything else in style A. The
+- Every bubble floats above its building and carries the soft lift like everything else in style A. The
   colors follow the final palette once slice 1 sets it.
 - **One problem bubble per building**: it shows the same single condition as the card's status (the priority list
   is in section 5).

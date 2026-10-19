@@ -22,9 +22,8 @@
   color: var(--ink);
   text-align: left;
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 14px;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -37,7 +36,7 @@
 
 .build-row:active:not(:disabled) {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--shadow);
+  box-shadow: var(--lift-pressed);
 }
 
 .build-row:disabled {
@@ -90,7 +89,7 @@
   padding: 2px 10px;
   font-weight: 700;
   background: var(--surface);
-  border: 2px solid var(--ink);
+  border: 2px solid var(--edge);
   border-radius: 14px;
 }
 
@@ -133,9 +132,8 @@
   pointer-events: auto;
   touch-action: manipulation;
   background: var(--card);
-  border: 2.5px solid var(--ink);
   border-radius: 18px;
-  box-shadow: 0 4px 0 var(--shadow);
+  box-shadow: var(--lift);
   animation: placing-in 160ms ease-out;
 }
 
@@ -157,7 +155,7 @@
   font-weight: 700;
   color: #fff;
   background: var(--red);
-  border: 2px solid var(--ink);
+  border: 2px solid var(--edge);
   border-radius: 12px;
 }
 
@@ -214,9 +212,8 @@
   padding: 0;
   color: var(--ink);
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 50%;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
   cursor: pointer;
 }
 
@@ -244,9 +241,8 @@
   font-weight: 700;
   color: #fff;
   background: var(--green);
-  border: 2.5px solid var(--ink);
   border-radius: 14px;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
   cursor: pointer;
 }
 
@@ -336,7 +332,7 @@
   white-space: nowrap;
   color: #fff;
   background: var(--red);
-  border: 2px solid var(--ink);
+  box-shadow: var(--lift);
   border-radius: 12px;
 }
 

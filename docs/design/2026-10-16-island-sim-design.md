@@ -215,7 +215,7 @@ Data flow:
 
 ### 6.1 Screens and controls (D23, approved 4a)
 
-Style A, "Cozy and bright", plus the Goods flow view: chunky round outlined buttons, bright colors, a small bounce or
+Style A, "Cozy and bright", plus the Goods flow view: chunky round buttons with a soft shadow and no dark outline (decision 30), bright colors, a small bounce or
 sparkle on touch, calm in tone. **Icons only, never emoji** (D22): an SVG line-icon set for UI chrome; building and
 goods icons are rendered from the 3D models in Blender.
 

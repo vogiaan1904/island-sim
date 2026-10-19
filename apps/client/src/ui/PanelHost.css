@@ -10,9 +10,8 @@
   display: flex;
   flex-direction: column;
   background: var(--card);
-  border: 2.5px solid var(--ink);
   border-radius: 18px;
-  box-shadow: 0 4px 0 var(--shadow);
+  box-shadow: var(--lift);
   padding: 0.75rem;
   color: var(--ink);
   /* Touches on the card are its own: they never move the camera. */

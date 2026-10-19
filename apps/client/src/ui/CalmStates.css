@@ -12,9 +12,9 @@
   font-weight: 600;
   color: var(--ink);
   background: var(--card);
-  border: 2.5px solid var(--ink);
+  box-shadow: var(--lift);
   border-radius: 999px;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
   transform: translateX(-50%);
   pointer-events: none;
   animation: calm-in 250ms ease-out;
@@ -25,7 +25,6 @@
   width: 0.75rem;
   height: 0.75rem;
   background: var(--yellow);
-  border: 2px solid var(--ink);
   border-radius: 50%;
   animation: calm-breathe 1.8s ease-in-out infinite;
 }

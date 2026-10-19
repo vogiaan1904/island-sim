@@ -23,6 +23,8 @@
      while it is pressed. */
   --lift: 0 2px 4px rgba(36, 50, 59, 0.16), 0 6px 14px rgba(36, 50, 59, 0.14);
   --lift-pressed: 0 1px 2px rgba(36, 50, 59, 0.22);
+  /* A light edge where one is needed: text fields, switches and rows inside a panel. */
+  --edge: #d3dce1;
   --sky: #d9f1f8;
   --water: #9bd8ea;
   --font: ui-rounded, 'SF Pro Rounded', 'Nunito', 'Segoe UI', system-ui, sans-serif;

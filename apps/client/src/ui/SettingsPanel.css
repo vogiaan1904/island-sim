@@ -28,9 +28,9 @@
   font-weight: 700;
   color: var(--ink);
   background: var(--surface);
-  border: 2.5px solid var(--ink);
+  border: 2px solid var(--edge);
   border-radius: 0.75rem;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -50,7 +50,7 @@
   width: 1.5rem;
   height: 1.5rem;
   background: var(--surface);
-  border: 2.5px solid var(--ink);
+  border: 2px solid var(--edge);
   border-radius: 50%;
 }
 

@@ -49,9 +49,7 @@
   height: 4rem;
   background: var(--surface);
   border-radius: 50%;
-  box-shadow:
-    0 0 0 2.5px var(--ink),
-    0 4px 0 2.5px var(--shadow);
+  box-shadow: var(--lift);
 }
 
 .hud-ring svg {
@@ -95,7 +93,6 @@
   background: radial-gradient(circle at 35% 30%, #63d8c8, var(--teal));
   border: 2.5px solid #fff;
   border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--ink);
 }
 
 .hud-ring[data-phase='landmark'] .hud-disc {
@@ -109,9 +106,8 @@
   font-size: 1.1rem;
   font-weight: 700;
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 0 14px 14px 0;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
 }
 
 /* ---- counters, gear and compass, top right ---- */
@@ -166,9 +162,8 @@
   padding: 0;
   color: var(--ink);
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 50%;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
 }
 
 .hud-gear[aria-pressed='true'] {
@@ -177,7 +172,7 @@
 
 .hud-gear:active {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--shadow);
+  box-shadow: var(--lift-pressed);
 }
 
 /* ---- goal icons, left edge under the badge ---- */
@@ -202,9 +197,9 @@
   padding-bottom: 6px;
   color: var(--ink);
   background: var(--surface);
-  border: 2.5px solid var(--ink);
+  border: 2.5px solid transparent;
   border-radius: 12px;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
 }
 
 .hud-goal img {
@@ -215,7 +210,7 @@
 .hud-goal[data-kind='need'] {
   background: var(--problem-bg);
   border-color: var(--problem-border);
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
 }
 
 .hud-goal-bar {

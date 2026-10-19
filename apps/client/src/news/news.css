@@ -14,9 +14,8 @@
   gap: 0.5rem;
   background: var(--card);
   color: var(--ink);
-  border: 2.5px solid var(--ink);
   border-radius: 18px;
-  box-shadow: 0 4px 0 var(--shadow);
+  box-shadow: var(--lift);
   font-family: var(--font);
   pointer-events: auto;
   touch-action: pan-y;
@@ -35,9 +34,8 @@
   height: 3.5rem;
   object-fit: cover;
   background: var(--picture-tile);
-  border: 2.5px solid var(--ink);
   border-radius: 50%;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
 }
 
 .news-portrait-none {
@@ -75,7 +73,7 @@
   gap: 0.6rem;
   padding: 0.55rem 0.7rem;
   background: var(--surface);
-  border: 2px solid var(--ink);
+  border: 2px solid var(--edge);
   border-radius: 14px;
   animation: news-swap 160ms ease-out;
 }
@@ -131,9 +129,8 @@
   font-weight: 700;
   color: var(--ink);
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 11px;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
   cursor: pointer;
   touch-action: manipulation;
   transition: transform 120ms ease-out;
@@ -141,7 +138,7 @@
 
 .news-button:active {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--shadow);
+  box-shadow: var(--lift-pressed);
 }
 
 .news-show {
@@ -183,7 +180,7 @@
   gap: 0.6rem;
   padding: 0.5rem 0.6rem;
   background: var(--surface);
-  border: 2px solid var(--ink);
+  border: 2px solid var(--edge);
   border-radius: 14px;
 }
 
@@ -230,9 +227,8 @@
   height: 5rem;
   color: var(--ink);
   background: radial-gradient(circle at 35% 30%, var(--build-top), var(--build-bottom));
-  border: 2.5px solid var(--ink);
   border-radius: 50%;
-  box-shadow: 0 4px 0 var(--shadow);
+  box-shadow: var(--lift);
   animation: celebrate-pop 520ms cubic-bezier(0.3, 1.6, 0.5, 1) both;
 }
 
@@ -241,9 +237,8 @@
   font-size: 1.4rem;
   font-weight: 700;
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 14px;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
 }
 
 .celebrate-line {
@@ -252,7 +247,7 @@
   font-size: 1rem;
   font-weight: 600;
   background: var(--card);
-  border: 2px solid var(--ink);
+  border: 2px solid var(--edge);
   border-radius: 14px;
 }
 
@@ -269,7 +264,6 @@
   height: 0.55rem;
   margin: -0.275rem;
   background: var(--yellow);
-  border: 2px solid var(--ink);
   border-radius: 50%;
   opacity: 0;
   animation: celebrate-spark 900ms ease-out 200ms both;

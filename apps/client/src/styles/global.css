@@ -25,6 +25,11 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* The soft look (decision 30): a button has no border unless its own rule gives it an edge; a soft shadow lifts it. */
+button {
+  border: 0;
+}
+
 /* A screen shown over the island canvas, such as the loading screen while models load. */
 .screen-overlay {
   position: fixed;

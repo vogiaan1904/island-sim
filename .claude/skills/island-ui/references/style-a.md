@@ -20,10 +20,14 @@ a pay-to-win mobile game.** So:
 
 - **Round and rounded.** Bottom buttons are circles; counters are pills; cards and panels have large corner radii;
   picture tiles have medium radii.
-- **Thick dark outline** on every interactive or framed element (buttons, pills, cards, tiles, bubbles). In the
-  mockups: 2 to 2.5 px in a dark blue-gray ink.
-- **Hard drop shadow**: a solid offset shadow straight down with no blur (mockups: `0 3px 0 rgba(0,0,0,.25)`).
-  This is what makes buttons look chunky and pressable.
+- **No dark outline** (decision 30, 2026-10-19, which replaced the approved mockups' thick ink outlines after the
+  first phone playtest: they looked heavy over the soft 3D island). Buttons, pills, cards, panels and bubbles have
+  none; a `button` has no border unless its own rule gives it an edge.
+- **Soft lift**: a soft blurred shadow (`--lift`; `--lift-pressed` while pressed, with a small move down) lifts a
+  piece off the island and keeps it pressable-looking.
+- **Light edge** (`--edge`) only where a boundary carries use: text fields, switches and rows inside a panel. A state
+  that is told by a border color (a goal that needs something, a waiting chip, an empty slot) keeps a transparent
+  border that the state colors.
 - **Surfaces** are white or warm cream; color comes from accents, icons and the island itself.
 - Text on top of the island (labels under bottom buttons) is white with a soft dark text shadow so it reads on any
   terrain.
@@ -36,7 +40,7 @@ review (ticket 21) may still change them. Use them through the tokens, never as 
 
 | Role | Mockup value | Used for |
 |---|---|---|
-| Ink (outlines, dark text) | `#24323b` | every outline, icon color on white |
+| Ink (dark text) | `#24323b` | text, icon color on white |
 | Surface | `#ffffff` | buttons, pills, bubbles |
 | Card surface | `#fffdf7` (cream) | building card, placement panel |
 | Muted text | `#6b7780`, `#4b5a63` | small labels, descriptions, "1 / 3" |
@@ -69,12 +73,12 @@ screens and keep the touch-target rules.
 
 | Block | Look | Where |
 |---|---|---|
-| Round button with label | white circle, outline, hard shadow, line icon inside, white label below | bottom bar, compass, Watch |
+| Round button with label | white circle, soft lift, line icon inside, white label below | bottom bar, compass, Watch |
 | Small round button | the same, smaller, no label (hit area still 44 px) | the gear (Settings) next to the compass |
 | Build button | the biggest circle, yellow gradient, larger icon | bottom center |
 | Selected state | yellow fill (`#ffd54a`) | the bottom button whose panel is open, the active view |
 | Go button | green, white bold text with icon, rounded rectangle | Place, Show me |
-| Plain pill button | white, outline, small shadow | Next, secondary actions |
+| Plain pill button | white, soft lift | Next, secondary actions |
 | Round cancel | red circle with an X icon | Cancel in placement |
 | Close button | small red circle with an X icon, overlapping the card's top-right corner | cards |
 | Counter pill | white pill, icon on the left, bold number | coins, residents, commuters |
@@ -85,11 +89,11 @@ screens and keep the touch-target rules.
 | Disabled button | the same shape with a muted fill and no shadow, still readable, the reason in words on or under it ("Need N more coins") | Place, Upgrade, Build picker items the player can't afford |
 | Hint box | soft red tinted box: small picture of the cause, one sentence, Fix button | problem on a card |
 | Name tag | small teal label with the staff member's name and role | news, Staff |
-| Portrait | circle with a white ring inside the dark outline; the picture is rendered in Blender from the Mini Characters with accessories (spec 12.4) | key staff in news, Staff, manager slots |
+| Portrait | circle with a white ring; the picture is rendered in Blender from the Mini Characters with accessories (spec 12.4) | key staff in news, Staff, manager slots |
 | Empty slot | dashed outline circle | open worker slot, empty manager slot |
 | Hint pill | dark translucent pill with white text and an icon, centered near the top | "Drag to move" during placement |
-| Ribbon | yellow outlined label with the view's icon and name and a small close X | active view, top center |
-| Bubble | outlined circle with a tail (or a thought-bubble trail for wishes), one picture inside | over buildings; kinds in `screens.md` |
+| Ribbon | yellow label with the view's icon and name and a small close X | active view, top center |
+| Bubble | white circle with a soft lift and a tail (or a thought-bubble trail for wishes), one picture inside | over buildings; kinds in `screens.md` |
 | Speech panel | white rounded panel with the portrait overlapping its left edge and the name tag on top | news from key staff |
 
 ## Motion

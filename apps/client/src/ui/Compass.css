@@ -6,9 +6,8 @@
   place-items: center;
   padding: 0;
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 50%;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
   cursor: pointer;
   /* Taps on it are its own: they never reach the camera gestures on the canvas below. */
   touch-action: manipulation;
@@ -17,7 +16,7 @@
 
 .compass:active {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--shadow);
+  box-shadow: var(--lift-pressed);
 }
 
 .compass:focus-visible {

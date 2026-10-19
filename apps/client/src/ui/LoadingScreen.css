@@ -14,9 +14,8 @@
   gap: 0.5rem;
   padding: 1.5rem 1.25rem 1.75rem;
   background: var(--card);
-  border: 2.5px solid var(--ink);
   border-radius: 1.75rem;
-  box-shadow: 0 4px 0 var(--shadow);
+  box-shadow: var(--lift);
   text-align: center;
 }
 
@@ -25,7 +24,6 @@
   height: 9rem;
   padding: 0.5rem;
   background: var(--picture-tile);
-  border: 2.5px solid var(--ink);
   border-radius: 1.25rem;
   object-fit: contain;
 }
@@ -50,7 +48,6 @@
   margin-top: 0.75rem;
   overflow: hidden;
   background: var(--track);
-  border: 2.5px solid var(--ink);
   border-radius: 999px;
 }
 
