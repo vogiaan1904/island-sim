@@ -58,7 +58,9 @@ checked against the installed versions. Anything marked "open" is still undecide
   (4 draw calls for the 32-tile island) of non-indexed flat-shaded triangles with one vertex color per tile
   (`LOOK.grass`, `LOOK.sand`, `LOOK.seabed`; first picks, ticket 21 reviews them). Land is flat at height 0, where models
   stand; the ground falls to -2.4 under open water, sloping only across water tiles next to the shore; the water
-  surface rests at -0.35 so the beach shows. Chunks are rebuilt only when the terrain string changes. There is no CPU
+  surface rests at -0.35 so the beach shows. A water tile whose two land sides meet at a corner gets that corner's
+  half as flat beach (the tile is split along the diagonal that cuts it off), so a stepped coast reads as a straight
+  diagonal; land tiles stay whole (spec 12.5). Chunks are rebuilt only when the terrain string changes. There is no CPU
   height lookup yet: land is flat and the camera clearance is measured from y = 0.
 
 ## 4. Water

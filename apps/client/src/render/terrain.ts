@@ -3,6 +3,8 @@ import { LOOK, TILE_SIZE, type Rgb } from './look.ts';
 // The island's ground as merged chunk meshes with vertex colors (spec 6.2): no textures, flat-shaded tiles. Tile
 // (x, y) of the sim's grid spans world x from 4x to 4x + 4 and z from 4y to 4y + 4. Land is flat at height 0, where
 // models stand; the ground falls to the sea floor under open water, sloping only across water tiles next to the shore.
+// A water tile whose two land sides meet at a corner gets that corner's half as flat beach, so a stepped coast reads as
+// a straight diagonal; every land tile stays whole, so nothing built hangs over the sea (decided in the look review).
 
 /** Tiles per chunk side: 16 gives 4 chunks (4 draw calls) for the 32-tile island. */
 export const TERRAIN_CHUNK_TILES = 16;
@@ -33,6 +35,35 @@ function cornerHeight(terrain: string, size: number, cx: number, cy: number): nu
   return land ? LAND_HEIGHT : SEA_FLOOR_HEIGHT;
 }
 
+type Corner = 'nw' | 'ne' | 'sw' | 'se';
+
+/** The corner of a water tile to fill as beach: its land sides are exactly two that meet there. */
+function filledCorner(terrain: string, size: number, tx: number, ty: number): Corner | null {
+  if (isLand(terrain, size, tx, ty)) return null;
+  const n = isLand(terrain, size, tx, ty - 1);
+  const s = isLand(terrain, size, tx, ty + 1);
+  const w = isLand(terrain, size, tx - 1, ty);
+  const e = isLand(terrain, size, tx + 1, ty);
+  if (n === s || w === e) return null;
+  return n ? (w ? 'nw' : 'ne') : w ? 'sw' : 'se';
+}
+
+/**
+ * A tile's two triangles as corner offsets, counter-clockwise seen from above. The diagonal cuts off the filled
+ * corner: NW and SE sit alone across the NE-SW diagonal, NE and SW across the NW-SE one.
+ */
+const SPLIT_NE_SW: ReadonlyArray<readonly [number, number]> = [[0, 0], [0, 1], [1, 0], [1, 0], [0, 1], [1, 1]];
+const SPLIT_NW_SE: ReadonlyArray<readonly [number, number]> = [[0, 0], [0, 1], [1, 1], [0, 0], [1, 1], [1, 0]];
+/** Which triangle (0 or 1) of its split holds each corner. */
+const FILLED_TRIANGLE: Record<Corner, number> = { nw: 0, se: 1, sw: 0, ne: 1 };
+
+/** A filled corner takes the color of its two land sides: sand when either is beach, else grass. */
+function fillColor(terrain: string, size: number, tx: number, ty: number, corner: Corner): Rgb {
+  const vertical = terrain[(corner[0] === 'n' ? ty - 1 : ty + 1) * size + tx];
+  const horizontal = terrain[ty * size + (corner[1] === 'w' ? tx - 1 : tx + 1)];
+  return vertical === '1' || horizontal === '1' ? LOOK.sand : LOOK.grass;
+}
+
 function tileColor(char: string | undefined): Rgb {
   if (char === '2') return LOOK.grass;
   if (char === '1') return LOOK.sand;
@@ -51,21 +82,18 @@ export function terrainChunks(terrain: string, size: number, chunkTiles: number 
       for (let ty = y0; ty < y0 + tiles; ty += 1) {
         for (let tx = x0; tx < x0 + tiles; tx += 1) {
           const color = tileColor(terrain[ty * size + tx]);
-          // Two triangles, counter-clockwise seen from above: (x0,z0) (x0,z1) (x1,z0) and (x1,z0) (x0,z1) (x1,z1).
-          for (const [cx, cy] of [
-            [tx, ty],
-            [tx, ty + 1],
-            [tx + 1, ty],
-            [tx + 1, ty],
-            [tx, ty + 1],
-            [tx + 1, ty + 1],
-          ] as const) {
+          const corner = filledCorner(terrain, size, tx, ty);
+          const split = corner === 'ne' || corner === 'sw' ? SPLIT_NW_SE : SPLIT_NE_SW;
+          const fill = corner === null ? color : fillColor(terrain, size, tx, ty, corner);
+          split.forEach(([ox, oy], k) => {
+            const cx = tx + ox;
+            const cy = ty + oy;
             positions[v] = cx * TILE_SIZE;
             positions[v + 1] = cornerHeight(terrain, size, cx, cy);
             positions[v + 2] = cy * TILE_SIZE;
-            colors.set(color, v);
+            colors.set(corner !== null && Math.floor(k / 3) === FILLED_TRIANGLE[corner] ? fill : color, v);
             v += 3;
-          }
+          });
         }
       }
       chunks.push({ x0, y0, tiles, positions, colors });

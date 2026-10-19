@@ -64,4 +64,48 @@ describe('terrain chunks', () => {
       expect((bz! - az!) * (cx! - ax!) - (bx! - ax!) * (cz! - az!)).toBeGreaterThan(0);
     }
   });
+
+  describe('the shore', () => {
+    // 3 x 3 maps around one water tile (1, 1), one chunk; its corners in world units are 4 and 8.
+    const around = (land: Array<'n' | 'e' | 's' | 'w'>) => {
+      const at = { n: [1, 0], e: [2, 1], s: [1, 2], w: [0, 1] } as const;
+      const chars = '000000000'.split('');
+      for (const side of land) chars[at[side][1] * 3 + at[side][0]] = '1';
+      const chunk = terrainChunks(chars.join(''), 3, 3)[0]!;
+      const v = 4 * 18;
+      const triangles = [0, 9].map((offset) => ({
+        points: [0, 3, 6].map((k) => Array.from(chunk.positions.slice(v + offset + k, v + offset + k + 3))),
+        colors: [0, 3, 6].map((k) => Array.from(chunk.colors.slice(v + offset + k, v + offset + k + 3))),
+      }));
+      return triangles;
+    };
+    const sand = LOOK.sand.map(Math.fround);
+    const seabed = LOOK.seabed.map(Math.fround);
+    const holds = (points: number[][], x: number, z: number) => points.some(([px, , pz]) => px === x && pz === z);
+
+    it('fills the corner of a water tile between two land sides as flat beach, cut along the diagonal', () => {
+      const corners = { nw: [4, 4], ne: [8, 4], sw: [4, 8], se: [8, 8] } as const;
+      const cases = [['nw', ['n', 'w']], ['ne', ['n', 'e']], ['sw', ['s', 'w']], ['se', ['s', 'e']]] as const;
+      for (const [corner, sides] of cases) {
+        const triangles = around([...sides]);
+        const [cx, cz] = corners[corner];
+        const filled = triangles.find((t) => holds(t.points, cx, cz))!;
+        const rest = triangles.find((t) => t !== filled)!;
+        expect(filled.points.map(([, y]) => y), corner).toEqual([LAND_HEIGHT, LAND_HEIGHT, LAND_HEIGHT]);
+        expect(filled.colors, corner).toEqual([sand, sand, sand]);
+        expect(rest.colors, corner).toEqual([seabed, seabed, seabed]);
+        expect(Math.min(...rest.points.map(([, y]) => y!)), corner).toBe(Math.fround(SEA_FLOOR_HEIGHT));
+        for (const { points } of triangles) {
+          const [[ax, , az], [bx, , bz], [qx, , qz]] = points as [number[], number[], number[]];
+          expect((bz! - az!) * (qx! - ax!) - (bx! - ax!) * (qz! - az!), corner).toBeGreaterThan(0);
+        }
+      }
+    });
+
+    it('leaves water tiles between land on opposite sides, or on three sides, as sea', () => {
+      for (const sides of [['n', 's'], ['e', 'w'], ['n', 'e', 'w'], ['n']] as Array<Array<'n' | 'e' | 's' | 'w'>>) {
+        expect(around(sides).flatMap((t) => t.colors), sides.join('')).toEqual(Array(6).fill(seabed));
+      }
+    });
+  });
 });

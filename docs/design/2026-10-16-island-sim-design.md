@@ -525,6 +525,10 @@ any of them during spec review; the skills follow this section.
 - **Back gestures:** the installed app avoids Safari's swipe-back; Android's back button closes the open card first.
 - **Around the island:** friends' islands appear far away as simple shapes; the Mainland lies off-screen in a fixed
   direction where ferries come from; visiting a friend is a short camera flight with a fade.
+- **Coast** (decided 2026-10-19, look review): the shore follows the tile grid, but a water tile whose two land sides
+  meet at a corner shows that corner's half as flat beach, so diagonal coasts are straight lines instead of
+  staircases. Only the drawing changes: land tiles stay whole and the sim's grid, placement and dock spot are as they
+  were.
 - **Construction** shows a frame or scaffold with workers using the interact clip; the building rises in steps.
 - **Damaged** buildings show a simple broken look (smoke, missing planks); the exact look is part of the art-direction
   task.
