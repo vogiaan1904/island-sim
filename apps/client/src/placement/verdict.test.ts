@@ -26,16 +26,30 @@ describe('the placement verdict', () => {
     expect(simSays(world, 'cottage', 15, 25, 0).ok).toBe(true);
   });
 
-  it('labels the road with the words from the spec and says what is wrong when it is missing', () => {
+  it('lays a road to the dock where none is beside it, and prices it with the building', () => {
     const world = aliceWorld();
     const verdict = buildingVerdict(islandOf(world), content, { building: 'cottage', x: 15, y: 25, rotation: 0 });
-    expect(verdict.ok).toBe(false);
-    expect(verdict.command).toBeNull();
-    expect(verdict.reason).toBe('no-road-access');
-    const road = verdict.labels.find((label) => label.id === 'road-access');
-    expect(road).toEqual({ id: 'road-access', ok: false, text: 'Needs a road beside it' });
-    const withRoadWorld = buildingVerdict(islandOf(withRoad()), content, { building: 'cottage', x: 15, y: 25, rotation: 0 });
-    expect(withRoadWorld.labels.find((label) => label.id === 'road-access')).toEqual({ id: 'road-access', ok: true, text: 'Road access' });
+    expect(verdict.ok).toBe(true);
+    expect(verdict.labels.find((label) => label.id === 'road-access')).toEqual({ id: 'road-access', ok: true, text: 'Road to the dock: 2 tiles' });
+    expect(verdict.connector).toHaveLength(2);
+    expect(verdict.costCents).toBe(20_000 + 2 * content.rules.roadPricePerTileCents);
+    const copy = structuredClone(world);
+    const sim = simSays(world, 'cottage', 15, 25, 0, copy);
+    expect(sim.ok && sim.ledger.reduce((sum, entry) => sum - (entry.kind === 'money' ? entry.deltaCents : 0), 0)).toBe(verdict.costCents);
+    expect(verdict.connector.every((tile) => islandOf(copy).roads[tile] === '1')).toBe(true);
+  });
+
+  it('says "Road access" beside a road joined to the dock, and what is wrong when no road can reach it', () => {
+    const joined = buildingVerdict(islandOf(withRoad()), content, { building: 'cottage', x: 15, y: 25, rotation: 0 });
+    expect(joined.labels.find((label) => label.id === 'road-access')).toEqual({ id: 'road-access', ok: true, text: 'Road access' });
+    expect(joined.connector).toEqual([]);
+    const world = aliceWorld();
+    islandOf(world).buildings = islandOf(world).buildings.filter((building) => building.type !== 'dock');
+    const cut = buildingVerdict(islandOf(world), content, { building: 'cottage', x: 15, y: 25, rotation: 0 });
+    expect(cut.ok).toBe(false);
+    expect(cut.reason).toBe('no-road-access');
+    expect(cut.labels.find((label) => label.id === 'road-access')).toEqual({ id: 'road-access', ok: false, text: 'No road can reach the dock' });
+    expect(simSays(world, 'cottage', 15, 25, 0)).toMatchObject({ ok: false, reason: 'no-road-access' });
   });
 
   it('says "Need N more coins" from the shortfall, in whole coins', () => {

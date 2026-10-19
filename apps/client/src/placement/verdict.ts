@@ -33,8 +33,10 @@ export interface PlacementVerdict {
   ok: boolean;
   /** Short words for what is right or wrong here, in the order the sim checks. Only what helps the player. */
   labels: PlacementLabel[];
-  /** What it costs, in cents (a building's price; a road's cents per new tile times the tiles). */
+  /** What it costs, in cents (a building's price plus its connector's; a road's cents per new tile times the tiles). */
   costCents: number;
+  /** A building's connector: the road tiles (row-major) placing it would pave to join it to the dock. Empty for a road. */
+  connector: number[];
   /** Cents the island is short of that price; 0 when it can pay. */
   shortfallCents: number;
   /** The reason code the sim would refuse with, or null when it would take it. */
@@ -69,13 +71,14 @@ const REASON_FOR_CHECK: Record<PlacementCheckId, ReasonCode> = {
 
 export function buildingVerdict(island: IslandState, content: Content, aim: BuildingAim): PlacementVerdict {
   const def = findBuildingDef(content, aim.building);
-  if (def === null) return { ok: false, labels: [], costCents: 0, shortfallCents: 0, reason: 'unknown-building', command: null };
+  if (def === null) return { ok: false, labels: [], costCents: 0, connector: [], shortfallCents: 0, reason: 'unknown-building', command: null };
   const blocked = unavailable(island, content, def);
   if (blocked !== null) {
     return {
       ok: false,
       labels: [{ id: 'locked', ok: false, text: blocked.text }],
       costCents: def.priceCents,
+      connector: [],
       shortfallCents: 0,
       reason: blocked.reason,
       command: null,
@@ -94,7 +97,9 @@ export function buildingVerdict(island: IslandState, content: Content, aim: Buil
     if (passed.get('free') !== true) labels.push({ id: 'free', ok: false, text: 'Something is in the way' });
     if (def.needsRoad) {
       const ok = passed.get('road-access') === true;
-      labels.push({ id: 'road-access', ok, text: ok ? 'Road access' : 'Needs a road beside it' });
+      const tiles = report.connector.length;
+      const text = !ok ? 'No road can reach the dock' : tiles === 0 ? 'Road access' : `Road to the dock: ${tiles} ${tiles === 1 ? 'tile' : 'tiles'}`;
+      labels.push({ id: 'road-access', ok, text });
     }
   }
   if (passed.get('affordable') !== true) labels.push({ id: 'affordable', ok: false, text: needMoreText(report.shortfallCents) });
@@ -102,7 +107,8 @@ export function buildingVerdict(island: IslandState, content: Content, aim: Buil
   return {
     ok: report.ok,
     labels,
-    costCents: def.priceCents,
+    costCents: report.costCents,
+    connector: report.connector,
     shortfallCents: report.shortfallCents,
     reason: failed === undefined ? null : REASON_FOR_CHECK[failed.id],
     command: report.ok ? { type: 'place-building', building: def.id, x: aim.x, y: aim.y, rotation: aim.rotation } : null,

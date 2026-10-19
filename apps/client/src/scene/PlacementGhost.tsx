@@ -8,7 +8,7 @@ import { dustPuff, ghostInstance, landingBounce, LANDING_SECONDS } from '../rend
 import { TILE_SIZE } from '../render/look.ts';
 import { useGame, useGameState } from '../session/game.tsx';
 import { useModelGeometry } from './modelGeometry.ts';
-import { RoadGhost } from './RoadGhost.tsx';
+import { RoadGhost, RoadTilesGhost } from './RoadGhost.tsx';
 import { usePaletteMaterial } from './palette.ts';
 
 // The same green and red as the labels and buttons (styles/tokens.css --green and --red), so 2D and 3D agree.
@@ -22,7 +22,8 @@ const matrix = new Matrix4();
  * The placement ghost (island-3d-client, scene-and-rendering.md section 12): a see-through copy of the building's model
  * on the tile the player aims at, tinted green where the sim's own check passes and red where it does not, with a flat
  * tile highlight under it. While the command is out it pulses; when the server says ok it turns solid, drops in with
- * a bounce and sends up a puff of dust. Everything it shows comes from `view.placement` and the island state.
+ * a bounce and sends up a puff of dust. The road it lays to the dock (its connector, spec 12.1) shows as road pieces
+ * until it lands. Everything it shows comes from `view.placement` and the island state.
  */
 export function PlacementGhost() {
   const draft = useGameState((state) => state.view.placement);
@@ -35,6 +36,8 @@ function Ghost({ draft }: { draft: BuildingDraft }) {
   const island = useGameState((state) => state.island?.state ?? null);
   const ghost = useMemo(() => ghostInstance(draft, content), [draft]);
   const verdict = useMemo(() => (island === null ? null : buildingVerdict(island, content, draft)), [island, draft]);
+  const size = content.rules.islandSize;
+  const connector = useMemo(() => (verdict?.connector ?? []).map((tile) => ({ x: tile % size, y: Math.floor(tile / size) })), [verdict, size]);
   const geometry = useModelGeometry(ghost.file);
   const palette = usePaletteMaterial();
   const material = useMemo(() => {
@@ -90,15 +93,20 @@ function Ghost({ draft }: { draft: BuildingDraft }) {
   });
 
   return (
-    <group ref={group} position={[ghost.x, 0, ghost.z]}>
-      <mesh rotation-x={-Math.PI / 2} position-y={0.08} renderOrder={1}>
-        <planeGeometry args={[ghost.width, ghost.depth]} />
-        <meshBasicMaterial color={verdict?.ok === false ? BAD : GOOD} transparent opacity={0.35} depthWrite={false} />
-      </mesh>
-      <mesh ref={model} geometry={geometry} material={material} rotation-y={ghost.rotationY} renderOrder={2} />
-      <instancedMesh ref={puffs} args={[undefined, dust, PIECES]} visible={false} frustumCulled={false}>
-        <sphereGeometry args={[TILE_SIZE * 0.25, 8, 6]} />
-      </instancedMesh>
-    </group>
+    <>
+      {draft.phase !== 'landing' && connector.length > 0 && (
+        <RoadTilesGhost tiles={connector} ok={verdict?.ok !== false} placing={draft.phase === 'placing'} />
+      )}
+      <group ref={group} position={[ghost.x, 0, ghost.z]}>
+        <mesh rotation-x={-Math.PI / 2} position-y={0.08} renderOrder={1}>
+          <planeGeometry args={[ghost.width, ghost.depth]} />
+          <meshBasicMaterial color={verdict?.ok === false ? BAD : GOOD} transparent opacity={0.35} depthWrite={false} />
+        </mesh>
+        <mesh ref={model} geometry={geometry} material={material} rotation-y={ghost.rotationY} renderOrder={2} />
+        <instancedMesh ref={puffs} args={[undefined, dust, PIECES]} visible={false} frustumCulled={false}>
+          <sphereGeometry args={[TILE_SIZE * 0.25, 8, 6]} />
+        </instancedMesh>
+      </group>
+    </>
   );
 }

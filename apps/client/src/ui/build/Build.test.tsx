@@ -146,8 +146,8 @@ describe('the placement panel', () => {
     aim(game, 15, 25);
     expect(screen.getByRole('list', { name: 'Checks' })).toHaveTextContent('Road access');
     expect(screen.getByRole('button', { name: 'Place' })).toBeEnabled();
-    aim(game, 25, 5);
-    expect(screen.getByRole('list', { name: 'Checks' })).toHaveTextContent('Needs a road beside it');
+    aim(game, 0, 0);
+    expect(screen.getByRole('list', { name: 'Checks' })).toHaveTextContent('Needs dry land');
     expect(screen.getByRole('button', { name: 'Place' })).toBeDisabled();
   });
 

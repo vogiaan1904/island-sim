@@ -1,7 +1,7 @@
 import { content } from '@island/content';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { Color, Matrix4, type InstancedMesh, type MeshStandardMaterial } from 'three';
-import type { RoadDraft } from '../placement/draft.ts';
+import type { RoadDraft, Tile } from '../placement/draft.ts';
 import { roadVerdict } from '../placement/roadVerdict.ts';
 import { TILE_SIZE } from '../render/look.ts';
 import { roadPreview } from '../render/roadPreview.ts';
@@ -22,8 +22,18 @@ const matrix = new Matrix4();
  */
 export function RoadGhost({ draft }: { draft: RoadDraft }) {
   const island = useGameState((state) => state.island?.state ?? null);
-  const preview = useMemo(() => (island === null ? null : roadPreview(island.roads, draft.tiles, content.rules.islandSize)), [island?.roads, draft.tiles]);
   const ok = useMemo(() => island === null || roadVerdict(island, content, draft.tiles).ok || draft.tiles.length === 0, [island, draft.tiles]);
+  if (draft.phase === 'landing') return null;
+  return <RoadTilesGhost tiles={draft.tiles} ok={ok} placing={draft.phase === 'placing'} />;
+}
+
+/**
+ * Road tiles shown before they are built: the pieces they will make, shaped by the roads beside them, and a highlight
+ * under each. Used by the road drag and by a building's connector (spec 12.1).
+ */
+export function RoadTilesGhost({ tiles, ok, placing }: { tiles: readonly Tile[]; ok: boolean; placing: boolean }) {
+  const roads = useGameState((state) => state.island?.state.roads ?? null);
+  const preview = useMemo(() => (roads === null ? null : roadPreview(roads, tiles, content.rules.islandSize)), [roads, tiles]);
   const palette = usePaletteMaterial();
   const tint = ok ? GOOD : BAD;
   const material = useMemo(() => {
@@ -33,7 +43,7 @@ export function RoadGhost({ draft }: { draft: RoadDraft }) {
     return clone;
   }, [palette]);
   material.color.copy(tint);
-  material.opacity = draft.phase === 'placing' ? 0.45 : 0.65;
+  material.opacity = placing ? 0.45 : 0.65;
 
   const marks = useRef<InstancedMesh>(null);
   useLayoutEffect(() => {
@@ -45,7 +55,7 @@ export function RoadGhost({ draft }: { draft: RoadDraft }) {
     mesh.computeBoundingSphere();
   }, [preview]);
 
-  if (preview === null || draft.phase === 'landing') return null;
+  if (preview === null) return null;
   return (
     <group>
       {[...preview.pieces].map(([file, list]) => (

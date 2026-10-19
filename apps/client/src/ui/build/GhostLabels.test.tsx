@@ -42,8 +42,8 @@ describe('the labels on the ghost', () => {
 
   it('shows what is wrong where it is aimed wrong, in the words of the panel', () => {
     const { game } = show();
-    aim(game, cottageAt(25, 5));
-    expect(screen.getByTestId('ghost-labels')).toHaveTextContent('Needs a road beside it');
+    aim(game, cottageAt(0, 0));
+    expect(screen.getByTestId('ghost-labels')).toHaveTextContent('Needs dry land');
   });
 
   it('shows the road verdict over the last tile of a drag', () => {

@@ -9,7 +9,7 @@ import { needMoreText } from '../ui/coins.ts';
 // sim's own `checkRoad` (the check `place-road` acts on) decides; only the words and the length limit label live here.
 // A test holds this to the real command on every tile.
 
-const NOTHING: PlacementVerdict = { ok: false, labels: [], costCents: 0, shortfallCents: 0, reason: 'nothing-to-build', command: null };
+const NOTHING: PlacementVerdict = { ok: false, labels: [], costCents: 0, connector: [], shortfallCents: 0, reason: 'nothing-to-build', command: null };
 
 export function roadVerdict(island: IslandState, content: Content, tiles: readonly Tile[]): PlacementVerdict {
   if (tiles.length === 0) return NOTHING;
@@ -19,6 +19,7 @@ export function roadVerdict(island: IslandState, content: Content, tiles: readon
       ok: false,
       labels: [{ id: 'length', ok: false, text: `Up to ${limit} tiles at a time` }],
       costCents: 0,
+      connector: [],
       shortfallCents: 0,
       reason: 'too-many-tiles',
       command: null,
@@ -34,5 +35,5 @@ export function roadVerdict(island: IslandState, content: Content, tiles: readon
   if (reason === 'not-enough-coins') labels.push({ id: 'affordable', ok: false, text: needMoreText(shortfallCents) });
   if (reason === null && tiles.length === limit) labels.push({ id: 'length', ok: true, text: `That is the most for one go (${limit} tiles)` });
   const command: PlayerCommand | null = reason === null ? { type: 'place-road', tiles: tiles.map(({ x, y }) => [x, y] as [number, number]) } : null;
-  return { ok: reason === null, labels, costCents, shortfallCents, reason, command };
+  return { ok: reason === null, labels, costCents, connector: [], shortfallCents, reason, command };
 }
