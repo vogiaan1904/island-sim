@@ -7,6 +7,7 @@ import { Hud } from './ui/hud/Hud.tsx';
 import { Arrival } from './ui/visit/Arrival.tsx';
 import { Watch } from './ui/watch/Watch.tsx';
 import { Ambience } from './audio/Ambience.tsx';
+import { UiSounds } from './audio/UiSounds.tsx';
 import { VisitBanner } from './ui/visit/VisitBanner.tsx';
 import { LoadingScreen } from './ui/LoadingScreen.tsx';
 import { LoginScreen } from './ui/LoginScreen.tsx';
@@ -103,6 +104,7 @@ function IslandScreen() {
       <Arrival />
       <Watch />
       <Ambience />
+      <UiSounds />
       <CalmStatus />
       {!ready && (
         <div className="screen-overlay">
