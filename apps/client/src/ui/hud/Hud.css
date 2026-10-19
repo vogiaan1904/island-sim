@@ -310,3 +310,16 @@
     transition: none;
   }
 }
+
+/* Watch mode: the HUD fades away and lets every touch through (the first one ends watching). */
+.hud {
+  transition: opacity 600ms ease;
+}
+
+.hud[data-watching='true'] {
+  opacity: 0;
+}
+
+.hud[data-watching='true'] * {
+  pointer-events: none !important;
+}

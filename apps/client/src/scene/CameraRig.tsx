@@ -9,13 +9,15 @@ import { setLivePose } from '../camera/livePose.ts';
 import { tapTarget } from '../camera/tap.ts';
 import { useCameraInput } from '../camera/useCameraInput.ts';
 import { aimAt, aimPoint, drawRoad, groundTile, tileAtWorld } from '../placement/draft.ts';
-import { useGame } from '../session/game.tsx';
+import { useGame, useGameState } from '../session/game.tsx';
 
 const NONE = CameraControlsImpl.ACTION.NONE;
 const scratch = new Vector3();
 
 /** How soon the real camera catches up with the asked-for one, in seconds. Ticket 08 tunes it on a real phone. */
 const SMOOTH_TIME = 0.2;
+/** Watch mode glides between moments slowly and gently: about 4 seconds to arrive. */
+const WATCH_SMOOTH_TIME = 1.2;
 
 /**
  * Owns the camera. Input goes through the pure controller (`camera/controller.ts`) into the store's `view.camera`;
@@ -24,6 +26,7 @@ const SMOOTH_TIME = 0.2;
  */
 export function CameraRig() {
   const { store } = useGame();
+  const watching = useGameState((state) => state.view.cameraMode === 'watch');
   const gl = useThree((three) => three.gl);
   const controls = useRef<CameraControlsImpl>(null);
   const applied = useRef<{ camera: unknown; jumps: number }>({ camera: null, jumps: -1 });
@@ -96,7 +99,7 @@ export function CameraRig() {
       ref={controls}
       mouseButtons={{ left: NONE, middle: NONE, right: NONE, wheel: NONE }}
       touches={{ one: NONE, two: NONE, three: NONE }}
-      smoothTime={SMOOTH_TIME}
+      smoothTime={watching ? WATCH_SMOOTH_TIME : SMOOTH_TIME}
       draggingSmoothTime={SMOOTH_TIME}
       minDistance={ISLAND_LIMITS.minDistance}
       maxDistance={ISLAND_LIMITS.maxDistance}

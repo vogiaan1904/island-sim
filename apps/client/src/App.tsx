@@ -5,6 +5,7 @@ import { GhostLabels } from './ui/build/GhostLabels.tsx';
 import { PlacementPanel } from './ui/build/PlacementPanel.tsx';
 import { Hud } from './ui/hud/Hud.tsx';
 import { Arrival } from './ui/visit/Arrival.tsx';
+import { Watch } from './ui/watch/Watch.tsx';
 import { VisitBanner } from './ui/visit/VisitBanner.tsx';
 import { LoadingScreen } from './ui/LoadingScreen.tsx';
 import { LoginScreen } from './ui/LoginScreen.tsx';
@@ -99,6 +100,7 @@ function IslandScreen() {
       <GhostLabels />
       <VisitBanner />
       <Arrival />
+      <Watch />
       <CalmStatus />
       {!ready && (
         <div className="screen-overlay">

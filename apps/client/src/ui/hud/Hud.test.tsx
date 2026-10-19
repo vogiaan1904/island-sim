@@ -136,10 +136,10 @@ describe('the HUD', () => {
     expect(screen.getByRole('button', { name: 'Face north' })).toBeInTheDocument();
   });
 
-  it('has no Views button, no Watch button, no player title and no emoji', () => {
+  it('has a Watch button but no Views button (slice 3), no player title and no emoji', () => {
     const { container } = show();
     expect(screen.queryByRole('button', { name: /views/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /watch/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Watch' })).toBeInTheDocument();
     expect(screen.queryByText(/mayor|governor|lord|your highness/i)).not.toBeInTheDocument();
     expectNoEmoji(container);
   });

@@ -11,6 +11,7 @@ import { Icon, type IconName } from '../icons.tsx';
 import { STAGE_NAMES } from '../names.ts';
 import { PanelHost } from '../PanelHost.tsx';
 import { PANEL_BODIES, PANEL_TITLES } from '../panels.ts';
+import { WatchButton } from '../watch/Watch.tsx';
 import { GlidingNumber } from './GlidingNumber.tsx';
 import { hudModel, type GoalTile, type HudModel, type StageRing } from './model.ts';
 import './Hud.css';
@@ -27,12 +28,14 @@ export function Hud() {
   const panelOpen = useGameState((state) => state.view.openPanel !== null || state.view.tappedBuilding !== null);
   // The placement panel takes the bottom bar's place while the player places something (ticket 12).
   const placing = useGameState((state) => state.view.placement !== null);
+  // Watch mode fades the whole HUD; the caption (`ui/watch/Watch.tsx`) stays.
+  const watching = useGameState((state) => state.view.cameraMode === 'watch');
   const model = useMemo(() => (island === null ? null : hudModel(island.state, content)), [island?.state]);
   if (island === null || model === null) return null;
   const glideKey = `${island.world}/${island.slot}`;
   return (
     <>
-      <div className="hud" data-panel-open={panelOpen}>
+      <div className="hud" data-panel-open={panelOpen} data-watching={watching}>
         <BubbleLayer />
         <StageBadge model={model} />
         <div className="hud-right">
@@ -116,12 +119,18 @@ function Goals({ tiles }: { tiles: readonly GoalTile[] }) {
 function SideButtons() {
   const { store } = useGame();
   const open = useGameState((state) => state.view.openPanel === 'settings');
+  const placing = useGameState((state) => state.view.placement !== null);
   return (
     <div className="hud-side">
       <button className="hud-gear" type="button" aria-label="Settings" aria-pressed={open} onClick={() => store.getState().togglePanel('settings')}>
         <Icon name="settings" size={24} />
       </button>
       <Compass />
+      {!placing && (
+        <WatchButton>
+          <Icon name="eye" size={24} />
+        </WatchButton>
+      )}
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { Buildings } from './Buildings.tsx';
 import { CameraRig } from './CameraRig.tsx';
 import { Ferry } from './Ferry.tsx';
 import { Nature } from './Nature.tsx';
-import { useFrameLoop } from './frameLoop.ts';
+import { FrameDriver } from './frameLoop.ts';
 import { People } from './People.tsx';
 import { PlacementGhost } from './PlacementGhost.tsx';
 import { QualityProbe } from './QualityProbe.tsx';
@@ -48,17 +48,18 @@ export default function IslandCanvas({ onReady }: { onReady: () => void }) {
     if (store.getState().view.quality === null) store.getState().setView({ quality: guessed });
   }, [store, guessed]);
   const quality = chosen ?? guessed;
-  const frameloop = useFrameLoop();
+  const watching = useGameState((state) => state.view.cameraMode === 'watch');
   // Who walks where and the ferry's timetable, planned once per island update (render/crowd.ts).
   const plan = useMemo(() => (island === null ? null : crowdPlan(island, content)), [island]);
   return (
     <div className="island-canvas">
       <Canvas
-        frameloop={frameloop}
+        frameloop="never"
         shadows="percentage"
         dpr={pixelRatioFor(quality, window.devicePixelRatio)}
         camera={{ position: [MIDDLE, 95, MIDDLE + 125], fov: CAMERA_FOV, near: 1, far: 2000 }}
       >
+        <FrameDriver watching={watching} />
         <CameraRig />
         <DayNight />
         <Sun quality={quality} />
