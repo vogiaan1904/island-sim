@@ -41,3 +41,17 @@ Verify all checksums: `cd assets/packs && shasum -a 256 *.zip`
 ## UI icons
 
 The UI line icons (`apps/client/src/ui/icons.tsx`) are Lucide shapes, ISC license; the notice is in `apps/client/src/ui/icons.LICENSE.md`.
+
+## Sounds
+
+Ambience recordings from Wikimedia Commons, downloaded 2026-10-19 into `assets/raw/commons-sounds/` (ignored by git;
+`list.tsv` there names every candidate). `pnpm assets sounds` (`tools/assets/src/sounds.ts`) cuts, loops and encodes the picks into
+`apps/client/public/sounds/`. The button sounds come from Kenney Interface Sounds (above): `select_002` (ui_tap), `drop_002`
+(ui_land) and `confirmation_001` (ui_collect).
+
+| File | License | Page | Used as | SHA-256 |
+|---|---|---|---|---|
+| `Ocean Waves on a Tropical Beach.ogg` | CC0 | https://commons.wikimedia.org/wiki/File:Ocean_Waves_on_a_Tropical_Beach.ogg | ambience_waves.m4a, from 92 s | `bae2fc0a0c1d36f43494883d9455ad151fc747a0770876b25436422ea8736e55` |
+| `20090610 0 ambience.ogg` | Public domain | https://commons.wikimedia.org/wiki/File:20090610_0_ambience.ogg | ambience_birds.m4a, from 0 s | `43848c3eda5f42829f1033112c2a91ba3e5c91b79a0532fda264c9f59856d431` |
+| `Karlova 0001.ogg` | Public domain | https://commons.wikimedia.org/wiki/File:Karlova_0001.ogg | ambience_town.m4a, from 8 s | `0d7827aba40f998514375610e865ce7a1bafa2ed130727f17239ec3f75854f57` |
+| `Pseudacris triseriata chorus.wav` | CC0 | https://commons.wikimedia.org/wiki/File:Pseudacris_triseriata_chorus.wav | ambience_night.m4a, from 0 s | `3e718573850b99733cbf000d7ed76b3899ad67fe080f1c7c9133f2b18d45a673` |

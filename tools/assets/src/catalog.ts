@@ -1,8 +1,8 @@
 /**
- * Every file the game ships in apps/client/public/models and .../icons. A file is added here in the same commit
- * that adds it, and the shipped-files test requires the folders to hold exactly this list.
+ * Every file the game ships in apps/client/public/models, .../icons and .../sounds. A file is added here in the same
+ * commit that adds it, and the shipped-files test requires the folders to hold exactly this list.
  */
-export const catalog: { models: readonly string[]; icons: readonly string[] } = {
+export const catalog: { models: readonly string[]; icons: readonly string[]; sounds: readonly string[] } = {
   models: [
     'palette.png',
     'accessory_bag_a.glb',
@@ -69,5 +69,14 @@ export const catalog: { models: readonly string[]; icons: readonly string[] } = 
     'portrait_lena_a.png',
     'portrait_mira_a.png',
     'portrait_tomas_a.png',
+  ],
+  sounds: [
+    'ambience_birds.m4a',
+    'ambience_night.m4a',
+    'ambience_town.m4a',
+    'ambience_waves.m4a',
+    'ui_collect.m4a',
+    'ui_land.m4a',
+    'ui_tap.m4a',
   ],
 };
