@@ -20,7 +20,7 @@ the islands keep running while you're away, and you can watch each other's islan
 | 2 | Simulation: Outpost to Settlement | The gameplay of the first stage, headless and tested | plan 1 | done: `2026-10-17-slice1-plan2-outpost-gameplay.md` |
 | 3 | Protocol and server | `packages/protocol`, `apps/server`: the always-running worlds behind accounts and invite codes | plans 1-2 | done: `2026-10-18-slice1-plan3-protocol-server.md` |
 | 4 | Art direction and asset pipeline | The chosen look, the conventions, and every slice 1 model and icon | the user and Blender (can run beside plans 1-3) | done: `2026-10-18-slice1-plan4-art-assets.md` |
-| 5 | Client | `apps/client`: the 3D island and the style A UI on phones. Two features: `slice1-client` (the playable island, plus the soft lock fix) then `slice1-alive` (crowds, ferry, watch mode, sound) | plans 1-3; plan 4 for final models | next: `.scratch/slice1-client/` spec written; `slice1-alive` not grilled |
+| 5 | Client | `apps/client`: the 3D island and the style A UI on phones. Two features: `slice1-client` (the playable island, plus the soft lock fix) then `slice1-alive` (crowds, ferry, watch mode, sound) | plans 1-3; plan 4 for final models | in progress: `slice1-client` is built (tickets 01 to 20 and 22 done) and waits on the user's two checks, ticket 08 (camera feel on a real phone) and ticket 21 (look review); then `slice1-alive` gets its `/grill-with-docs` |
 | 6 | Ship slice 1 | Installable app, two-player end-to-end test, deployment, phone performance check | plans 1-5 | not written: `.scratch/slice1-ship/` |
 
 ## What each later plan covers
@@ -48,13 +48,15 @@ the islands keep running while you're away, and you can watch each other's islan
 - Plans 5 and 6 (from plan 4): no crowd level of detail for people ships; if phones need one, decide it on measured
   performance. The animation manifest does not say which clips loop (idle, walk, sprint and the wheelchair moves do).
 - Later (from plan 4): building level variants and the damaged look; terrain and water colors should follow the look.
-- Soft lock (plan 2 decision 15): an island with no coins, no residents and nothing to sell cannot pay commuters and
-  stays stuck. A gentle way out must land in plan 5, before its client is playtested. Wages are paid before upkeep,
-  so an island just short of money pays its commuters, who then idle at workplaces left unpaid by upkeep.
-- Plan 5: serve the built client from the game server (one origin for the page, `/api` and `/ws`), with a safe path
-  lookup; during development the client's dev server proxies `/api` and `/ws` to `pnpm server`.
-- Plan 5: the client's store applies `island` and `update` messages with the sim's `applyChanges`, exactly as the
-  server's test client does (`apps/server/test/player.ts`).
+- Soft lock (plan 2 decision 15): **closed by `slice1-client` tickets 01 and 02.** Mainland help gives a stuck island a
+  grant at the morning ferry, and a building waiting for money keeps its workers and runs at half output (spec 12.1;
+  `island-game-logic`, `slice1-rules.md`). `SIM_VERSION` is 4. Wages are still paid before upkeep (Known gaps in `slice1-rules.md`).
+- Plan 5: **done.** The game server serves the built client from the same origin as `/api` and `/ws` with a safe path
+  lookup (`apps/server/src/http/static.ts`); in development the Vite server proxies both to `pnpm server:dev`
+  (`island-server`).
+- Plan 5: **done.** The client's store applies `island` and `update` messages with the sim's `applyChanges`, exactly as
+  the server's test client does (`apps/client/src/store/mirror.ts`), and assembles the island for the sim's helpers with
+  `islandFromEntities`.
 - Plan 6: the hosting provider, TLS, process supervision, deploy steps and the backup's second location; then update
   `island-server` (operations.md).
 - Settled in plan 3: the load policy for retuned content (a `SIM_VERSION` bump with a migration, no clamping; the
@@ -88,11 +90,25 @@ Blender open with the MCP server started.
 - The 3D island: terrain, water, instanced buildings, day and night; the free camera with every gesture and the
   compass; build mode with the ghost and the sim's placement checks.
 - Style A UI: HUD (stage badge, coins, residents, commuters), building cards with Fix, bubbles, key staff news,
-  Settings and Log; no emoji.
+  Settings and Log; no emoji. (Built in `slice1-client`.)
 - Crowds of Mini Characters from the sim's flows, the ferry with commuters and newcomers, basic watch mode, sound.
+  (`slice1-alive`, not built.)
 - Plus the plan 5 items under "Carried over" above.
 
-Inputs for its `/grill-with-docs` and `/to-spec` session: design spec 6.1, 6.2, 8.1, 12.4, 12.5 and 12.6 (with 12.1
+**Plan 5, `slice1-alive`** (next; not grilled). Its `/grill-with-docs` runs on the real code of `slice1-client` and the
+updated skills (`island-3d-client` lists what is built), after the user's two checks (ticket 08, ticket 21). Open
+questions:
+- Crowd scale-down: how many full characters, the cheaper level of detail for distant people, the walker cap per
+  neighborhood, and the switch distances with hysteresis (`island-3d-client`, `scene-and-rendering.md`, section 10).
+- The ferry: the boat, its timetable from the sim's morning and evening trips, commuters and newcomers boarding, and
+  in which fixed direction the Mainland lies.
+- Watch mode: how moments are ranked, how long the camera holds each, the Watch button and caption, 30 fps and Wake Lock.
+- Sound: sources (CC0), file format and location, the mix that follows the camera, the button sounds.
+- Friends' islands far away: the shapes on the horizon and the visit flight that can start from them.
+- The crowd frame rate on a phone, per quality tier, measured by the user; whether the start check's 24 ms step-down
+  fits real phones; whether 90/120 Hz screens are capped at 60 fps.
+
+Inputs for the `slice1-client` `/grill-with-docs` and `/to-spec` session (done): design spec 6.1, 6.2, 8.1, 12.4, 12.5 and 12.6 (with 12.1
 for the soft lock); the skills `island-3d-client`, `island-ui` and `island-testing` (plus `island-game-logic` for
 the soft lock); the mockups in `docs/mockups/`.
 

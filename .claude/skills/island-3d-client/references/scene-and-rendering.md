@@ -1,8 +1,11 @@
 # Scene and rendering
 
-Planned design from spec 6.2 (approved section 4b) and the defaults in spec 12.4 to 12.6. No client code exists yet;
-the models it draws exist (plan 4, see the model contract in `SKILL.md`).
-Library details must be checked against the installed versions. Anything marked "open" is still undecided.
+Design from spec 6.2 (approved section 4b) and the defaults in spec 12.4 to 12.6. **Built in slice 1** (client tickets
+09, 10, 12, 13, 15, 20): terrain, water, instanced buildings, roads, scaffolds and the pier, day and night, shadows,
+quality tiers, the placement ghost and road preview, world anchors for bubbles. Each section says "As built" where it
+is real. **Not built:** distant islands, people, vehicles, ships, glows, smoke, Views, per-building window light,
+shore foam. File names below are in `apps/client/src`; the folder map is in `SKILL.md`. Library details must be
+checked against the installed versions. Anything marked "open" is still undecided.
 
 ## Contents
 
@@ -25,14 +28,15 @@ Library details must be checked against the installed versions. Anything marked 
 - React Three Fiber + drei on WebGL2 (spec 6.2). No other engine, no WebGPU renderer.
 - No full-screen post-processing (bloom, ambient occlusion, depth of field) unless it is measured to fit the budget
   on the reference phone. Glows are sprites, not bloom.
-- What to show on a device without WebGL2 is not in the spec (open; the message itself is `island-ui`).
+- **Built:** `ui/webgl.ts` `supportsWebGL2()` asks a canvas for a `webgl2` context before any 3D loads; without it the
+  app (`App.tsx`) shows one friendly sentence on a `NoticeScreen` (wording is `island-ui`) and never mounts the canvas.
 
 ## 2. Scene layers
 
 | Layer | Contents | Draw calls (normal pass) | Notes |
 |---|---|---|---|
 | Environment | Sky color, fog, the sun light, ambient fill | 0-1 | Colors from the art direction (Q10) |
-| Terrain | Merged chunks with vertex colors | one per visible chunk | Chunk size: open |
+| Terrain | Merged chunks with vertex colors | 4 (16-tile chunks of the 32-tile island) | Section 3 |
 | Water | One surface, cheap wave and shore foam | 1 | |
 | Distant islands | Friends' islands as simple far-away shapes | 1 | Section 7 |
 | Static models | Buildings, roads, nature, props | one per model type on screen | Shared palette material |
@@ -50,8 +54,12 @@ Library details must be checked against the installed versions. Anything marked 
 - Rebuild only the chunk whose tiles changed, and only when the state changes (per tick at most, never per frame).
 - Keep a CPU-side height lookup built from the same data. The camera ground limit, the placement ghost and movers on
   slopes all use it, so nobody needs to raycast the terrain every frame.
-- Chunk size trades draw calls (fewer, bigger chunks) against culling (smaller chunks). Open; decide with the tile
-  size in slice 1.
+- **As built** (`render/terrain.ts`, `scene/Terrain.tsx`): `terrainChunks(terrain, size, 16)` makes 16 x 16 tile chunks
+  (4 draw calls for the 32-tile island) of non-indexed flat-shaded triangles with one vertex color per tile
+  (`LOOK.grass`, `LOOK.sand`, `LOOK.seabed`; first picks, ticket 21 reviews them). Land is flat at height 0, where models
+  stand; the ground falls to -2.4 under open water, sloping only across water tiles next to the shore; the water
+  surface rests at -0.35 so the beach shows. Chunks are rebuilt only when the terrain string changes. There is no CPU
+  height lookup yet: land is flat and the camera clearance is measured from y = 0.
 
 ## 4. Water
 
@@ -62,7 +70,9 @@ Library details must be checked against the installed versions. Anything marked 
   costs an extra pass.
 - No reflection or refraction render targets: each one renders the scene again.
 - Ships can bob with the same wave function, so they ride the waves you see.
-- What Low quality drops from the water (if anything) is an open tier decision.
+- **As built** (`scene/Water.tsx`): one 96 x 96 segment plane, 4 islands wide, with two crossing swells in the vertex
+  shader whose time is the gliding game clock in ticks; its colors come from `LOOK.water` and the sun. Shore foam is not
+  built. Low drops nothing from the water.
 
 ## 5. Models and instancing
 
@@ -86,8 +96,8 @@ Library details must be checked against the installed versions. Anything marked 
   the same attribute set, with defaults where unused.
 - An `InstancedMesh` is culled as one object. For meshes whose instances move, keep its bounds current or turn off
   frustum culling for it, or whole groups of movers vanish at screen edges.
-- Planned dev-only check: warn when a loaded model has more than one primitive, an unexpected material, or more
-  triangles than the `island-blender` budget for its category.
+- Built dev-only check: `bakedGeometry` warns in the console when a model has more than one mesh. The triangle budget
+  is checked by `pnpm assets check`, not in the client.
 - Combining several model types into one draw call (for example three.js `BatchedMesh`) is not in the spec. Only
   consider it if model types alone push the count over budget; measure first and record the decision here.
 
@@ -99,8 +109,12 @@ Library details must be checked against the installed versions. Anything marked 
   load in the background after the first frame. The service worker caches the app and the models
   (`state-and-pwa.md`).
 - Stage sets only add: reaching a new stage never unloads earlier models.
-- Visiting a friend who is at a later stage needs that stage's set before their island shows. Load it during the
-  visit flight and fade (`camera-and-watch-mode.md`, visiting).
+- Visiting a friend who is at a later stage needs that stage's set before their island shows. As built, every stage's
+  set is preloaded two seconds after the first island (`scene/Buildings.tsx`), well before a visit.
+- **As built:** `stageModels(content, stage)` lists the files (pier, six road pieces, each available building and its
+  scaffold); `Buildings` preloads Outpost at module load with `useGLTF.preload(url, false, true)` (the third argument
+  turns the meshopt decoder on) and shows the island inside a Suspense boundary, so the loading screen stays until the
+  models are in.
 
 ## 7. Around the island: friends' islands and the Mainland
 
@@ -110,7 +124,8 @@ Spec 12.5:
   (generated in `sim`) and the world summary. Draw them as one cheap mesh (or one instanced draw call) with no
   people, vehicles or detail; full detail only exists while you visit.
 - **The Mainland lies off-screen in a fixed direction**, where the ferries come from. It is never drawn; ferries and
-  Mainland ships sail in from and out to that edge. Which direction is open (fix it with the tile grid and north).
+  Mainland ships sail in from and out to that edge. Which direction is open until the ferry is built (north is -z; the
+  dock is on the south shore). Distant islands are not built.
 - The camera limits keep the view around your own island, so these shapes are horizon dressing, not places to fly
   to by panning.
 
@@ -146,8 +161,11 @@ night strength from the rules' sunrise and sunset, 30 minutes of twilight each s
 device guess; the 2 s frame probe that steps down once), `render/shadow.ts` (shadow center on the ground point the camera
 looks at, snapped to texels in light space). In the scene: `DayNight` (frame priority -1) fills `daylight` and `toSun`
 in `scene/Sun.tsx`, `windowGlow` in `scene/palette.ts` makes slot 0 glow in the shared material, `useFrameLoop`
-sets the canvas frameloop to `never` while hidden. The shadow map still updates every frame; skipping updates when nothing
-moved, and lighting windows per building (occupied homes only, staggered), are open.
+sets the canvas frameloop to `never` while hidden. The shadow map still updates every frame. Shadow numbers: the shadow camera covers 60 units
+each way from its focus (`SHADOW_HALF_EXTENT`), sits 250 units from it along the light, bias -0.0004, normal bias 0.05.
+Windows: every slot-0 texel glows at once with `windowGlow.value` (the night strength); lighting only occupied homes
+and staggering their switch-on by a hash of the building id are open. Whether shadows fade out at whole-island zoom
+is open too.
 
 ## 9. Construction, effects and world anchors
 
@@ -155,15 +173,16 @@ moved, and lighting windows per building (occupied homes only, staggered), are o
 steps.
 
 - The scaffold is a model from `island-blender`, drawn instanced like any other model type.
-- The number of the current step comes from the construction progress in the state, so every viewer sees the same
-  step. How many steps a building has is open.
-- Proposal for drawing a step: show the building only up to a height set by a per-instance progress value (the
-  shader discards fragments above it). Use a separate material variant only for buildings under construction, so the
-  many finished buildings do not pay for fragment discard, which is slow on many phone GPUs.
-- Workers at the site are movers from the construction flow (`people-vehicles-ships.md`), using `interact-left` and
-  `interact-right`. Prices are paid up front (spec 2.3, 12.1), so ordinary construction does not wait for money. A
-  landmark waits while materials are missing (they are carried from storage; missing ones can be bought on the
-  landmark's card, spec 12.1); while a site waits, no workers are busy there.
+- **As built** (`render/construction.ts`, `render/instances.ts`): a site is drawn inside `prop_scaffold_<w>x<h>.glb`
+  (a farm 3x2 and a turned 2x3 use the same model, turned). The step comes from the sim's own progress,
+  `constructionStep(constructionLeft, buildTicks)`: 0 when placed up to 3 while ticks are left, 4 (`CONSTRUCTION_STEPS`)
+  when built, so every viewer sees the same step. `constructionRise(step)` is step / 4 and becomes the instance's
+  `rise`: the building model is scaled vertically to that share of its height inside the scaffold (no shader discard,
+  so finished buildings pay nothing). A landmark site waiting for materials stays at step 0.
+- Workers at the site are movers from the construction flow (`people-vehicles-ships.md`; not built), using
+  `interact-left` and `interact-right`. Prices are paid up front (spec 2.3, 12.1), so ordinary construction does not
+  wait for money. A landmark waits while materials are missing (they are carried from storage; missing ones can be
+  bought on the landmark's card, spec 12.1); while a site waits, no workers are busy there.
 
 **Damaged buildings** (for example the pier after a storm) show a simple broken look: smoke and missing planks (spec
 12.5). The exact look is part of the art-direction task. Proposal: a damaged variant or extra broken pieces from
@@ -188,6 +207,13 @@ them world anchors projected to the screen each frame, says when an anchor is of
 tells them the current zoom level: zoomed out to the whole island, bubbles shrink to small dots and only problems
 remain (spec 12.4). Expose these per frame without React re-renders (`state-and-pwa.md`).
 
+**As built** (`render/anchors.ts`, `camera/livePose.ts`, `ui/bubbles/BubbleLayer.tsx`): `buildingAnchor(building,
+content)` is a point over the middle of the turned footprint at a height of 4 + 3 per tile of the longer side (a first
+guess; ticket 21 may change it), `islandAnchor` is the dock-free fallback, and `projectPoint(anchor, pose, viewport)`
+puts it on the screen from the live camera pose (written by `CameraRig` each frame), flagging points behind the camera
+or more than 40 px off screen. Bubbles become dots when the camera distance is at least 0.6 of the farthest distance
+(`bubbleDetail`, `DOTS_FROM` in `ui/bubbles/bubbles.ts`; about 184 units).
+
 ## 10. Detail by zoom
 
 | Zoom | What is drawn (spec 6.2, 12.4) |
@@ -199,7 +225,8 @@ remain (spec 12.4). Expose these per frame without React re-renders (`state-and-
 - Switch levels on camera distance, with hysteresis so a level does not flicker at its boundary.
 - Within street zoom, a tilted camera can see far down a street: give the full model to the nearest movers up to
   the cap and use the simplified model (or nothing) beyond.
-- Switch distances, hysteresis and the neighborhood cap are open.
+- Switch distances, hysteresis and the neighborhood cap are open (`slice1-alive`; only the bubble dots switch by zoom
+  so far, with no hysteresis).
 
 ## 11. Quality tiers and the budget
 
@@ -214,18 +241,30 @@ Spec 6.2 targets, all binding:
 | Watch mode | 30 fps |
 | Background | nothing rendered |
 
-What a tier may change (values open): pixel ratio below the cap, shadows (always off on Low), shadow map size, crowd
-and vehicle caps, water detail, antialiasing.
+**As built** (`render/quality.ts`; the tier is `view.quality`, `ViewState`):
 
-- **Picking the tier**: start from a guess, measure sustained frame time over the first seconds and after big scene
-  changes, step down when the target is missed, step up cautiously, with hysteresis so it never flip-flops. drei
-  ships a performance-monitor helper that may fit; check it. A tier the player picks wins and is remembered on that
-  device (the Settings control is `island-ui`).
-- **Frame rate**: 60 is the target. Whether to cap 90/120 Hz screens at 60 to save battery is open.
-- **Measure**: read draw calls and triangles from the three.js renderer info each frame. Planned dev-only overlay:
-  fps, frame time, draw calls, triangles, tier, mover counts. It is never shown to players.
+| Tier | Pixel ratio (never above the screen's own, nor 2) | Shadow map |
+|---|---|---|
+| Low | 1 | off |
+| Medium | 1.5 | 1024 |
+| High | 2 | 2048 |
 
-Draw-call accounting (structure only; fill in real numbers in slice 1):
+Crowd and vehicle caps, water detail and antialiasing do not vary by tier yet (nothing to cap; the Canvas uses the
+default antialiasing).
+
+- **Picking the tier** (`guessQuality`, `createFrameProbe`, `scene/QualityProbe.tsx`): the first guess is Low when the
+  browser reports 2 GB of memory or less or 4 cores or fewer, otherwise Medium on a touch screen (`pointer: coarse`)
+  and High on a desktop. Then the probe measures the first 2 s of real frames after 5 warm-up frames (a gap over 1 s is
+  a paused page and ignored) and steps down one tier, once, if the average frame is slower than 24 ms (about 42 fps).
+  It never steps up. A tier the player picks in Settings wins, is saved on that device (`store/settings.ts`) and
+  stops the probe.
+- **Frame rate**: 60 is the target. Whether to cap 90/120 Hz screens at 60 to save battery is open; the user checks
+  it on a phone.
+- **Measure**: read draw calls and triangles from the three.js renderer info each frame. A dev-only overlay (fps,
+  frame time, draw calls, triangles, tier) is not built; it is never shown to players.
+
+Draw-call accounting (as built: terrain 4, water 1, one instanced mesh per model file that has instances, see
+`instancedDrawCalls`; the other rows are for `slice1-alive`; no phone number has been taken):
 
 | Group | Normal pass | Shadow pass |
 |---|---|---|
@@ -256,6 +295,26 @@ buttons) is `island-ui`. Inside the canvas:
   placed, spec 12.1) is shown by `island-ui`, then confirm.
 - While placing, a one-finger drag moves the ghost, not the camera (`camera-and-watch-mode.md`).
 - No ghost while visiting a friend (read-only).
+
+**As built** (tickets 12, 13):
+
+- **State** is `view.placement`, a `PlacementDraft`: a `BuildingDraft` (`building`, `x`, `y`, `rotation`) or a `RoadDraft`
+  (`tiles`, `pen` 'draw' or 'look'), both with `phase` 'aiming' | 'placing' | 'landing'. The pure helpers are in
+  `placement/draft.ts` (`startDraft`, `aimAt`, `rotateDraft`, `sendingDraft`, `settleDraft`, `lostDraft`, `drawRoad`,
+  `penTo`, `clearRoad`, `aimPoint`). `x`, `y` are the top-left tile of the turned footprint, the same meaning as the
+  sim's `place-building`.
+- **Aim.** On touch the ghost is aimed at a screen point 72 px above the finger (`TOUCH_LIFT_PX`); on a mouse it is
+  under the cursor. The point is cast onto the ground and floored to a tile (`tileAtWorld`).
+- **Verdict.** `placement/verdict.ts` `buildingVerdict(island, content, draft)` and `roadVerdict.ts` call the sim's
+  `checkPlacement`, `checkRoad` and the landmark lock, and the labels come from those checks; there is no client rule.
+  `scene/PlacementGhost.tsx` tints the ghost `#3cc46b` or `#ff5a5f` (the same green and red as the labels and buttons).
+- **Placing and landing.** While the command is out the ghost pulses. On the server's ok it turns solid and
+  `render/ghost.ts` drives a 0.9 s landing (`LANDING_SECONDS`): a 6 unit drop over 0.12 s, an 18 percent squash over
+  0.18 s, and a puff of 8 dust pieces (`dustPuff`). A refusal keeps the ghost with the reason and plays nothing.
+- **Roads.** `render/roadPreview.ts` `roadPreview(roads, tiles, size)` returns the pieces the drag will make (the new
+  tiles and the road tiles beside them that change shape), lifted 0.12 units; `scene/RoadGhost.tsx` draws them with
+  the same instanced path (`ModelInstances` takes its own see-through `material`, which casts no shadow) and a flat
+  highlight under each new tile. A drag lays at most the sim's 64 tiles per command.
 
 ## 13. Views: Goods flow and the other overlays
 

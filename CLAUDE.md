@@ -1,7 +1,7 @@
 # Island Sim
 
 3D web game: build a modern island (citizens, farms, factories, transport, hiring) in deep-management style,
-in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay), 3 (protocol and server) and 4 (art direction and assets) are done.**
+in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay), 3 (protocol and server) and 4 (art direction and assets) are done. Plan 5 (the client) is half built: `slice1-client` is built (tickets 01 to 20 and 22 done) and waits on the user's two checks, ticket 08 (camera feel on a real phone) and ticket 21 (look review); `slice1-alive` is next.**
 
 ## Resume here
 
@@ -10,11 +10,14 @@ in always-running private multiplayer worlds. **Status: slice 1 in progress; pla
 - Process: the mattpocock skills' main flow (`HARNESS.md`, "Workflow"). The game design spec is
   `docs/design/`; each remaining slice 1 plan becomes a feature in `.scratch/<feature>/` (a spec and tickets).
   No product code before the user approves the tickets.
-- **Next step:** plan 5 (the client), as `.scratch/slice1-client/`. In one session: `/grill-with-docs` on the open
-  questions listed under "Plan 5, client" in `docs/plans/2026-10-17-slice1-index.md` (the soft lock way out comes
-  first), then `/to-spec`, then `/to-tickets`. Build with `/implement-spec`, or `/implement` per ticket with
-  `/clear` between. `pnpm server` runs the server; `pnpm admin` creates the first account. The models, icons and
-  their contract are ready (`island-3d-client`).
+- **Next step:** the user's two checks of `slice1-client` (`.scratch/slice1-client/issues/`): ticket 08, the camera on
+  a real phone (steps are in the ticket), and ticket 21, the look review of the lit island and the unmocked screens;
+  tuning follows their notes. After those, `slice1-alive` (crowds, ferry, watch mode, sound) gets its
+  `/grill-with-docs` on the open questions under "Plan 5, `slice1-alive`" in `docs/plans/2026-10-17-slice1-index.md`,
+  then `/to-spec` and `/to-tickets`. Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);
+  develop with `pnpm server:dev` and `pnpm client`. `pnpm admin create-account <name>` makes the first account. The
+  skills `island-3d-client`, `island-ui`, `island-testing`, `island-server` and `island-game-logic` describe what is
+  built.
 - Art direction (Q10) is decided: the "golden" look, 4-unit tiles (spec 11, 12.6). Assets are rebuilt with
   `pnpm blender` and checked with `pnpm assets check` (`island-blender`).
 

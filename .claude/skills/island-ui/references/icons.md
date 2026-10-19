@@ -55,14 +55,14 @@ render per building can serve every place if it stays crisp when scaled down to 
 
 ## Line icon style
 
-As in the mockups (confirm when the library is chosen):
+As in the mockups, and as built in `ui/icons.tsx` (Lucide shapes):
 
 - 24 x 24 grid, 2 px stroke, round caps and joins, no fill, color from `currentColor`.
 - One stroke weight across the UI; a slightly heavier stroke (about 2.4 to 3) only for small bold glyphs such as the
   X on a close button or the check on Place.
 - Icons sit inside the outlined style A shapes (circle, pill, tile); they are not used bare as buttons.
-- Use the icon set from one place (a shared icon component or sprite, *planned*). Never paste ad hoc SVG paths
-  into a screen.
+- Use the icon set from one place: `apps/client/src/ui/icons.tsx`, `<Icon name size />`, keys in `LINE_ICONS`. Never
+  paste ad hoc SVG paths into a screen. License: Lucide (ISC), text in `ui/icons.LICENSE.md`.
 
 ## Accessibility
 
@@ -97,22 +97,19 @@ are typing (listed by code point so this file stays emoji-free):
 
 If you need a check, a warning, an arrow between recipe tiles, a star rating or an up/down trend, draw the icon.
 
-## The check (illustrative, planned)
+## The check (built)
 
-There is no code yet. When the client exists, add an automated check (with `island-testing`) that scans
-player-facing strings: React components in `apps/client`, UI text, and the names and descriptions in
-`packages/content`. A regular expression that matches everything in the table above and passes the allowed
-characters (tested with Node 24):
+`apps/client/src/test/no-emoji.ts` is the one place the list lives (do not copy the pattern into another test):
 
-```ts
-// Illustrative. Matches emoji and emoji-prone symbols; allows the middle dot, multiplication sign,
-// dashes, curly quotes and the ellipsis.
-const EMOJI_OR_SYMBOL =
-  /[\p{Extended_Pictographic}\u{FE0F}\u{20E3}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{2460}-\u{24FF}\u{25A0}-\u{27BF}\u{2900}-\u{297F}\u{2B00}-\u{2BFF}\u{1F000}-\u{1FAFF}]/u;
-```
+- `EMOJI_OR_SYMBOL`, one regular expression for every range in the table above; the allowed characters pass.
+- `findEmoji(text)` returns the first finding with its code point, or null.
+- `playerFacingText(element)` collects what a player sees or hears: text nodes and the attributes `alt`, `aria-label`,
+  `aria-description`, `aria-placeholder`, `aria-valuetext`, `title`, `placeholder` and `value` (script, style and
+  template contents skipped).
+- `expectNoEmoji(stringOrElement)` throws naming the code point. Every UI test renders its screen and calls
+  `expectNoEmoji(container)`; a test string that needs an emoji writes it with `\u{...}`.
 
-Run it in CI once the repo has a remote, and before calling any UI task done. A screenshot check catches the
-visual side.
+Run it before calling any UI task done (`island-testing`). A screenshot check (plan 6) catches the visual side.
 
 ## Player-typed text
 

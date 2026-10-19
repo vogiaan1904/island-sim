@@ -5,8 +5,9 @@ description: Rules, workflows and checklists for the Island Sim authoritative wo
 
 # Island Sim: world server and protocol
 
-Built in slice 1, plan 3 (`docs/plans/2026-10-18-slice1-plan3-protocol-server.md`). Paths and APIs below
-are real; "Still open" lists what plans 5 and 6 settle.
+Built in slice 1, plan 3 (`docs/plans/2026-10-18-slice1-plan3-protocol-server.md`), and extended by the client
+feature (plan 5): it also serves the built client, `WorldInfo` lists the world's islands and `TICK_MS` is shared.
+Paths and APIs below are real; "Still open" lists what plan 6 and later settle.
 
 - Source of truth: `docs/design/2026-10-16-island-sim-design.md`, sections 3 (architecture), 4.1 (time),
   4.6 (events), 5 (server) and **12 (resolved details: 12.2 sim and determinism, 12.3 server)**. If this skill and
@@ -19,8 +20,8 @@ are real; "Still open" lists what plans 5 and 6 settle.
 ## Scope
 
 - `apps/server`: one Node process that runs every world 24/7. Accounts, worlds, the tick loop, the command pipeline,
-  persistence in SQLite, WebSocket sync, the localhost admin interface and backups. Serving the built client comes
-  with the client (plan 5).
+  persistence in SQLite, WebSocket sync, the localhost admin interface and backups, and the built client
+  (`apps/client/dist`) on the same origin as `/api` and `/ws`.
 - `packages/protocol`: the protocol version, Valibot schemas for what clients send (player commands, client messages,
   account requests), types for what the server sends, and the server-level reason codes. Imported by the server and
   the client, so ESLint bans Node-only and browser-only APIs in it.
@@ -71,16 +72,18 @@ packages/protocol/src/
 apps/server/src/
   main.ts         pnpm server: start, then a graceful shutdown on SIGINT or SIGTERM
   server.ts       startServer(config, { clock, log, autoTick }): the listeners, worlds, gateway, admin, backups
-  config.ts       ServerConfig, DEFAULT_CONFIG, configFromEnv (ISLAND_* variables)
+  config.ts       ServerConfig, DEFAULT_CONFIG, configFromEnv (ISLAND_* variables; `clientDir`, `tickMs` = TICK_MS)
   db.ts           openDatabase: SQLite in WAL mode, schema migrations by user_version
   clock.ts log.ts random.ts backup.ts
   worlds/         store.ts (WorldStore), recovery.ts (recoverWorld, CONTENT_HASH), runtime.ts (WorldRuntime),
                   registry.ts (Worlds: load, create, claim, invite codes, timers)
   accounts/       store.ts (AccountStore), accounts.ts (Accounts), passwords.ts (argon2id), rate-limit.ts
-  http/           request.ts (body, cookies, Origin, client IP), api.ts (createApi: the /api routes)
+  http/           request.ts (body, cookies, Origin, client IP), api.ts (createApi: the /api routes),
+                  static.ts (createStaticHandler: the client's files; `pathOf` splits off the query string)
   sync/           gateway.ts (the /ws upgrade, heartbeat), connection.ts (one socket), views.ts (one island's slice)
   admin/          api.ts (createAdminApi, 127.0.0.1 only), cli.ts (pnpm admin)
-apps/server/test/ support.ts, server.ts, player.ts: the test harness (island-testing, server-tests.md)
+apps/server/test/ support.ts, server.ts, player.ts: the test harness (island-testing, server-tests.md); client tests
+                  import it by relative path (`startTestServer` sets `clientDir: null`)
 ```
 
 ## How a world runs
@@ -170,6 +173,29 @@ Full detail and the security checklist: `references/accounts-and-security.md`.
   transaction. The host creates the
   first account and issues reset codes with `pnpm admin`.
 
+## Serving the client
+
+`startServer` answers every request that is not `/api` or `/ws` (`isServerPath`, compared on the path without its query
+string) from `config.clientDir`, the client's build output; `null` serves nothing (tests). The default is
+`apps/client/dist` beside the server; `ISLAND_CLIENT_DIR` changes it and an empty value turns it off. The handler
+(`http/static.ts`):
+
+- Only `GET` and `HEAD` (others get 405 with `allow`). The path is split on `?` and `#` as raw text, decoded, and
+  refused with 400 for a bad escape, a NUL, a backslash or `..`, and with 404 for any segment that starts with a dot
+  (`.env`, `.git`, `.well-known`). The real path must stay inside the real build folder (a link out is not followed,
+  nor a link to a dotfile).
+- A name with no extension that is not a file, and the folder itself, answer `index.html` (the client's screens);
+  a missing name with an extension answers 404. If the build folder or its `index.html` does not exist, the server
+  falls through to the API's own `not-found`, so a server with no build still runs.
+- Content types from a fixed table (html, js, css, json, webmanifest, svg, png, jpg, webp, ico, glb, woff2, wasm, mp3,
+  ogg, map ...), anything else `application/octet-stream`; every answer carries `x-content-type-options: nosniff`,
+  including the 400, 404 and 405 ones.
+- Caching: files under `assets/` whose name ends in a hash (`assets/index-Dk3j9sLq.js`) get `public, max-age=31536000,
+  immutable`; everything else (the page, models, icons) gets `no-cache` with a weak `ETag` from size and modified time,
+  and `If-None-Match` answers 304.
+- Tests: `apps/server/test/static.test.ts` on a real HTTP server (types, fallback, traversal, dotfiles, links, `/api`
+  and `/ws` untouched, caching headers).
+
 ## Hosting, in short
 
 `pnpm server` with `ISLAND_*` variables, one machine, HTTPS in front, the same origin for the page and `/ws`. The
@@ -178,6 +204,11 @@ minute after the start, so restarts do not skip a day. Shutdown order: the API a
 the close frame, every trusted world is snapshotted, then the listeners and the database close. **The provider,
 TLS, process supervision and the backup's second location are chosen when slice 1 deploys (plan 6); update this skill
 and `references/operations.md` then.** Details: `references/operations.md`.
+
+**Playing and developing the client** (root scripts): `pnpm client:build` makes `apps/client/dist`, then `pnpm server`
+serves it on `http://127.0.0.1:8787`. For hot reload, run `pnpm server:dev` (the server with `ISLAND_ORIGIN=
+http://localhost:5173` and `ISLAND_SECURE_COOKIES=0`) and `pnpm client` (Vite on 5173, proxying `/api` and `/ws` to
+the server, or to `ISLAND_SERVER_URL`). The first account: `pnpm admin create-account <username>`.
 
 ## Checklist: add a new message type
 
@@ -219,7 +250,6 @@ checklist instead.
 ## Still open
 
 - Hosting provider, TLS, process supervision, deploy steps, where the backup copy goes (plan 6).
-- Serving the built client from the server, with a safe path lookup (plan 5, once there is a build).
 - A slow-tick budget and its log line, once real worlds are measured.
 - Command log retention (kept whole for now) and exporting one world to replay a bug locally.
 - Leaving a world, freeing a slot, deleting a world (not in the spec).

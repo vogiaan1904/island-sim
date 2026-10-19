@@ -2,7 +2,9 @@
 
 Spec 2.3, 2.4, 2.5, 4.5, 4.6, 12.1, 12.2 and 12.3. The ledger, events, the Mainland market, auto-sell, upkeep, rent
 and rewards are built in `packages/sim` (slice 1 plans 1-2). Key staff beyond the port master, taxes, the full event
-catalogue and the server side (event log, news) are still planned.
+catalogue are still planned. The server side (event log, news on opening an island) is built (`island-server`), and the
+client shows the events as the port master's news and the Log (`island-ui`, `news/`). Event types carry an
+`importance` in content data (`mainland-help` 65); the news picks the top five by it.
 
 Contents: money - paying - the ledger and invariants - the Mainland market - friends and active islands - chill
 rules - safety rules - key staff - automation rules - the event log - open points.

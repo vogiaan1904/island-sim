@@ -1,8 +1,9 @@
 # Camera, gestures and watch mode
 
-Planned design from spec 6.1, 6.2 (decision 16) and the defaults in spec 12.5. No code exists yet. camera-controls
-and @use-gesture/react are fixed by the spec; check every method and option named here against the installed
-versions. Proposals are marked as such; open items are listed at the end.
+Design from spec 6.1, 6.2 (decision 16) and the defaults in spec 12.5. **Built in slice 1** (client tickets 07, 12, 13,
+20): everything except watch mode and the Watch button (section 11), which are planned for `slice1-alive`. Section 12
+holds the decided numbers. Sections 3 to 10 keep their design reasons; where a section says "proposal", the built
+choice is given next to it.
 
 ## Contents
 
@@ -17,7 +18,7 @@ versions. Proposals are marked as such; open items are listed at the end.
 9. Fly-to, "Show me" and framing
 10. Visiting a friend's island
 11. Watch mode
-12. Open items
+12. Decided values
 
 ## 1. Why the camera matters
 
@@ -34,7 +35,7 @@ predictability as a regression, the same as a crash.
 | Turn (full 360 degrees) | Two-finger twist | Right-drag left/right, Q and E |
 | Tilt (straight down to near eye level) | Two fingers moving up or down side by side | Right-drag up/down |
 | Face north | Tap the compass | Click the compass |
-| Watch mode | Tap Watch; touch to stop | Press V; any input stops |
+| Watch mode (not built; `slice1-alive`) | Tap Watch; touch to stop | Press V; any input stops |
 
 Every movement glides to a stop; the camera stays around the island and never goes below the ground; zooming in
 tilts slightly by itself (spec 6.1).
@@ -53,16 +54,23 @@ Changing what a gesture does is a design change: ask the user.
 
 ## 3. How it is built
 
-- drei `<CameraControls>` (the camera-controls library) does smoothing, transitions and limits.
-- Our own gesture layer (`@use-gesture/react`), bound to the canvas element, turns all input into camera-controls
-  calls. camera-controls' built-in input is switched off (its mouse and touch actions set to none). One owner for
-  input means conflicts (building taps, placement, road drag, watch mode, UI) are solved in one place.
-- Moves go through camera-controls' own operations (in current versions: truck for panning, dolly or zoom for
-  distance, rotate for azimuth and polar angle, set-look-at for fly-tos, a boundary box, min and max distance and
-  polar angle, smooth time). Check the names in the installed version.
-- The camera's state (target, distance, azimuth, polar angle) lives in camera-controls, not in React state. UI that
-  follows the camera (the compass needle) reads it per frame through a ref or a direct style update, never through
-  a React re-render per frame.
+- **Three layers, one owner of input.** `camera/controller.ts` is pure: `applyGesture(state, gesture, limits)` and
+  `step(state, dt, limits)` turn a `CameraState` and one normalized `Gesture` (drag, swipe, orbit, two-finger, zoom,
+  wheel, twist, keys, double-tap, face-north, fly-to, release, stop) into the next state, and `cameraPose(state,
+  limits)` gives the pose the real camera should have. `camera/input.ts` says what a browser event means
+  (`classifyWheel`, `wheelGesture`, `keyForCode`, the pinch tracker, `createDoubleTap`). `camera/useCameraInput.ts`
+  binds `@use-gesture/react` to the canvas element and the keyboard to the window and only forwards gestures to
+  `store.cameraGesture`. Everything that moves the camera, including the compass, "Show me" and Fix flights, calls
+  `store.getState().cameraGesture(...)`.
+- **The camera state lives in the store** (`view.camera`), not in camera-controls and not in React state per frame.
+  drei `<CameraControls>` (in `scene/CameraRig.tsx`) has all its mouse and touch actions set to NONE and only
+  smooths the real camera toward the pose (`SMOOTH_TIME` 0.2 s). The rig calls `cameraStep(dt)` every frame for
+  momentum and keys, and writes the live pose to `camera/livePose.ts` for the bubble layer and the compass.
+- Browser zoom and the context menu are switched off in the binding (`gesturestart` and `gesturechange` prevented,
+  `contextmenu` prevented), in CSS (`touch-action: none` on the canvas, `overscroll-behavior: none` on the page).
+- A tap resolves with `camera/tap.ts` `tapTarget`: the screen point is cast onto the ground, floored to a tile, and the
+  building is looked up in the mirrored island with `buildingAtTile`. No raycast over instances. People are not
+  pickable.
 
 ## 4. Touch
 
@@ -78,7 +86,7 @@ Changing what a gesture does is a design change: ask the user.
   movement threshold, if the two fingers move in the same vertical direction while their distance and angle barely
   change, the gesture locks into tilt for the rest of the gesture (until the fingers lift); otherwise it stays in
   move, zoom and turn. A consequence: two fingers cannot move the view straight up or down the screen; one finger
-  can. The thresholds are open; tune them on real phones.
+  can. The thresholds are in section 12 (`TUNING`); ticket 08 tunes them on a real phone.
 - **Double-tap on open ground: zoom in** one animated step toward the tapped point. A double-tap on a building does
   not zoom: its first tap already opened the card (section 8).
 
@@ -90,25 +98,26 @@ Changing what a gesture does is a design change: ask the user.
 - Both arrive as wheel events. Trackpad pinch arrives as wheel events with the ctrl key flag in Chrome, Edge and
   Firefox, and as WebKit gesture events in Safari; use-gesture handles both for pinch (check). Use a non-passive
   listener and prevent the default, or the browser zooms the page instead.
-- Telling a trackpad swipe from a mouse wheel needs a detection heuristic on the wheel events (open). Because it
-  can guess wrong, Settings has a "controls" switch, trackpad or mouse (spec 12.4, 12.5; the control is
+- Telling a trackpad swipe from a mouse wheel is `classifyWheel` in `camera/input.ts` (rule in section 12). Because
+  it can guess wrong, Settings has a "controls" switch, trackpad or mouse (spec 12.4, 12.5; the control is
   `island-ui`). The player's choice wins over detection and is remembered on that device as view state
-  (`state-and-pwa.md`).
+  (`view.controlsChoice` against `view.controlsDetected`, `resolveControls`; saved by `store/settings.ts`).
 - **Right drag**: left/right turns, up/down tilts. Suppress the context menu on the canvas.
 - **WASD and arrow keys: move** relative to the current heading (W and Up move up the screen), at a speed scaled by
-  the camera's distance so it feels the same at every zoom. **Q and E: turn.** **V: watch mode.** Ignore these keys
-  while a text field has focus, and keep them clear of the UI's shortcuts (`island-ui`).
-- **Compass: face north.** Rotate the azimuth to north with a transition, keeping zoom and tilt. Which world axis is
-  north is open (fix it with the tile grid).
+  the camera's distance so it feels the same at every zoom. **Q and E: turn.** V (watch mode) is not bound yet. The keys are ignored
+  while a text field, select or editable element has focus, or ctrl, meta or alt is held, and are kept clear of the UI's
+  shortcuts (`island-ui`).
+- **Compass: face north** (`ui/Compass.tsx`, a button named "Face north"). It sends `face-north`: the azimuth goes to the
+  nearest whole turn, keeping zoom and tilt. North is -z on the tile grid (section 12).
 
 ## 6. Limits
 
-| Limit | How (proposal) | Values |
+| Limit | How (built) | Values |
 |---|---|---|
-| Zoom range | Min and max distance: street level to the whole island in view, from the island's size | open |
-| Tilt range | Min and max polar angle: straight down to near eye level, with a margin above the horizon | open |
-| Stays around the island | A boundary box around the island plus a margin, for the target | open |
-| Never below the ground | Polar limit, plus a check of the eye's height against the terrain height lookup and the water level, raising the eye when needed | clearance: open |
+| Zoom range | Min and max distance from the target to the eye, from the island's size | 10 units (street level) to 2.4 x the island's width (307 units for a 32-tile island) |
+| Tilt range | Polar angle from straight down | 0 to 1.4 rad (about 80 degrees), and never so low that the eye is under the clearance |
+| Stays around the island | The target is clamped to a box | the island plus one eighth of its width (16 units) on each side |
+| Never below the ground | The eye keeps a clearance above y = 0, which caps the tilt at close range | 3 units. Land is flat at height 0, so there is no terrain lookup yet |
 | Turn | None: full 360 degrees | |
 
 Prefer the CPU height lookup (`scene-and-rendering.md`, terrain) over raycasting collider meshes every frame on
@@ -116,14 +125,16 @@ phones. Friends' islands on the horizon are not reachable by panning; visits use
 
 ## 7. Glide, momentum and auto-tilt
 
-- **Glide**: camera-controls eases toward each new target (smooth time). Tune the feel on real phones.
+- **Glide**: camera-controls eases the real camera toward the pose (`SMOOTH_TIME` 0.2 s in `scene/CameraRig.tsx`).
 - **Momentum comes from our gesture layer** (spec 12.5): at the end of a fling, take the gesture's release velocity
   (move, turn and zoom alike) and keep applying it with a decay until it stops. Do not rely on camera-controls'
-  smoothing for this. The decay rate is open.
+  smoothing for this. Built: `release` starts a fling only if the fingers rested no more than 100 ms, the speed decays
+  with a time constant of 0.35 s, and the controller counts it as coasting until the speed falls under the rest speeds.
 - Any new touch or input stops the momentum at once.
 - **Auto-tilt**: zooming in tilts slightly toward the horizon by itself. Proposal: a curve of tilt against distance,
-  applied as an offset to the tilt the player chose, so a manual tilt is respected rather than overridden. The curve
-  is open.
+  applied as an offset to the tilt the player chose, so a manual tilt is respected rather than overridden. Built: the
+  offset is 0.26 rad at the closest distance and falls with the square of the remaining log-distance to the farthest
+  (`autoTiltOffset`); `cameraPose` adds it to `state.tilt`.
 
 ## 8. Taps and conflicts
 
@@ -135,9 +146,11 @@ phones. Friends' islands on the horizon are not reachable by panning; visits use
   first tap did not open anything. What a single tap on open ground does otherwise is `island-ui`'s call.
 - UI elements over the canvas (HUD, cards, bubbles) take their own pointer events; the gesture layer listens on the
   canvas only.
-- **Placing a building**: a one-finger drag moves the ghost (just above the finger), not the camera. Proposal:
-  two-finger gestures still move, zoom and turn the camera, so the player can adjust the view without cancelling.
-- **Drawing a road**: a one-finger drag draws along the grid; same proposal for two fingers.
+- **Placing a building**: while a draft is aiming (`view.placement`), a one-finger drag or tap moves the ghost (just
+  above the finger), not the camera; a mouse hovering aims it too. Two-finger gestures still move, zoom and turn the
+  camera, so the player can adjust the view without cancelling (`camera/placementDrag.test.tsx`).
+- **Drawing a road**: with the pen down, a one-finger drag or left-button drag lays road along the grid; with the
+  pen switched to "look around" the same drag moves the camera. Two fingers move the camera.
 - **Watch mode**: any touch or input stops it, and that touch does nothing else (it does not also tap a building).
 - Browser and back gestures (pinch-zoom, pull-to-refresh, swipe-back, Android back): `state-and-pwa.md`.
 
@@ -155,16 +168,21 @@ phones. Friends' islands on the horizon are not reachable by panning; visits use
 
 - "Fly the camera to a friend's island and watch it live, read-only" (spec 2.5). **Visiting is a short camera flight
   with a fade** (spec 12.5).
-- Plan: start a short flight from your island toward the friend's island (its far-away shape is visible on the
-  horizon), fade out, switch the mirror to that island (the server sends its full state; changes flow only for the
-  island on screen, spec 5.3), load its stage's models, place the camera at the friend's island, fade in. The limits
-  switch to its bounds. Going home is the same in reverse.
-- Keep the flight short: its job is to show where you are going, not to fly across the whole sea. Its exact length
-  and path are open.
+- **Built (ticket 20), simpler than the first plan.** A friend's far-away shape does not exist yet, so the trip starts
+  on the world screen: Visit calls `session.visit(slot)` (Home calls `session.home()`), which sets
+  `session.arriving` and opens that island; the server sends its full state and changes flow only for the island on
+  screen (spec 5.3). When that state is in, `ui/visit/Arrival.tsx` puts a sky-colored veil over the canvas, jumps the
+  camera to the farthest distance (`fly-to`, instant), glides it down to the start pose 150 ms later (`FLIGHT_DELAY_MS`)
+  and clears the veil in 700 ms (`ARRIVAL_FADE_MS`). With reduced motion the camera just jumps to the start pose. The
+  limits are the same for every island, because every island has the same size. A visit shows a banner with the island
+  name, the owner and Home (`ui/visit/VisitBanner.tsx`).
+- Every stage's models are preloaded two seconds after the first island, so a friend at a later stage shows at once.
+  When far-away shapes exist (`slice1-alive`), the flight can start from them.
+
 - Read-only: no placement ghost, no building or road commands (the server checks ownership; the UI hides owner
   controls, spec 12.3). Watch mode works the same.
 
-## 11. Watch mode
+## 11. Watch mode (planned for `slice1-alive`; nothing of it is built)
 
 - **Enter**: the Watch button (`island-ui`) or V. **Exit**: any touch on a phone, any input on desktop.
 - **The UI fades** (`island-ui` does the fade; the 3D side exposes the watch state in view state).
@@ -180,10 +198,27 @@ phones. Friends' islands on the horizon are not reachable by panning; visits use
 - **30 fps** and the **screen kept awake** (Wake Lock) while active; both end on exit (`state-and-pwa.md`). The
   ambience keeps playing and follows the drifting camera (`sound.md`).
 
-## 12. Open items
+## 12. Decided values (slice 1; ticket 08 tunes them on a real phone)
 
-- Tilt-versus-two-finger thresholds; the trackpad detection heuristic.
-- Zoom and tilt ranges, boundary margin, ground clearance, auto-tilt curve, momentum decay, key speeds.
-- Which axis is north.
-- How watch mode ranks moments and how long it holds each.
-- Length and path of the visit flight.
+World axes: x east, z south, y up; a tile is 4 units; **north is -z**. Azimuth 0 puts the camera south of the target
+looking north, so north is up the screen; it grows as the camera goes around toward the east. The vertical field of
+view is 40 degrees. The island's limits come from `limitsForIsland(32, 4)` (`camera/limits.ts`: `ISLAND_LIMITS`).
+Start pose: the island's center, distance 150, tilt 0.9 rad, azimuth 0.
+
+| Thing | Value (`TUNING` in `camera/controller.ts` unless noted) |
+|---|---|
+| Two fingers decide after | 12 px of movement |
+| Pinch counts at | 6 percent change of finger distance (`decidePinch` 0.06 as a natural log) |
+| Twist counts at | about 4 degrees (`decideTwist` 0.07 rad) |
+| Tilt lock | both fingers mostly vertical: sideways at most half the vertical (`tiltSideways` 0.5), with no pinch or twist decided; 0.004 rad per px of tilt |
+| Right-drag | 0.005 rad of turn per px sideways, 0.004 rad of tilt per px up or down |
+| Mouse wheel | zoom by `exp(deltaY * 0.0015)` toward the cursor |
+| Trackpad pinch | a wheel with ctrl held: zoom by `exp(-deltaY * 0.01)` toward the cursor |
+| Trackpad or mouse | `classifyWheel`: ctrl held is a trackpad pinch; a line or page delta is a mouse; a whole-number `deltaY` of at least 100 with no `deltaX` is a mouse; anything else is a trackpad. A trackpad swipe moves, a mouse wheel zooms. The Settings switch overrides it |
+| Double-tap on open ground | two taps within 300 ms and 30 px, neither on a building; the distance halves (`doubleTapFactor` 0.5), toward the point |
+| Keys | W A S D and the arrows move 0.9 of the distance per second; Q and E turn 1.4 rad per second |
+| Fling | starts above 0.25 distances per second (move), 0.25 rad per second (turn), 0.2 ln-distance per second (zoom); decays with a time constant of 0.35 s; rests below 0.04, 0.03 and 0.03; release speed capped at 3, 6 and 3 |
+| Real camera smoothing | `SMOOTH_TIME` 0.2 s in `scene/CameraRig.tsx` |
+| "Show me" | `fly-to` at distance 44 (`SHOW_ME_DISTANCE` in `news/showMe.ts`) |
+
+Still open: how watch mode ranks moments and how long it holds each (`slice1-alive`); the numbers above after ticket 08.

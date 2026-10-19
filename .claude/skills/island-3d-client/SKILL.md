@@ -5,17 +5,19 @@ description: How to build, change and review the 3D side of the Island Sim clien
 
 # Island Sim: 3D client
 
-> **Status (2026-10-16): first draft, design phase. No client code exists yet.** Everything here comes from the
-> design spec `docs/design/2026-10-16-island-sim-design.md` (sections 1, 4, 6.1, 6.2, 7, 8, and the
-> defaults in section 12 "Resolved details", which this skill follows; the user may still change them during spec
-> review). It is a plan, not a description of code. Paths and modules marked *planned* do not exist yet. Library
-> names (React Three Fiber, drei, camera-controls, @use-gesture/react, Zustand, three.js) are fixed by the spec; their
-> exact APIs must be checked against the installed versions. Slice 1 (spec 8.1, step 10) updates this skill with
-> real paths, APIs and examples. Where this skill and the spec disagree, the spec wins.
+> **Status (2026-10-19): the slice 1 island is built** (`slice1-client`, tickets 03 to 20): terrain, water, instanced
+> buildings, roads, scaffolds and the pier, day and night with lit windows, one sun and a shadow map, the free camera on
+> touch, trackpad, mouse and keyboard, the placement and road ghosts, the world anchors for bubbles, visiting. **Not built, and
+> planned in the references for `slice1-alive`:** people, vehicles, the ferry boat, nature props, distant islands,
+> watch mode, ambience sound. **Not built (plan 6):** service worker, Wake Lock, context-loss recovery. Draw calls
+> and frame rate have not been measured on a phone, and the camera feel (ticket 08) and the look (ticket 21) wait for
+> the user, so every number marked "ticket 08" or "ticket 21" below may still move. Where this skill and the design
+> spec (`docs/design/2026-10-16-island-sim-design.md`) disagree, the spec wins.
 
 ## What this skill covers
 
-Everything drawn inside the 3D canvas of `apps/client` (planned: Vite + React + React Three Fiber), plus the camera,
+Everything drawn inside the 3D canvas of `apps/client` (Vite 8, React 19, React Three Fiber 9, drei 10, three 0.186,
+Zustand 5, `@use-gesture/react` 10; versions are pinned in `apps/client/package.json`), plus the camera,
 the client state the renderer reads, and the ambience sound:
 
 - scene structure, terrain, water, instanced models, loading models per stage, friends' islands in the distance
@@ -98,35 +100,63 @@ Each rule has a reason. If a task seems to need breaking one, stop and ask inste
     `category_name-part_variant.glb` (spec 12.6). Never load from `assets/raw/` or `assets/packs/`: those are
     untrusted, uncompressed originals and are not shipped.
 
-## How the 3D client is shaped (planned)
+## How the 3D client is shaped (built)
 
 ```
-server: full island state, then per-tick changes, world summary, events
+server -> connection/socket.ts (hello, open-island, commands, mark-seen; messages.ts guards what arrives)
    |
+   v   session/session.ts feeds every message to the store
+store/store.ts   one Zustand vanilla store: island mirror (store/mirror.ts, pure applyMessage using the sim's
+   |             applyChanges and islandFromEntities), view state (store/view.ts), session phase
+   |  components read it with useGameState(selector); nothing else writes island data
    v
-Zustand island mirror  (one store; the renderer only reads it)
-   |  subscribe once per tick, outside React render
+render/   pure render data, no React or three imports, unit-tested: instances.ts, island.ts, roads.ts,
+   |      construction.ts, terrain.ts, daylight.ts, ghost.ts, roadPreview.ts, anchors.ts, quality.ts, shadow.ts,
+   |      look.ts, models.ts (the only place a model URL is made)
    v
-derived render data  (plain TypeScript, no React or three imports, unit-tested)
-   - instance lists per model type (buildings, roads, nature, construction sites and their steps)
-   - movers per flow: walkers, carriers, vehicles, ferry and ships, with counts and routes
-   - night state, lit windows, distant islands, view overlays (goods lines, highlights)
-   |  every frame, allocation-free, with the gliding game clock
-   v
-per-frame buffers  (instance matrices; clip layer, phase, scale and tint attributes; time, night, fade uniforms)
-   |
-   v
-R3F scene: terrain chunks, water, instanced models, people (two detail levels), vehicles and ships,
-           glows, smoke, dust, overlays (ghost, road preview, goods lines), camera rig + gesture layer
-           (+ the ambience mixer, which reads the camera pose)
+scene/    R3F components: IslandCanvas > CameraRig, DayNight, Sun, Water, Terrain, Buildings > ModelInstances,
+          PlacementGhost, RoadGhost, QualityProbe; frameLoop.ts stops rendering while the page is hidden
+camera/   pure controller.ts (state + gesture -> state), input.ts (event meaning), useCameraInput.ts (the binding)
+glide/    clock.ts (the gliding game clock), counter.ts (gliding numbers)
 ```
 
-- The game clock glides between the 2.5 s ticks and is the single time source for every animation, so tests can pin
-  it to an exact game time.
-- View state (camera mode, quality tier, controls choice, active view, placement draft) is kept apart from the island
-  mirror, so a full-state reset after a reconnect never wipes it.
-- The spec does not fix folders inside `apps/client`. Keep the derived-render-data code free of React and three so it
-  can be unit-tested; record the real folders here in slice 1.
+| Folder in `apps/client/src` | Holds |
+|---|---|
+| `connection/` | `socket.ts` (one WebSocket, `connectGame`), `api.ts` (the `/api` routes), `messages.ts` (guard for server messages: the protocol has no schema for them) |
+| `store/` | `store.ts`, `mirror.ts`, `view.ts` (`ViewState` + `initialView()`), `settings.ts` (localStorage `island-sim:settings`) |
+| `session/` | `session.ts` (log-in, worlds, open, visit, reconnect with backoff, `command`), `game.tsx` (`useGame`, `useGameState`) |
+| `render/`, `scene/`, `camera/`, `glide/` | as above |
+| `placement/` | `verdict.ts`, `roadVerdict.ts` (the sim's own checks for the ghost) and `draft.ts` (the draft in `view.placement`); the UI side is `island-ui` |
+| `ui/`, `news/` | HTML over the canvas: `island-ui` |
+| `test/` | shared test helpers: `island-testing`, `references/client-tests.md` |
+
+- **React for structure, buffers for motion, as built.** `Buildings` calls `islandInstances(island, content)` when the
+  island state changes (at most once per update, so once per tick). `ModelInstances` writes the matrices into one
+  `InstancedMesh` per model file in a layout effect (capacity doubles from 8) and sets `count`. The frame loop only
+  touches the sun, the sky color, the window-glow and water uniforms, and the camera rig. No component exists per
+  building or per road tile.
+- **Draw calls, as designed.** Terrain 4 chunks, water 1, one instanced mesh per model file that has instances
+  (`instancedDrawCalls` in `render/island.ts` counts them), the ghost's few pieces, and the shadow pass repeats the
+  instanced meshes and terrain. Bubbles, cards and the compass are DOM, not draw calls. A phone count is still to be
+  taken from the user's device (`island-testing`, `phone-performance.md`).
+- **Model files come only through `render/models.ts`.** `modelUrl(file)` throws for a file the asset catalog
+  (`tools/assets/src/catalog.ts`, imported as `@island/assets`) does not list. Names: `buildingModel(type)` is
+  `building_<content id>_a.glb`, `roadModel(piece)`, `scaffoldModel(w, h)`, `PIER_MODEL`, `PALETTE_URL`.
+  `stageModels(content, stage)` is the load list; `Buildings` preloads Outpost first and the later stages two seconds
+  after the first island.
+- **Geometry** comes from `scene/modelGeometry.ts` (`useModelGeometry`, `bakedGeometry`): drei `useGLTF`, the one mesh,
+  its node matrix folded into float positions and normals once. **Material** is `scene/palette.ts`
+  (`usePaletteMaterial`): nearest filter, sRGB, no mipmaps, `flipY` false, plus the window glow term on palette slot 0
+  (`windowGlow.value` is the night strength, set once a frame by `DayNight`).
+- The `@island/assets` workspace dependency exists only for the catalog; the client never reads `assets/raw` or
+  `assets/packs`.
+- **The gliding game clock** (`glide/clock.ts`, `createGameClock`) is the one time source: `reset(tick, atMs)` on a
+  full state, `arrive(tick, atMs)` on an update, `ticksAt(atMs)` for the gliding time in ticks (at most one tick
+  ahead, never backwards). `TICK_MS` (2,500) is exported by `@island/protocol` and used by the server and the client
+  alike. Pass wall-clock milliseconds in, so a test pins the time.
+- **View state** (`ViewState`: camera, quality, controls choice, open panel, tapped building, placement draft) sits
+  beside the mirror in the same store, so a new full state never wipes it. New view fields go in `ViewState` and
+  `initialView()`.
 
 ## The model contract (from the asset pipeline, plan 4, 2026-10-18)
 
@@ -169,8 +199,12 @@ client must do with them:
 2. The processed `.glb` must exist as `apps/client/public/models/category_name-part_variant.glb`, made by
    `island-blender`: one mesh, the shared palette material, meshopt, origin at the footprint's bottom center, front
    facing the road (glTF +Z). If not, do that first.
-3. Put it in the right stage's load set (Outpost first, later stages in the background).
-4. Draw it through the shared instanced path: one instanced mesh for the type, instances from derived render data.
+3. Put it in the right stage's load set: a building needs only its `building_<id>_a.glb` and a scaffold for its
+   footprint (`stageModels` in `render/models.ts` derives both from the content data). Anything else is added to that
+   function.
+4. Draw it through the shared instanced path: a pure function in `render/` returns `ModelInstance`s per model file
+   (`{ id, x, z, rotationY, y?, rise? }`), `islandInstances` merges them, and `ModelInstances` draws one instanced mesh
+   per file. A new kind of thing adds its list to `islandInstances` and nothing else.
 5. Decide where it shows: zoom levels, night look (lit windows, glows), casts a shadow or not, how its construction
    steps look, and how each building level (1-3, from slice 2) shows on the island.
 6. Add its draw calls (normal pass and shadow pass) to the budget and re-measure the worst view.
@@ -243,22 +277,20 @@ Read only the one the task needs.
 
 ## Still open (update this skill when decided)
 
-Spec section 12 settled many details; these remain. Do not invent values; decide them in slice 1 (with the user
-where it is a design choice) and write the answer here and in the matching reference file.
+Slice 1 settled the camera numbers, quality tiers, terrain chunks, construction steps and the light (values in the
+references, marked where ticket 08 or 21 may retune them). What remains:
 
-- The look of glows, smoke and distant islands (the look itself is decided; see the model contract).
-- Terrain chunk size; LOD switch distances and hysteresis; neighborhood walker cap; the crowd scale-down rule. No
-  crowd model ships: if phones need one, a cheaper level of detail for distant people is a client decision.
-- What each quality tier changes (pixel ratio per tier, shadow map size, caps) and how the tier is picked; whether
-  90/120 Hz screens are capped at 60 fps.
-- Which parts of a character a color tint may change.
-- How the client knows where a driver sits in each vehicle (no vehicles in slice 1).
-- Gesture thresholds (tilt versus move, zoom and turn), trackpad detection, zoom and tilt limits, the auto-tilt
-  curve, how momentum feels, which axis is north and in which fixed direction the Mainland lies.
-- Watch mode: how moments are ranked and how long the camera holds each.
-- Construction: how many steps a building rises in. The damaged look (spec 12.5) and building levels (spec 12.1)
-  are later stages; the asset side proposes one model per level (`building_market_a-l2.glb`).
-- Sound sources, file format and location.
-- Folder layout inside `apps/client`.
+- **slice1-alive:** the crowd scale-down rule, the neighborhood walker cap, level-of-detail distances and hysteresis,
+  which parts of a character a tint may change, how the client knows where a driver sits, watch mode (how moments are
+  ranked, how long the camera holds each), ambience sound sources, file format and location, the look of glows, smoke
+  and distant islands, and in which fixed direction the Mainland lies (the dock is on the south shore; the ferry is
+  not built).
+- **Phone measurements:** frame cost and draw calls per quality tier on the user's phones, whether the start check's
+  24 ms threshold fits them, and whether 90/120 Hz screens are capped at 60 fps.
+- **Ticket 08 and 21 (the user):** the camera feel numbers in `camera/controller.ts` (`TUNING`, `SMOOTH_TIME`) and the
+  look, including the terrain colors in `render/look.ts`.
+- **Plan 6:** Wake Lock, context-loss recovery, service worker and model caching, test hooks for screenshots.
+- **Later stages:** the damaged look (spec 12.5) and building levels (spec 12.1; the asset side proposes one model per
+  level, `building_market_a-l2.glb`).
 
 Each reference file also marks its own open items.

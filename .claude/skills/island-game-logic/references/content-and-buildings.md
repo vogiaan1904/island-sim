@@ -1,7 +1,8 @@
 # Content data, map, buildings, recipes, stages
 
 Spec 2.1, 3, 4.2, 6.1 (building card, placing), 12.1 and 12.4. `packages/content` and the slice 1 Outpost content are
-built (slice 1 plans 1-2); other stages and the client and server paths named here are still planned. For the full
+built (slice 1 plans 1-2); other stages are still planned. Client and server paths named here may be illustrative; the real ones are in
+`island-ui`, `island-3d-client` and `island-server`. For the full
 flow of adding a building or good (brief, model, data, sim with tests first, 3D, UI, checks) use `island-content`;
 this file covers only the content and sim side.
 

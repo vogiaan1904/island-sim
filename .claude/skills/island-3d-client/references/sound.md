@@ -1,6 +1,8 @@
 # Ambience sound
 
-Planned design from spec 6.2 and 12.5. No code and no sound files exist yet. Proposals are marked as such.
+Planned design from spec 6.2 and 12.5, for `slice1-alive`. No sound code and no sound files exist yet; the only trace
+is the mute switch in Settings (`view.muted`, saved on the device in `store/settings.ts`), which nothing listens to yet.
+Proposals are marked as such.
 
 ## What and who
 

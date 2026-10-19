@@ -8,18 +8,26 @@ description: How to test every layer of Island Sim and what must be true before 
 How to test each layer of Island Sim, and what must be true before work is called done. This skill covers *how to
 test*. The rules under test belong to the domain skills listed at the end.
 
-> **Status (slice 1, plans 1 to 3 done):** the sim's tests, the pacing harness, the protocol tests and the server
-> tests are real. Commands from the repo
+> **Status (2026-10-19):** the sim's tests, the pacing harness, the protocol tests, the server tests and the client's
+> Vitest suite (plan 5) are real. Commands from the repo
 > root: `pnpm test` (all Vitest projects), `pnpm typecheck`, `pnpm lint`, `pnpm check` (all three), `pnpm pacing`
 > (the pacing report; `--seeds 42,1` and `--fast` for no invariants). One file: `pnpm vitest run <path>` (end a
-> folder path with `/`, or Vitest's filter also matches other files); one server file: `pnpm --filter
-> @island/server exec vitest run <files>`. Asset checks: `pnpm assets check` (also inside `pnpm check`) and
-> `pnpm blender test` (needs Blender, outside `pnpm check`). Client checks are still planned (plans 5-6).
+> folder path with `/`, or Vitest's filter also matches other files); one project's file: `pnpm --filter
+> @island/server exec vitest run <files>` or `pnpm --filter @island/client exec vitest run <files>`. Asset checks:
+> `pnpm assets check` (also inside `pnpm check`) and `pnpm blender test` (needs Blender, outside `pnpm check`).
+> **Not built (plan 6):** Playwright, screenshot checks, emulated-touch gesture tests in a browser, the real-phone
+> checklist's readout. Never claim them. The 3D look, the camera feel and phone speed are checked by the user.
 
-## Implemented so far (slice 1, plans 1 to 3)
+## Implemented so far (slice 1, plans 1 to 5)
 
 - Server and protocol (plan 3): unit tests next to the code in `apps/server/src/` and `packages/protocol/src/`,
-  integration tests with real sockets and SQLite in `apps/server/test/`; see `references/server-tests.md`.
+  integration tests with real sockets and SQLite in `apps/server/test/`; see `references/server-tests.md`. The static
+  file handler has its own `apps/server/test/static.test.ts` (types, `index.html` fallback, traversal and dotfiles
+  refused, `/api` and `/ws` untouched).
+- Client (plan 5): the Vitest project `client` in `apps/client` (jsdom), tests beside the code as `*.test.ts` and
+  `*.test.tsx`, shared helpers in `apps/client/src/test/`: `stubGame`, `stubApi` and `gameOn`, `aliceWorld` and
+  `islandMessage`, `expectNoEmoji`, and an in-process game server for the tests that need the real protocol. The
+  patterns are in `references/client-tests.md`.
 
 - Unit tests sit next to the code as `*.test.ts`. Shared helpers and whole-run tests live in `packages/sim/test/`.
 - `packages/sim/test/fixtures.ts`: hand-painted 8 x 8 maps (`SMALL`, `DEFAULT_MAP`, `HALL_MAP`, `paint`,
@@ -56,7 +64,7 @@ test*. The rules under test belong to the domain skills listed at the end.
 
 ## Test layers at a glance
 
-| Layer | What it proves | Tools | Location (planned where not built yet) | Details |
+| Layer | What it proves | Tools | Location | Details |
 |---|---|---|---|---|
 | Sim unit | Each tick pass and each command does the right thing on a small hand-built state | Vitest | `packages/sim` | `references/sim-tests.md` |
 | Determinism | Same seed and commands give the same state hash | Vitest | `packages/sim` | `references/sim-tests.md` |
@@ -65,10 +73,11 @@ test*. The rules under test belong to the domain skills listed at the end.
 | Golden scenarios | Whole scripted runs (first: "Outpost to Settlement") end in the stored state hash, in seconds | Vitest | `packages/sim` | `references/sim-tests.md` |
 | Pacing harness | A scripted bot reaches each stage in about the target real time | Headless Node runner | `tools/pacing/` | `references/pacing-harness.md` |
 | Server integration | Accounts, worlds, commands, sync, reconnect, crash recovery, catch-up, events, paused worlds, rate limits | Vitest with real `ws` clients and a real server | `apps/server` | `references/server-tests.md` |
-| Client unit | HUD, cards, news and the Zustand store | Vitest and Testing Library | `apps/client` | `references/client-tests.md` |
-| Client end to end | Two players sign up, invite, build and visit; fixed screenshots; emulated touch gestures | Playwright | to be decided in slice 1 | `references/client-tests.md` |
-| No emoji in UI | No player-facing string contains an emoji or emoji-like symbol | Vitest scan, plus a Playwright text check | to be decided in slice 1 | `references/client-tests.md` |
-| Phone performance | 60 fps target, never below 30, watch mode at 30 fps, draw calls, heat, battery | The user's real phones and a checklist | results log to be decided | `references/phone-performance.md` |
+| Client unit | HUD, cards, panels, news, the store, the camera controller, render data, placement verdicts | Vitest, Testing Library, jsdom | `apps/client/src` | `references/client-tests.md` |
+| Client with the real server | The store and session against a real in-process server, over a real socket | Vitest (node environment) with the server's test helpers | `apps/client/src` | `references/client-tests.md` |
+| Client end to end | Two players sign up, invite, build and visit; fixed screenshots; emulated touch gestures | Playwright | not built (plan 6) | `references/client-tests.md` |
+| No emoji in UI | No player-facing string contains an emoji or emoji-like symbol | `expectNoEmoji` in the UI tests; a Playwright text check later | `apps/client/src/test/no-emoji.ts` | `references/client-tests.md` |
+| Phone performance | 60 fps target, never below 30, watch mode at 30 fps, draw calls, heat, battery | The user's real phones and a checklist | no results yet | `references/phone-performance.md` |
 | Assets | Every shipped `.glb` and icon passes naming, palette, ground, footprint, budget, clip and catalog checks; content has its files | `pnpm assets check`, `pnpm blender test` | `tools/assets/`, `tools/blender/tests/` | `references/asset-checks.md` |
 
 Keep the shape of a pyramid: many fast sim tests, fewer server tests, a handful of end-to-end flows. A rule checked
@@ -84,8 +93,9 @@ only in Playwright is checked slowly and explained badly when it fails.
 | A bug seen in a running world | Load that world's snapshot and command log locally (how: `island-server`), replay, and assert the correct outcome (spec 5.2: "the same replay reproduces bugs locally") | A smaller unit test at the pass level that pins the cause |
 | New content (a building, good, recipe, house, landmark) | Follow `island-content`; its last steps come back here | Sim suite, asset checks, client unit tests, emoji check, pacing harness |
 | Tick loop, persistence, sync, accounts, rate limits | Server integration test with real WebSocket clients | Sim suite if any sim code moved |
-| HUD, card, news, store | Vitest and Testing Library test of what the player sees | The Playwright flow if navigation changed |
-| Camera or gestures | Playwright test with emulated touch (and keyboard or mouse for desktop) | Real-phone checklist (ask the user) |
+| HUD, card, news, store | Vitest and Testing Library test of what the player sees (`stubGame`, `expectNoEmoji`) | The Playwright flow if navigation changed (plan 6) |
+| Camera or gestures | A controller test: a `Gesture` in, the next `CameraState` out (`camera/controller.test.ts`); event meaning in `camera/input.test.ts` | Real-phone checklist (ask the user); browser touch emulation arrives with Playwright (plan 6) |
+| A placement preview or a client-side check of a sim rule | A test that the verdict equals what the sim's own command decides on the same state (`placement/verdict.test.ts`) | The sim suite if a shared check moved |
 | How the 3D scene looks | First the fixture (snapshot, camera spot, game time); the baseline image is taken only after the user approves the look | Draw-call check at the fixed spots; real-phone checklist |
 | Balancing numbers | Run the pacing harness *before* the change, to have a baseline | Golden hashes (deliberate update), pacing harness after |
 | An exported `.glb` | Asset checks on that file | Screenshot checks that include the model |
@@ -137,13 +147,16 @@ configurable for tests (spec 12.3).
 - **pnpm workspaces** (one install at the root; run a package's script with `pnpm --filter <package> <script>`),
   **TypeScript strict**, **Vitest** for unit and integration tests, **Playwright** for browser tests, **ESLint**.
 - Root scripts that exist: `pnpm test` (all Vitest projects), `pnpm test:watch`, `pnpm typecheck`, `pnpm lint`,
-  `pnpm check` (typecheck, lint and test) and `pnpm pacing` (the pacing harness). Still planned: Playwright and the
-  asset checks. Until a script exists, do not claim to have run it; say what you ran instead.
+  `pnpm check` (typecheck, lint and test), `pnpm pacing` (the pacing harness) and `pnpm assets check`. Still
+  planned: Playwright. Until a script exists, do not claim to have run it; say what you ran instead.
 - Typecheck and lint are part of "tests pass". A change that passes Vitest but fails strict `tsc` is not done.
 - ESLint blocks `Math.random`, `Date`, timers, float `Math` functions, `async` and Node or server imports in
   `packages/sim/src` and `packages/content/src`, so determinism leaks fail before any test runs (rule list in
   `island-game-logic`).
-- Test file placement: next to the code as `*.test.ts`; shared helpers and whole-run tests in `packages/<name>/test/`.
+- Test file placement: next to the code as `*.test.ts` (or `*.test.tsx` for React); shared helpers and whole-run tests in
+  `packages/<name>/test/`, `apps/server/test/` and `apps/client/src/test/`.
+- `pnpm typecheck` lists packages by hand (the client is in it); Vitest finds `packages/*` and `apps/*` by itself, not
+  `tools/*`.
 - **CI** once the repo has a remote (it has none yet): typecheck, lint, all Vitest suites including goldens, asset
   checks and Playwright. Whether the pacing harness runs in CI (it is slow) is to be decided; the real-phone
   checklist always stays manual.
@@ -155,7 +168,7 @@ and why.
 
 - [ ] The new behavior has a test, and you saw that test fail before the code existed.
 - [ ] The relevant suites ran after your last edit and you are quoting their real output: sim for any sim or content
-      change; server for server or protocol; client unit and Playwright for client; asset checks for exported models.
+      change; server for server or protocol; client Vitest for client (Playwright joins in plan 6); asset checks for exported models.
 - [ ] Typecheck and lint pass.
 - [ ] Every sim run in the tests had the invariant checks on.
 - [ ] Golden hashes are unchanged, or each change is explained (procedure above).

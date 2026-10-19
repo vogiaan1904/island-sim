@@ -1,8 +1,8 @@
 # Time, ticks, passes and commands
 
 Spec 3, 4.1, 4.7, 5.1, 6.1 (placing a building), 12.1, 12.2 and 12.3. The clock, the tick, the passes and the commands
-are built in `packages/sim` (slice 1 plans 1-2; real names in SKILL.md and `slice1-rules.md`). Names for server-side
-parts are planned or illustrative.
+are built in `packages/sim` (slice 1 plans 1-2; real names in SKILL.md and `slice1-rules.md`). The server side is built too
+(`island-server`); code blocks marked illustrative are still not the real names.
 
 Contents: time units - the game clock and the workday - the world tick - pass cadence - commands - reason codes and
 the build preview - tick output - errors - open points.

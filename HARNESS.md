@@ -60,7 +60,7 @@ verification below. Hard bugs start with `/diagnosing-bugs`.
 | `packages/sim` | The pure simulation; unit tests beside the code, whole runs and goldens in `test/` | `island-game-logic` |
 | `packages/protocol` | Valibot schemas for messages, commands and changes; the protocol version | `island-server` |
 | `apps/server` | Worlds ticking 24/7, SQLite, accounts, WebSocket sync, admin CLI; integration tests in `test/` | `island-server` |
-| `apps/client` | The browser client (plan 5, in progress): Vite, React, R3F; the 3D island and the style A UI. `src/test/no-emoji.ts` is the shared no-emoji check | `island-3d-client`, `island-ui` |
+| `apps/client` | The browser client (plan 5, `slice1-client` built): Vite, React 19, React Three Fiber; the 3D island, the free camera and the style A UI (`src/connection`, `store`, `session`, `render`, `scene`, `camera`, `placement`, `ui`, `news`). Vitest in jsdom, tests beside the code, helpers in `src/test/` (`no-emoji.ts`, `game.ts`, an in-process server) | `island-3d-client`, `island-ui`; tests: `island-testing` |
 | `tools/pacing` | The pacing harness: a bot run against the stage-time targets | `island-testing` |
 | `assets/` | Kenney packs (git-ignored) and `SOURCES.md` | `island-blender` |
 | `docs/brainstorm/` | Numbered decisions, open questions, the design progress checklist | |
@@ -99,10 +99,12 @@ For development run `pnpm server:dev` and `pnpm client` in two terminals and ope
    - A new world-state field: a snapshot migration test (`island-game-logic`).
    - A new package: add it to the `typecheck` script, which lists packages by hand; Vitest finds `packages/*` and
      `apps/*` by itself, not `tools/*`.
-   - A changed skill: run skill-creator's validator on it.
+   - A changed skill: run skill-creator's validator on it (`quick_validate.py` in the skill-creator folder; the system
+     Python lacks `yaml`, so `uv run --with pyyaml python <validator> <skill dir>`).
    - The look, rendering cost or phone speed: the agent cannot claim these. Prepare the check and ask the user.
-4. **Report:** what changed, each command run with its summary lines, and what could not be run and why. Playwright
-   and screenshot checks do not exist yet (plan 6); never claim them. The 3D look and phone speed cannot be claimed. The full list is "Before you say
+4. **Report:** what changed, each command run with its summary lines, and what could not be run and why. The client's Vitest
+   suite runs inside `pnpm check`. Playwright and screenshot checks do not exist yet (plan 6); never claim them. The 3D
+   look, the camera feel and phone speed cannot be claimed (tickets 08 and 21 are the user's). The full list is "Before you say
    done" in `island-testing`.
 
 ## Failure Escalation

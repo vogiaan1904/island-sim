@@ -42,6 +42,8 @@ Unit tests sit next to the code (`apps/server/src/**/*.test.ts`); integration te
 - **A real server:** `startTestServer(overrides, clock)` (`test/server.ts`) listens on free ports with an in-memory
   database (or `tempDatabase()` for restarts) and `ORIGIN` as the game's origin. `addAccount` adds an account as the
   host would. `Browser` sends the game's Origin and keeps the session cookie; `server.store` reads the logs.
+  `startTestServer` sets `clientDir: null`, so a test that wants the static files passes a temp folder
+  (`test/static.test.ts` does). The client's tests import these helpers by relative path (`client-tests.md`).
 - **A real socket:** `Player.connect(server, browser)` (`test/player.ts`) with `hello()`, `open()`, `command()` and
   `next(type, match)`, which waits for a message instead of sleeping. It keeps `mirror` the way the client will: the
   full state, then each update applied with the sim's `applyChanges`.

@@ -14,12 +14,16 @@ Contents: as built - hosting - deploying a new version - backups - admin command
   escapes every handler ends the process without one (Node's default), and the supervisor restarts it.
 - **Settings** (`configFromEnv`): `ISLAND_HOST` (127.0.0.1), `ISLAND_PORT` (8787), `ISLAND_ADMIN_PORT` (8788),
   `ISLAND_ORIGIN` (`http://localhost:8787`; set it to the public `https://` origin), `ISLAND_DB`
-  (`data/island.sqlite`), `ISLAND_BACKUP_DIR` (`data/backups`; empty turns backups off), `ISLAND_SECURE_COOKIES=0`
+  (`data/island.sqlite`), `ISLAND_CLIENT_DIR` (the client's build output, default `apps/client/dist`; empty serves no
+  client, `SKILL.md`, "Serving the client"), `ISLAND_BACKUP_DIR` (`data/backups`; empty turns backups off), `ISLAND_SECURE_COOKIES=0`
   for plain-HTTP development, `ISLAND_TRUST_PROXY=1` behind your reverse proxy. Timings are fixed by the game.
   **Development:** the Vite dev server proxies `/api` and `/ws` to this server, but the browser sends the dev
   server's Origin, which the Origin checks compare to `ISLAND_ORIGIN`. Start the server with
   `ISLAND_ORIGIN=http://localhost:<vite port> ISLAND_SECURE_COOKIES=0`, or every POST and the socket upgrade are
-  refused (`bad-origin`, 403).
+  refused (`bad-origin`, 403). The root scripts do it: `pnpm server:dev` (port 5173) and `pnpm client` (Vite, which
+  reads `ISLAND_SERVER_URL` if the game server listens elsewhere); a phone on the same Wi-Fi needs the Mac's address
+  in `ISLAND_ORIGIN` (`island-testing`, `phone-performance.md`). `pnpm client:build` then `pnpm server` plays the
+  build on one origin.
 - **Admin:** the admin interface listens on 127.0.0.1 only, serves only a loopback peer address, and refuses any
   request with an Origin header (a web page on the host's browser is not the host) or a Host other than `127.0.0.1`,
   `localhost` or `[::1]` (DNS rebinding: a page whose own name was rebound to loopback sends no Origin on a simple

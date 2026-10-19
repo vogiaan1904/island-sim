@@ -1,6 +1,7 @@
 # People, vehicles and ships
 
-Planned design from spec 6.2, decision 26 and the defaults in spec 12.1, 12.5 and 12.6. No client code exists yet; the
+Planned design from spec 6.2, decision 26 and the defaults in spec 12.1, 12.5 and 12.6, for `slice1-alive`. No client
+code for people, vehicles or ships exists yet (the slice 1 client draws buildings, roads and sites only); the
 characters, the animation texture and the accessories do (plan 4). The
 bake, the crowd model, scaffolds and bag props (Blender side) are `island-blender`; this file covers how the client
 uses them and how movers are derived from sim flows.

@@ -70,9 +70,9 @@ Spec 6.1: desktop adds **hover hints** and **keyboard shortcuts**.
 - **Hover hints**: a short label on hover for buttons, goal icons and bubbles. They are an extra: everything a
   hint says must also be reachable by tapping, because touch has no hover.
 - **Keyboard shortcuts already taken by the camera** (spec 6.1): W A S D and the arrow keys (move), Q and E
-  (turn), V (watch mode). Do not reuse them. Shortcuts for the bottom buttons and cards are **not decided yet;
-  list them here when they are.** Escape closing the open card or cancelling placement is a natural choice; confirm
-  it when shortcuts are decided.
+  (turn), V (watch mode, not bound yet). Do not reuse them. **Built:** Escape drops an aiming placement ghost
+  (`ui/build/PlacementPanel.tsx`). Shortcuts for the bottom buttons and cards are not decided; list them here when
+  they are. Goal icons carry a `title` as their hover hint.
 - Visible keyboard focus on every control (a clear outline in the style A ink color).
 - Mouse: pointer cursor on tappable things; scrolling over a card scrolls the card. Over the island (spec 6.1
   and 12.5), a mouse wheel or a trackpad pinch zooms and a trackpad two-finger swipe moves; that is

@@ -2,7 +2,7 @@
 
 Spec 4.4, 4.7, 6.2 and 12.1. Decision D10 chose a flow network over simulating vehicles. The road network, goods
 transit and the ferry are built in `packages/sim` (slice 1 plans 1-2; `slice1-rules.md`). The client side (vehicles,
-ships, flow lines), bus and rail, and power are still planned.
+ships, flow lines; the slice 1 client draws no movers yet), bus and rail, and power are still planned.
 
 Contents: the model - the graph - the transport pass - goods in transit - the path cache - walking distance and
 reach - timetables - what the client needs - open points.

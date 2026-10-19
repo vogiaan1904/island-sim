@@ -1,9 +1,11 @@
 # Client state for 3D, and PWA issues that affect rendering
 
-Planned design from spec 5.3, 6.2 and the defaults in spec 12.3 to 12.5. No code exists yet. The sync protocol
-(message shapes, versions, reconnect backoff) is `island-server`; the manifest, the "Add to Home Screen" hint, cards,
-Settings and safe-area insets for the HUD are app shell and `island-ui`. This file covers what the renderer needs
-from them.
+Design from spec 5.3, 6.2 and the defaults in spec 12.3 to 12.5. **Built in slice 1:** the mirror and view state
+(section 1), the gliding clock and counters (4), full states and reconnects (5), no rendering while hidden (6), browser
+gestures (9), safe areas and pixel ratio (10). **Not built** (plan 6 unless noted): context-loss recovery (7), Wake Lock
+(8, with watch mode in `slice1-alive`), service worker and model caching (11), test hooks (12). The sync protocol
+(message shapes, versions) is `island-server`; the manifest, the "Add to Home Screen" hint, cards, Settings and
+safe-area insets for the HUD are app shell and `island-ui`. This file covers what the renderer needs from them.
 
 ## Contents
 
@@ -28,8 +30,12 @@ from them.
 - The renderer reads the mirror and never writes island data into it. Island data changes only through server
   messages; the player's actions are commands to the server.
 - View state (camera mode, watch mode, quality tier, controls choice, active view, placement draft) is kept apart
-  from the mirror, so a full-state reset never wipes it. The quality tier and the controls choice (trackpad or mouse)
-  the player picks in Settings are remembered on that device. Whether view state is a separate store or a separate slice is open.
+  from the mirror, so a full-state reset never wipes it. **As built:** one Zustand vanilla store (`store/store.ts`,
+  `createGameStore`) holds `island` (the mirror), `commands` (pending and settled), `view` (`ViewState`) and `session`;
+  `applyMessage` in `store/mirror.ts` is pure and never touches `view`. The mirror keeps the entity map and the
+  assembled `IslandState` (`islandFromEntities`, once per message); both are replaced, never mutated. The quality tier
+  and the controls choice the player picks in Settings are saved on the device in localStorage `island-sim:settings`
+  (`store/settings.ts`), only when the player chose them.
 
 ## 2. Reading the store without re-renders
 
@@ -74,8 +80,12 @@ function Walkers({ mesh }: { mesh: WalkerMesh }) {
   tick plus the fraction of the interval since it arrived (measured with `performance.now()`).
 - Clamp the fraction so the clock never runs more than one tick ahead when a tick is late. When the next tick
   arrives, ease out any difference; the clock never moves backwards on screen.
-- Use one shared constant for the 2.5 s interval (where it lives is agreed with `island-server`; open), never a
-  second copy.
+- The 2.5 s interval is `TICK_MS` in `@island/protocol` (re-exported by `glide/clock.ts`), the one constant the
+  server ticks by; never a second copy.
+- **As built** (`glide/clock.ts`): `createGameClock()` with `reset(tick, atMs)` for a full state, `arrive(tick, atMs)`
+  for an update, and `ticksAt(atMs)`. A later tick eases in over the next interval, the same tick again changes
+  nothing, and a full state may jump back. `glide/counter.ts` `createCounterGlide()` glides a number over one tick
+  (`GlidingNumber` in the HUD); a value arriving mid-glide starts from what is shown.
 - This clock is the single time source for everything animated: movers, clips, water, glows, smoke, day and night,
   construction steps, watch mode. That is what makes a pinned clock give a repeatable image.
 - Counters (coins, residents, commuters) glide from the previous value to the new one over the tick interval, using
@@ -93,6 +103,11 @@ connection was closed and the client gets the full state again, spec 5.3), and w
 - Camera, quality tier, controls choice and view stay as they were (view state is separate).
 - After server downtime a world fast-forwards up to 24 hours (spec 5.2, 12.3); the client just gets a later full
   state. Do not try to animate the missed hours.
+- **As built** (`session/session.ts`): a dropped socket keeps the island in the mirror and on screen, sets
+  `session.reconnecting` and retries after 0.5 s, 1 s, 2 s and so on up to 15 s, each with up to a quarter more or less
+  (`reconnectDelayMs`); coming back to the page while waiting out a backoff tries at once. Coming back from the background after 20 s or more (`LONG_AWAY_MS`) does not trust the old
+  socket and reconnects at once; every reconnect asks for a fresh full state, and the view state stays. Commands still
+  waiting for a result are dropped when the connection drops (`commandsLost`).
 - A **paused world** ("This island is resting, back soon", spec 12.3) sends no ticks. The clock holds at most one tick
   ahead, so movers come to rest; the message itself is `island-ui`. Rendering and the camera keep working.
 
@@ -103,7 +118,9 @@ connection was closed and the client gets the full state again, spec 5.3), and w
   advancing frames by hand); pick the approach that holds a steady 30 on iOS and Android, and record it here.
 - Background: nothing rendered. On `visibilitychange` to hidden, stop the frame loop, timers that drive animation,
   and the ambience (`sound.md`); on visible, resume. Browsers mostly pause animation frames in the background anyway;
-  stop explicitly so nothing else keeps running.
+  stop explicitly so nothing else keeps running. **As built:** `scene/frameLoop.ts` `useFrameLoop()` gives the Canvas
+  `frameloop="never"` while `document.visibilityState` is hidden. Everything animated reads the wall clock, so the island
+  is where it should be on return.
 
 ## 7. WebGL context loss
 
@@ -145,6 +162,8 @@ The game disables browser pinch-zoom, pull-to-refresh and swipe-back (spec 6.2).
   edge swipe cannot be fully switched off, which is one more reason for the install hint (`island-ui`). **Android's
   back button closes the open card first**; the card is `island-ui`, and the back handling lives in the app shell.
   For the canvas this means: a back press while a card is open must not also move the camera or leave the game.
+  **As built:** `ui/cards/useBackClosesCard.ts` pushes one history step while a card is open; back removes it and
+  closes the card; closing the card some other way gives the step back.
 - Test the screen edges on the user's real phones, in the browser and installed.
 
 ## 10. Safe areas, orientation, pixel ratio
@@ -155,8 +174,9 @@ The game disables browser pinch-zoom, pull-to-refresh and swipe-back (spec 6.2).
   the insets and out from under open cards (`camera-and-watch-mode.md`).
 - Both orientations are supported (manifest). On resize or rotation, R3F resizes the canvas; re-check the pixel ratio
   then too.
-- Pixel ratio is the device's, capped at 2 (spec), and lower on lower tiers. R3F's `dpr` setting takes a value or a
-  range.
+- Pixel ratio is the device's, capped at 2 (spec), and lower on lower tiers (values in `scene-and-rendering.md`,
+  section 11). **As built:** `<Canvas dpr={pixelRatioFor(quality, window.devicePixelRatio)}>`; `index.html` has
+  `viewport-fit=cover` and the HUD pads by `env(safe-area-inset-*)`.
 
 ## 11. Service worker and model caching
 
@@ -168,7 +188,9 @@ The game disables browser pinch-zoom, pull-to-refresh and swipe-back (spec 6.2).
 ## 12. Test hooks the renderer must offer
 
 Planned requirements for `island-testing` (screenshot checks of a fixed island snapshot at fixed camera spots and game
-time, spec 9). Names and mechanism are open.
+time, spec 9; plan 6). None is built. Without them, the client's pure modules are tested directly: the clock and
+`daylightAt` take their time as an argument, the camera controller takes a gesture, and the render-data functions take
+an island state.
 
 - Load a fixed island snapshot without a server.
 - Pin the game clock to an exact game time.

@@ -5,11 +5,15 @@ description: Rules and approved visual style for the 2D game UI of Island Sim (a
 
 # Island Sim: 2D UI
 
-The 2D UI is everything drawn in HTML/CSS/React on top of the 3D island in `apps/client` (planned: Vite + React +
-React Three Fiber). This skill holds the approved look and the rules every screen must follow.
+The 2D UI is everything drawn in HTML/CSS/React on top of the 3D island in `apps/client` (Vite, React 19, over the
+React Three Fiber canvas). This skill holds the approved look and the rules every screen must follow.
 
-**Status: first draft, written from the design spec before any code exists.** Paths marked *planned* do not exist
-yet. Slice 1 settles the open points listed at the end; update this skill then (spec section 8.1, step 10).
+**Status (2026-10-19): built in slice 1** (`slice1-client`, tickets 05 to 20): sign-in and sign-up, worlds, HUD, build
+picker and placement panel, cards, bubbles, Staff, Trade, news, Log, the stage celebration, Settings, the calm states
+and visiting. "As built" below lists where each piece lives and what to reuse. **Not built:** Watch and its caption,
+Views (slice 3), UI button sounds and the ambience (`slice1-alive`), the "Add to Home Screen" hint (plan 6). The look
+review (ticket 21) and the camera feel (ticket 08) wait for the user, so colors, sizes and wording below may still
+change after it.
 
 ## Sources of truth
 
@@ -78,8 +82,8 @@ HUD or its data bar. Feels like Township, Hay Day, SimCity BuildIt, but calm, an
 - Bright colors on white or cream surfaces; one rounded, friendly font.
 - A **small bounce or sparkle on touch** with a soft button sound; bubbles bob gently; coins fly to the counter.
 - Calm: no screen shake, no flashing, no urgent timers or nagging badges.
-- Palette and font in the mockups are a starting point only. **The final palette is decided in slice 1 after the
-  art-direction pass (Q10); update this skill then.**
+- Palette and font in the mockups were a starting point. The built tokens are in `styles/tokens.css` ("As built");
+  the user's look review (ticket 21) may still change them.
 
 Details, mockup color values, button kinds, motion and sound: `references/style-a.md`.
 
@@ -87,10 +91,16 @@ Details, mockup color values, button kinds, motion and sound: `references/style-
 
 A strict user rule (D22, and its own non-goal in spec 1), for the game, mockups and docs alike.
 
-- **UI chrome** (buttons, statuses, hints): an SVG line-icon set. The exact library is **to be decided in slice 1;
-  update this skill then.** The mockups used Lucide-style 24 px line icons.
-- **Buildings, goods and key staff portraits**: pictures rendered in Blender from the 3D models (portraits from
-  the Mini Characters with accessories), `island-blender`, planned in `apps/client/public/icons/`.
+- **UI chrome** (buttons, statuses, hints): one SVG line-icon set, `apps/client/src/ui/icons.tsx` (`<Icon name size />`,
+  keys in `LINE_ICONS`). The shapes are **Lucide** (ISC license, partly Feather, MIT), copied as path data from the
+  approved mockup's icon sheet; the license text is `apps/client/src/ui/icons.LICENSE.md` and `assets/SOURCES.md` lists
+  them. The coin is our own filled drawing. To add an icon, add a key with the inner elements of a Lucide 24 x 24 SVG
+  and keep the license file; never paste an ad hoc SVG into a screen.
+- **Buildings, goods and key staff portraits**: pictures rendered in Blender from the 3D models (portraits from the
+  Mini Characters), `island-blender`, in `apps/client/public/icons/`, 256 px PNG named `building_<id>_a.png`,
+  `good_<id>_a.png` and `portrait_<name>_a.png`; `ui/names.ts` has `goodPicture` and `portraitPicture`, and a building
+  card uses the same render.
+
 - **Symbol characters count as emoji**, because some phones draw them as colored emoji: check marks, crosses,
   warning signs, stars, hearts, arrows, play triangles, the copyright and trademark signs and similar. Draw them as
   icons. Player-facing text holds letters, digits and plain punctuation only.
@@ -118,7 +128,7 @@ Full rules, the blocked character ranges, a check you can run, and player-typed 
   residents toward the target, then the landmark. Never a level number, never the player's title (there is none).
 - **Counters**, top right: whole coins and residents; commuters too during Outpost. They glide between ticks.
 - **Goal icons**, left edge: the next stage target and current needs, each with a small progress bar.
-- **Compass**, a small **gear** next to it (opens Settings), and **Watch**, right side.
+- **Compass**, a small **gear** next to it (opens Settings), and **Watch**, right side. (Watch is not built yet.)
 - **Bottom round buttons**: Staff (hire commuters and key staff), Trade, **Build** (big, center), Views, Log.
   **No tab bar.** These buttons open a card, panel or mode over the island; they do not switch pages. The **Views
   button appears with the first view** (Goods flow, slice 3); until then it is not shown.
@@ -220,13 +230,49 @@ friendly words. Full guide with examples: `references/text-tone.md`.
 - [ ] Solo play works: nothing on the screen needs a friend (D11).
 - [ ] Component test and screenshot check added or updated.
 
+## As built (slice 1)
+
+Paths are under `apps/client/src`. Reuse these; do not write a second table, formatter or reason list.
+
+| Need | Use |
+|---|---|
+| Colors, font, outline, shadow | `styles/tokens.css` (custom properties: `--ink`, `--surface`, `--card`, `--teal`, `--yellow`, `--green`, `--red`, `--picture-tile`, `--goods-tile`, `--shadow`, `--font`, and the problem and waiting pairs), `styles/global.css`. The font is the system rounded stack (`ui-rounded`, `SF Pro Rounded`, `Nunito`, `Segoe UI`, `system-ui`); no web font is loaded. Components use the tokens, never a hex value |
+| Layout switch | CSS `@media (min-aspect-ratio: 5/4)`: wide. Everything else is narrow. `ui/hud/Hud.css` and `ui/PanelHost.css` use the same query; wide panels are `min(22rem, 42vw)` on the right |
+| Panels | `view.openPanel` (`PanelId`: staff, trade, build, log, settings); `store.togglePanel(id)`; `ui/PanelHost.tsx` draws the open one with its Close; register a body with one line in `PANEL_BODIES` in `ui/panels.ts` |
+| Names of things | `ui/names.ts`: `STAGE_NAMES`, `BUILDING_NAMES`, `GOOD_NAMES`, `NEED_WORDS`, `NEED_ICONS`, `ROLE_NAMES`, `PORT_MASTER_TRAITS`, `theBuilding(id)`. Typed `Record`s keyed by content id, so a new id fails the build until it has a name |
+| Coins | `ui/coins.ts`: `coinsHeld` and `coinsText` round down, `coinsShort` and `needMoreText` ("Need N more coins") round up, one fixed `en-US` locale |
+| Refusals in words | `ui/reasonWords.ts` `reasonWords(reason, shortfallCents)` covers every sim and server reason; `NOT_SENT_WORDS` when no command could be sent; `ui/useCommand.ts` `useCommand()` gives `{ send, outcome }` |
+| API errors in words | `ui/apiReasons.ts` |
+| Sign-up fields | `ui/fieldRules.ts` checks with the protocol's own schemas and shows `RULE_TEXT` before typing |
+| Number input | `ui/Stepper.tsx` |
+| Building status and Fix | `ui/cards/conditions.ts` (pure): `statusOf`, `problemOf` (cause, picture, fix), `Fix` = a command or a "show me" flight; the bubbles and the card both read it, so they never disagree |
+| Bubbles | `ui/bubbles/bubbles.ts` (`bubblesOf`, `bubbleDetail`: dots from 0.6 of the farthest camera distance), `BubbleLayer.tsx` (stack 46 px, dots 22 px; a collected reward sends 6 coins 70 ms apart, each flying 700 ms; a spoken line stays 4 s) |
+| News | `news/pick.ts` `pickNews` (top 5 by `importance`), `news/words.ts`, `news/showMe.ts` (fly-to at distance 44), `news/portMaster.ts`, `NewsCard`, `LogPanel`, `StageCelebration` |
+| Placement | `placement/verdict.ts`, `roadVerdict.ts` produce the labels, cost and command; `ui/build/` has the picker, `PlacementPanel`, `GhostLabels` (the words also float on the ghost) |
+| Visiting | `ui/visit/` (`Arrival`, `VisitBanner`); owner controls (the goal icons, the bottom bar, Fix and Buy on a card, reward bubbles, the placement draft, the stage celebration) are hidden when `island.own` is false |
+| Settings | `ui/SettingsPanel.tsx`: sound switch, quality (Low, Medium, High), controls (Auto, Trackpad, Mouse), account with change password, My worlds, log out. Saved on the device by `store/settings.ts` |
+| Calm states | `ui/CalmStates.tsx` (reconnecting line, resting, update required), `NoticeScreen`, `LoadingScreen`; no WebGL2 is one sentence on a `NoticeScreen` |
+| Panels' own tests | each screen has a `*.test.tsx` beside it; `test/no-emoji.ts` `expectNoEmoji` (see `island-testing`) |
+
+Facts worth knowing before a change:
+
+- Touch targets are real CSS px, at least 44 (the close and round buttons are larger; small icons keep a 44 px hit
+  area). The HUD pads by `env(safe-area-inset-*)` and is click-through between controls.
+- Keyboard: the camera keys belong to the camera (W A S D, arrows, Q, E). Escape drops an aiming placement ghost.
+  There are no shortcuts for the bottom buttons. Goal icons carry a `title` as the hover hint.
+- Android back: `ui/cards/useBackClosesCard.ts` closes the open card first.
+- Reduced motion (`prefers-reduced-motion`) is honored in the panel slide, the arrival veil, the bubbles, the gliding
+  numbers and the news.
+- The Views button and Watch are absent, and the tests assert it.
+- Screens with no approved mockup were built from the style A blocks: Staff, Trade, Build picker, Log, Settings,
+  sign-in, world screen, visiting. Ticket 21 is the user's review of them.
+
 ## Still open (update this skill when settled)
 
-- Final palette and font (slice 1, after the art-direction pass Q10).
-- The SVG line-icon library and the file location of the UI icon set.
-- Where the UI code and design tokens live in `apps/client` (suggested, not fixed: `apps/client/src/ui/`).
-- The exact narrow/wide breakpoint and the desktop shortcuts for the bottom buttons.
-- Rendered picture size and format, and whether the card picture is a separate render (with `island-blender`).
-- Where display names live (content data by default; confirm with `island-game-logic`).
-- Screens with no approved mockup yet: Staff, Trade, Build picker, Log, Settings, sign-in, world and claim
-  screens, visiting a friend's island.
+- The user's look review (ticket 21): palette values in `tokens.css`, the font choice (system rounded versus a
+  self-hosted font), sizes, and the wording of unmocked screens.
+- Keyboard shortcuts for the bottom buttons (none decided; Escape closes placement only).
+- The Watch button, its caption and the fade, with watch mode (`slice1-alive`); button sounds and where the sound
+  files live (`slice1-alive`).
+- Views and their picker and legend (slice 3); level stars and Upgrade (slice 2).
+- Whether the card picture should be a separate render from the Build picker's building icon (with `island-blender`).

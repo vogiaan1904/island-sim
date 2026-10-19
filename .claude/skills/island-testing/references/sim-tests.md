@@ -1,7 +1,9 @@
 # Sim tests
 
-Planned home: `packages/sim` (test folder layout to be decided in slice 1). All code here is **illustrative**: names
-such as `runScript`, `stateHash` or `withInvariants` are placeholders until the real sim API exists. What the spec
+Home: `packages/sim` (built in slice 1 plans 1 and 2): unit tests beside the code, shared fixtures and whole runs in
+`packages/sim/test/` (`fixtures.ts`, `harness.ts` with `runScript` and `replay`, `scenarios.ts`, `golden.test.ts`,
+`determinism.test.ts`; the list is in `SKILL.md`). Code blocks here are **illustrative**: use the real helpers named in
+`SKILL.md` and read their source before copying a shape. What the spec
 fixes: `sim.applyCommand` and one world tick function (`sim.tick`), the command types, the world tick order and the
 seeded archipelago generator all live in `sim`, and each tick returns the changed and removed entities plus a ledger
 of every money and goods movement; `applyCommand` returns the same for its own effect, with its events (spec 5.1,
@@ -26,8 +28,8 @@ transport about every 10 ticks). The exact list, order and cadence are in `islan
 (`references/time-and-commands.md`). Test each pass on its own:
 
 - **Smallest state that shows the rule.** One farm, one road, one cottage. Build it in the test with small builder
-  helpers (planned) rather than loading a big saved state, so a reader sees the whole setup.
-- **Run just that pass**, or a single tick if passes cannot be called alone (to be decided in slice 1), and assert
+  helpers (`smallWorld`, `building`, `village`, `town`, `hallSite` in `packages/sim/test/fixtures.ts`) rather than loading a big saved state, so a reader sees the whole setup.
+- **Run just that pass**, or a single `tickWorld` call at a chosen time of day (`nextTickAt(world, minute)`), and assert
   exact numbers.
 - **Building conditions** (spec 4.2, 12.1): a building keeps a set of conditions, and the card and bubbles show the
   most important one in this order: under construction, damaged, waiting for money, no workers, understaffed (some
@@ -161,7 +163,8 @@ Each snapshot stores the sim version, and new state fields get their starting va
 migrations in `sim` (spec 12.2). A graceful shutdown always writes a snapshot, so after a deploy the replay window is
 empty and old logs never meet new rules (the server test for that is in `server-tests.md`).
 
-- Keep a stored snapshot fixture for each released sim version (planned location to be decided in slice 1).
+- Keep a snapshot migration test for each released sim version (`packages/sim/src/snapshot.test.ts`). `SIM_VERSION` is 4;
+  the steps from 2 to 3 and 3 to 4 only move the version (no state changed).
 - Loading an old fixture migrates it to the current version; the migrated state passes every invariant and runs
   deterministically (two runs from it give the same hashes).
 - Each migration gets a test that its new fields get the intended starting values.
@@ -184,7 +187,7 @@ Spec 9 and 12.2: invariants are checked every tick in tests, using the ledger th
 
 How to apply them:
 
-- One shared helper (planned) runs ticks and commands and checks every invariant after each tick and after each
+- One shared helper (`runScript(seed, steps, totalTicks, { checkInvariants })` in `packages/sim/test/harness.ts`) runs ticks and commands and checks every invariant after each tick and after each
   command. A failure names the tick, island, good or money, the expected and actual change, and the ledger entries
   involved.
 - Every sim test that runs more than one tick goes through it: scenario, change set, determinism, replay, migration
@@ -217,7 +220,7 @@ stored value.
 - **Solo first.** Run it on a one-island world, because a world with one player must be fully playable (CLAUDE.md).
   Add a two-island variant once trade or world projects touch the sim.
 - **Store a readable summary next to each hash**: tick, stage, residents, coins and key stocks at each checkpoint.
-  Storage format (a JSON file per scenario, or Vitest snapshots) is to be decided in slice 1.
+  Built: the hash is a literal in `packages/sim/test/golden.test.ts`, with the readable checkpoint values asserted beside it.
 - **Run time in seconds.** The spec promises that tests fast-forward a game month (43,200 ticks) in seconds. If a
   golden scenario gets slow, profile the sim; do not shorten the scenario to hide it.
 - **One more per roadmap slice** (spec 8.2): slice 2 (Settlement: market level 2, building levels, the automation

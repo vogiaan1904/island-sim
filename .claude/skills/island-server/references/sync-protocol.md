@@ -42,7 +42,10 @@ per-tick changes - visiting - phones and reconnects - validation - versioning - 
 - **A world that failed to load** (`Worlds.failed`) shows to its members as `paused` in `/api/me`, and `open-island`
   for it answers `error` / `world-paused`; `not-a-member` is for worlds the account has no island in.
 - **The client mirror** applies `island.entities`, then each update with the sim's `applyChanges`; the server test
-  client (`apps/server/test/player.ts`) does exactly this, and plan 5's store should use the same function.
+  client (`apps/server/test/player.ts`) does exactly this, and so does the client store (`apps/client/src/store/
+  mirror.ts`, `applyMessage`). There is no schema for server messages: the client checks what arrives with its own
+  guard (`connection/messages.ts`) and casts to the protocol's types. The island on screen is assembled from the
+  mirrored entities with the sim's `islandFromEntities`.
 - **Hello versions:** before the strict parse, a first message that is a `hello` with another `protocolVersion` is
   answered `update-required` and closed with 4001, whatever other fields it carries, so a later `hello` with a new
   field still tells an older cached client to update (not 4002).
@@ -157,9 +160,10 @@ Conceptual list; the real messages are in the table under "As built". Invite cod
 
 ## Phones and reconnects
 
-- When the app goes to the background, the client closes the socket and nothing is sent. On return it reconnects
-  with backoff and gets the full state again (spec 5.3). The client side of this, including backoff with some random
-  jitter so many phones don't reconnect in lockstep after a restart, belongs to `island-3d-client`.
+- A phone that was away comes back to a socket it cannot trust, and gets the full state again (spec 5.3). **As built,
+  the client** keeps the socket in the background, and on return after 20 s or more drops it and reconnects at once;
+  a socket that closes by itself is retried after 0.5 s, 1 s, 2 s and so on up to 15 s, each with up to a quarter more
+  or less, so phones do not reconnect in lockstep after a restart (`island-3d-client`, `state-and-pwa.md`, section 5).
 - The server keeps nothing per connection that must survive a reconnect. A connection's subscription and rate-limit
   state are thrown away when it closes.
 - Phones often vanish without a close frame. A ping and pong heartbeat (the pattern documented for `ws`, every 30 s)
@@ -180,8 +184,8 @@ Conceptual list; the real messages are in the table under "As built". Invite cod
 - One protocol version constant in `packages/protocol`. Bump it for any change an older client or server would
   misread.
 - The server and the client are built and deployed together, but an installed PWA can keep running an old cached
-  build. The version check in the first message is how it learns to update; the update flow itself belongs to
-  `island-3d-client`.
+  build. The version check in the first message is how it learns to update. **As built,** the client shows its
+  "update required" screen (session phase `update-required`) and asks the player to reload; wording is `island-ui`.
 - An additive field in an HTTP response needs no bump (an older client ignores it): `WorldInfo.islands` (the claimed
   islands of the world: slot, name, owner as typed; filled in `/api/me`, `/api/register`, `/api/worlds` and
   `/api/worlds/join`) was added that way. The world screen lists friends to visit from it; the live `summary` of an

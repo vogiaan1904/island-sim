@@ -1,67 +1,131 @@
 # Client tests
 
-Planned home: `apps/client` (folders inside it to be decided in slice 1). The things being tested are described in
-`island-ui` (HUD, cards, bubbles, layouts, text rules) and `island-3d-client` (scene, crowds, camera, budget).
+Home: `apps/client/src`, tests beside the code (built in slice 1 plan 5). The things being tested are described in
+`island-ui` (HUD, cards, bubbles, layouts, text rules) and `island-3d-client` (scene, camera, budget). **Built:** the
+Vitest project below. **Not built (plan 6):** Playwright with two players, screenshot checks, browser touch emulation,
+the context-loss test and the test hooks at the end; never claim them.
 
-Contents: Vitest and Testing Library - pure render-data functions - Playwright with two players - screenshot
-checks - camera and gestures - the no-emoji check - test hooks the client needs.
+Contents: the Vitest project - helpers - component tests - tests against a real in-process server - pure modules -
+what is not tested by code - Playwright with two players (plan 6) - screenshot checks (plan 6) - camera and gestures -
+the no-emoji check - test hooks the client needs (plan 6).
 
-## Vitest and Testing Library
+## The Vitest project
 
-The DOM environment (jsdom or happy-dom) is to be decided in slice 1. Neither has WebGL, so keep the 3D canvas out of
-these tests; the HUD, cards and news are plain React and can render alone.
+- `apps/client/vitest.config.ts`: `defineProject` named `client`, `environment: 'jsdom'`, `include
+  src/**/*.test.{ts,tsx}`, `setupFiles src/test/setup.ts` (jest-dom matchers, and Testing Library's `cleanup` after
+  each test, because the repo's tests import from `vitest` instead of using globals). The root `vitest.config.ts` picks
+  it up through `apps/*`.
+- Run: `pnpm vitest run apps/client/src/ui/` (end a folder with `/`), or `pnpm --filter @island/client exec vitest run
+  <file>`. `pnpm check` runs the whole project; its tsconfig has `types: ["vite/client", "node"]`.
+- Neither jsdom nor node has WebGL, so the canvas is never mounted in a test. The scene's testable parts are pure
+  modules in `render/`, `camera/` and `placement/`; `scene/*.test.ts` covers only what runs without a GPU
+  (`bakedGeometry` on the real `.glb` files in a node-environment test, `windowGlow`, the frame loop hook).
+- A test that needs a real server or file reads starts with `// @vitest-environment node`.
 
-Test what the player sees and does: find elements by role and accessible name, tap or click them, assert visible
-text. The UI uses icons, never emoji, so icon-only buttons need an accessible name; that is what tests find them by
-(agree the labels with `island-ui`).
+## Helpers in `apps/client/src/test/`
 
-What to cover (spec 6.1, 12.4):
+| Helper | Use |
+|---|---|
+| `no-emoji.ts` | `expectNoEmoji(container)`: fails on any emoji or emoji-like symbol in the text and the attributes a player reads (`island-ui`, `references/icons.md`). Call it in every screen test |
+| `game.ts` `stubGame(phase)` | A `Game` for component tests: the real store in that session phase, a session whose every action is a `vi.fn` spy (`logIn`, `register`, `openWorld`, `visit`, `home`, `command`, `markSeen` ...), and a real clock. Wrap the component in `<GameProvider game={game}>` |
+| `islands.ts` `aliceWorld()`, `islandOf(world, slot)`, `islandMessage(world, slot, worldId)` | A world on seed 42 with Alice's island claimed by the sim's own commands (dock at 12,26), and the full-state message the server would send for it. Feed it with `game.store.getState().receive(islandMessage(world))`; change the world first to build the case |
+| `placement.ts` `worldWithRoad()` | Alice's island with a road along x = 14, built by the sim's `place-road` |
+| `news.ts` | Event builders for the news and Log tests |
+| `api.ts` `stubApi()`, `signInOn`, `gameOn`, `world(overrides)`, `ok`, `refused` | A stubbed HTTP API typed with the protocol's response types, and a game made from the real session over it with a socket that never answers. Each method is a spy to override per test |
+| `server.ts` `aliceServer()`, `browserFetch(server)`, `browserSockets(jar)`, `wsUrl`, `closeServers()` | An in-process game server (below) |
 
-- **HUD:** the stage badge shows the stage name and a ring with progress to the next stage (residents first, then the
-  landmark); coin and resident counters, with the commuter counter only during Outpost; money shown as whole coins
-  although the sim keeps cents (the rounding rule is `island-ui`'s); goal icons for the next stage target and current
-  needs; compass, Watch and the gear button (Settings: sound, quality, controls (trackpad or mouse), account with the
-  username shown as typed and change password, log out); bottom buttons Staff, Trade,
-  Build and Log. Views appears only once the first view exists (Goods flow, slice 3), so slice 1 tests assert it is
-  absent. No player title anywhere. Counters glide between ticks: use fake timers and assert the value after the
-  glide, not mid-way.
-- **Building card:** the most important condition in words (order in spec 12.1, including "understaffed" when some
-  workers are missing); the cause of a problem with a Fix button that does the fix when there is one action (raise
-  this building's priority, hire commuters, repair) and otherwise moves the camera to the cause; Upgrade with its
-  coin cost; the workers; the manager slot.
-- **Landmark card:** its materials, and a button that buys the missing ones from the Mainland (a player command);
-  bought materials show as on their way until the next ferry brings them.
-- **Placing:** with too few coins, Place is disabled and shows "Need N more coins". Dragging a road shows its cost,
-  paid per tile when placed. After Place, the ghost shows a short "placing" state until the server answers; the
-  landing bounce plays only on the server's ok, never on a rejection (spec 12.4).
-- **News:** on return, the events since the player's last visit, grouped, the top five by each event type's importance
-  from content data, one item at a time with the key staff member's portrait and "Show me". The Log button opens the
-  history of news and events, each with "Show me".
-- **Registering into a full or resting world:** the player sees "This world is full" or "This world is resting, try
-  again soon" and no account is created (spec 12.3).
-- **Paused world:** when the server reports the world paused, the player sees "This island is resting, back soon"
-  (spec 12.3).
-- **Visiting:** on a friend's island, owner controls are hidden (spec 12.3).
-- **Store (Zustand mirror):** a full state becomes the mirror; per-tick changes update changed entities, drop removed
-  ids and append events; a new full state (after a reconnect) replaces everything, leaving no stale entity, and keeps
-  view state such as the camera mode (`island-3d-client` keeps it apart from the mirror).
-- **Fixtures from the real protocol.** Feed the store message sequences recorded from a server integration run,
-  typed with `packages/protocol`, so the client tests cannot drift from what the server really sends.
+## Component tests
 
-## Pure render-data functions
+Render the component inside `GameProvider` with `stubGame`, put the state you want in the store, find elements by role
+and accessible name, act with `@testing-library/user-event`, assert visible text and the spies. Icon-only buttons are
+found by their `aria-label` ("Build", "Face north", "Settings", "Close"). Counters glide: use fake timers
+(`vi.useFakeTimers`, `act(() => vi.advanceTimersByTime(TICK_MS))`) and assert the value after the glide, not midway.
+Example shape (`ui/hud/Hud.test.tsx`):
 
-`island-3d-client` keeps the code that turns island state and game time into movers, instance data and looks free of
-React and three, so it is plain unit-test material:
+```tsx
+const game = stubGame('playing');
+game.store.getState().receive(islandMessage(aliceWorld()));
+render(<GameProvider game={game}><Hud /></GameProvider>);
+await userEvent.click(screen.getByRole('button', { name: 'Build' }));
+expect(game.store.getState().view.openPanel).toBe('build');
+expectNoEmoji(container);
+```
 
-- the same state and game time give the same output (this is what makes screenshot checks and visits stable);
-- later game time moves things forward; frame rate changes nothing;
-- more people in the sim never means fewer on screen, and caps hold (about 200 full characters at street zoom);
-- only allowed character clips are ever chosen (the clip list is in `island-blender`); a person carrying goods gets
-  two clip layers, legs walking or idle and arms holding-both, while a full-body clip (sit, drive, sprint, pick-up,
-  interact, emote-yes, wheelchair) plays on both layers (spec 12.5);
-- zoomed out to the whole island, bubbles become small dots and only problems remain (spec 12.4).
+What is covered (spec 6.1, 12.4); add a case here when a screen is added:
 
-## Playwright with two players
+- **HUD:** the stage name and ring (residents first, then the landmark), whole-coin and resident counters, the commuter
+  counter only in Outpost, up to three goal icons, the compass, the gear, Staff, Trade, Build and Log, and the absence
+  of Views and Watch. No player title anywhere.
+- **Building card:** the most important condition in words (`ui/cards/conditions.test.ts` on the sim's `shownStatus`),
+  the cause with Fix (one command, or a "show me" flight), the Island Hall's materials and Buy, the refusal words, and
+  no Fix or Buy on a visit.
+- **Placing:** "Need N more coins" with Place disabled, the placing state until the server answers, no bounce on a
+  refusal, the road cost per tile; the verdict equals the sim's own `place-building` or `place-road` on the same
+  state (`placement/*.test.ts`).
+- **News and Log:** the top five by importance, one at a time with Show me, Done and Close marking the newest event of
+  the whole news seen, the Log newest first.
+- **Sign-up and worlds:** each refusal in words (`bad-invite-code`, `world-full`, `world-resting`, `username-taken`),
+  the rules shown before typing, a world screen for 0 or 2+ worlds, the invite code and its regenerate.
+- **Calm states:** reconnecting, resting ("This island is resting, back soon"), update required, no WebGL2.
+- **Visiting:** the banner, Home, and owner controls hidden.
+- **Settings:** sound, quality, controls kept on the device (`store/settings.test.ts`), change password, log out.
+
+## Tests against a real in-process server
+
+For anything that depends on what the server really sends, the client test drives a real server instead of
+hand-writing messages (the protocol has no schema for server messages, so this is what keeps the client honest).
+`test/server.ts` re-uses `apps/server/test/` by relative path (`startTestServer`, `addAccount`, `Browser`, `Player`,
+`ORIGIN`, `TICK_MS`; `island-testing`, `references/server-tests.md`, "The harness"):
+
+```ts
+// @vitest-environment node
+afterEach(closeServers);
+const setup = await aliceServer();   // alice (slot 0, seed 42) and bob (slot 1) in one world; password 'password-1'
+const { fetch, jar } = browserFetch(setup.server);   // same-origin paths, the game's Origin, a cookie jar
+const store = createGameStore();
+const session = createSession(store, createGameClock(), {
+  api: createApi(fetch), openSocket: browserSockets(jar), socketUrl: wsUrl(setup.server), now: () => 50_000,
+});
+await session.start();
+await session.logIn('Alice', 'password-1');
+await vi.waitFor(() => expect(store.getState().session.phase).toBe('playing'));
+setup.tick(3);   // advance the manual clock one tick at a time and run the world's due ticks
+await vi.waitFor(() => expect(store.getState().island?.state).toEqual(setup.runtime.world.islands[0]));
+```
+
+Used by `store/mirror.test.ts` (the island assembled from the mirror equals the server's island state; a second full
+state replaces everything and keeps view state; a pending command settles from its result), `connection/*.test.ts`,
+`session/session.test.ts`, `session/reconnect.test.ts` and `session/visit.test.ts`. Always close servers in
+`afterEach`. The server's `ws` and `better-sqlite3` come from `apps/server`'s own dependencies, which is why these
+files import the server tests by relative path instead of through a package.
+
+## What is not tested by code
+
+3D visuals, frame rate, camera feel on real touch and the look. They go to the user (`phone-performance.md`; tickets
+08 and 21). A passing Vitest run says nothing about them.
+
+## Pure modules
+
+`island-3d-client` keeps the code that turns island state and game time into instances, looks and camera poses free
+of React and three, so it is plain unit-test material (`render/*.test.ts`, `camera/*.test.ts`, `placement/*.test.ts`,
+`glide/*.test.ts`, `ui/**/model.test.ts`, `ui/cards/conditions.test.ts`, `news/*.test.ts`):
+
+- the same state and game time give the same output (this is what makes screenshot checks and visits stable): road
+  piece and rotation for each neighbor pattern, a building at its footprint center and the sim's rotation,
+  `constructionStep` against progress, `daylightAt` against the clock, terrain chunks, anchors, quality tiers;
+- the clock and counters take wall-clock milliseconds as an argument, so a test pins them; later time moves things
+  forward;
+- the camera controller: each gesture moves the target the right way, the limits hold (never below the ground, stays
+  around the island, tilt range), the tilt lock triggers only for side-by-side vertical moves, momentum decays to
+  rest, auto-tilt, face north, fly-to;
+- a client-side preview agrees with the sim: build the state with the sim's own commands, then compare the verdict with
+  what `applyCommand` decides (valid, and each refusal reason);
+- zoomed out to the whole island, bubbles become small dots and only problems remain (spec 12.4);
+- Not built yet, for `slice1-alive`: more people in the sim never means fewer on screen and caps hold (about 200 full
+  characters at street zoom); only allowed character clips are chosen; a person carrying goods gets two clip layers
+  (legs walking or idle, arms holding-both) while a full-body clip plays on both (spec 12.5).
+
+## Playwright with two players (plan 6; not built)
 
 - Runs against a real server with a fresh test database and the built client. The server needs tick control (see
   `server-tests.md`) so a build finishes without waiting real minutes.
@@ -84,7 +148,7 @@ React and three, so it is plain unit-test material:
   `island-3d-client`'s and `island-ui`'s.
 - Keep this suite to a few critical flows. Rules belong in sim tests.
 
-## Screenshot checks
+## Screenshot checks (plan 6; not built)
 
 - **Fixed inputs:** a fixed island snapshot (a fixture), fixed camera spots (whole island, neighborhood, street
   level), a fixed game time (at least one day and one night shot, for lit windows), a fixed quality level, and a
@@ -108,6 +172,10 @@ React and three, so it is plain unit-test material:
   new look is taken after the user approves the look. Same rules as golden hashes (SKILL.md).
 
 ## Camera and gestures
+
+**Built:** the controller and the event meaning are tested as pure modules (`camera/controller.test.ts`,
+`camera/input.test.ts`, `camera/tap.test.ts`), and the binding with a placement or road draft in
+`camera/placementDrag.test.tsx`. **Plan 6:** the browser-level emulation below.
 
 Every row of the camera table in spec 6.1 gets a test, with the details from spec 12.5. All input (touch, mouse,
 wheel, keys) goes through one gesture layer, so these tests exercise that layer.
@@ -146,20 +214,24 @@ the real-phone checklist.
 
 ## The no-emoji check
 
-The rule and the exact list of forbidden characters (emoji, plus symbols such as arrows, check marks and stars that
-some phones draw as emoji) are in `island-ui` (`references/icons.md`), together with an illustrative pattern. Do not
-keep a second list here: the test uses that pattern, ideally from one shared module, so the list lives in one place.
+The rule and the table of forbidden characters (emoji, plus symbols such as arrows, check marks and stars that some
+phones draw as emoji) are in `island-ui` (`references/icons.md`). **Built:** the one pattern lives in
+`apps/client/src/test/no-emoji.ts` (`EMOJI_OR_SYMBOL`, `findEmoji`, `playerFacingText`, `expectNoEmoji`); do not keep a
+second list in any test, and write a test string that needs an emoji with `\u{...}`.
 
-- **Source scan (Vitest):** scan every place player-facing text lives: client UI copy, news lines, watch mode
-  captions, bubble text, and the names and descriptions in `packages/content`. Where UI strings live is decided in
-  slice 1; when a new place is added, add it to the scan in the same change.
-- **Rendered text (Playwright):** after each screen of the end-to-end flow, check the page's visible text. This catches
-  strings built at runtime. Player-typed text cannot bring emoji in: usernames are limited to ASCII letters, digits,
+- **Rendered text (Vitest):** every screen test renders the screen and calls `expectNoEmoji(container)`, which checks
+  the text nodes and the attributes a player reads (`alt`, `aria-label`, `title`, `placeholder`, `value` and the
+  other aria text). This catches strings built at runtime, in the DOM the player gets. `test/no-emoji.test.ts` tests
+  the check itself. When player-facing text lives outside a component (the name tables, the news and reason words),
+  a test runs `expectNoEmoji` over those strings too.
+
+- **Rendered text (Playwright, plan 6):** after each screen of the end-to-end flow, check the page's visible text.
+  Player-typed text cannot bring emoji in: usernames are limited to ASCII letters, digits,
   "-" and "_", and island names to ASCII letters, digits, spaces, "-" and "'" (spec 12.3). The validation itself is
   tested on the server (`server-tests.md`).
-- Run it before calling any UI or content text change done, and in CI once it exists.
+- Run it before calling any UI or content text change done (it is part of `pnpm check`), and in CI once it exists.
 
-## Test hooks the client needs (to be decided in slice 1)
+## Test hooks the client needs (plan 6; none built)
 
 Decide with `island-3d-client` how these are exposed and kept out of the production build (or behind a test flag):
 

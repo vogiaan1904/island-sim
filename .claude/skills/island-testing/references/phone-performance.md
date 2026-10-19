@@ -32,10 +32,17 @@ check is pending until the user answers.
   screen (installed) or a browser tab. If none of the phones is roughly "mid-range from about 3 years ago", say that
   the target class was not tested: a recent flagship at 60 fps proves little.
 - **Readout:** a debug overlay showing fps, frame time, draw calls, triangles, quality level and people on screen
-  (planned; to be decided in slice 1 with `island-3d-client`). Without it: Safari Web Inspector on a Mac for an
+  (not built; plan 6). Today: Safari Web Inspector on a Mac for an
   iPhone, or Chrome remote debugging (`chrome://inspect`) for Android.
 - **Same island every time:** a test world at a known state (for example the Settlement checkpoint of the golden
-  scenario), so runs can be compared. How to load it on a phone is to be decided in slice 1.
+  scenario), so runs can be compared. Loading a fixed snapshot on a phone is not built (plan 6); a real world on the
+  Mac is what exists. **Reaching the Mac from a phone on the same Wi-Fi** (written for ticket 08): the phone talks to
+  the Vite server, which forwards `/api` and `/ws` to the game server on 127.0.0.1. Terminal 1:
+  `ISLAND_ORIGIN=http://<ip>:5173 ISLAND_SECURE_COOKIES=0 pnpm server` (`<ip>` from `ipconfig getifaddr en0`; the
+  Origin check compares it to the page address, and `pnpm server:dev` only accepts `http://localhost:5173`). Terminal 2:
+  `pnpm client --host`. Open `http://<ip>:5173` on the phone. The port is fixed (`strictPort`). Note the quality tier
+  Settings shows, because the first one is a guess from the device (`island-3d-client`, `scene-and-rendering.md`,
+  section 11).
 - **Same conditions:** phone at room temperature, battery above 50% and not charging (charging adds heat), low-power
   mode off, brightness fixed.
 

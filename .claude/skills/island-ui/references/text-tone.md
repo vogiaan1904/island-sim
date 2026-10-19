@@ -80,8 +80,9 @@ Use these as written (sentence case on screen):
 
 - Names and one-line descriptions of buildings, goods, key staff and traits are looked up by their stable content
   id, never hardcoded in components and never shown as the raw id. The spec has the client import
-  `packages/content` for UI (spec 3), so content data is the default home for display names; the final place is
-  decided in slice 1 with `island-game-logic` (renaming for players changes the display name, never the id).
+  `packages/content` for UI (spec 3), so content data was the default home for display names. **Decided in slice 1:** content has ids only, and the names
+  live in one client table keyed by id, `apps/client/src/ui/names.ts` (typed `Record`s, so a new content id fails the
+  build until it has a name). Renaming for players changes the display name, never the id.
   Write them in this same tone (`island-content`).
 - A building description says what it does for the island and its size, in one or two short sentences: "Sells
   food and goods to the homes around it. Takes 2 x 2 tiles." (on screen, the multiplication sign U+00D7 in place of the x)

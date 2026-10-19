@@ -20,8 +20,9 @@ description: Simulation rules and content data for Island Sim, the pure determin
 
 ## Where a change belongs
 
-Built (slice 1 plans 1-2): `packages/sim` and `packages/content`. Still planned: `apps/server`, `apps/client` and
-`packages/protocol` (plans 3-6).
+Built (slice 1): `packages/sim` and `packages/content` (plans 1-2 and the client feature's sim tickets), and around them
+`packages/protocol` and `apps/server` (plan 3, `island-server`) and `apps/client` (plan 5, `island-3d-client`,
+`island-ui`).
 
 | You are changing | Where it goes | Skill |
 |---|---|---|
@@ -57,7 +58,7 @@ change a result. That single property is what makes crash recovery exact (snapsh
 anyone reproduce a bug locally from a log, lets tests fast-forward a game month in seconds, and lets the client run
 the same placement checks as the server.
 
-## Implemented so far (slice 1, plans 1 and 2)
+## Implemented so far (slice 1)
 
 | What | Where | API |
 |---|---|---|
@@ -66,7 +67,6 @@ the same placement checks as the server.
 | Canonical JSON and the state hash (cyrb53, 14 hex digits) | `hash.ts` | `canonicalJson`, `stateHash` |
 | State shape | `state.ts` | `WorldState`, `IslandState`, `BuildingState`, `Rotation` |
 | World and island generation (integer-only) | `world.ts`, `terrain.ts` | `createWorld(seed, content)` |
-| Placement checks shared with the client preview | `placement.ts` | `checkPlacement`, `findDockSpot`, `footprintSize` |
 | Commands | `commands/` | `applyCommand(world, content, command, { sequence })`: claim-island, check-in, place-building, place-road, hire-commuters, set-priority, set-auto-sell, sell, buy-materials, collect |
 | Ledger (money and goods) and events | `ledger.ts`, `events.ts` | `LedgerEntry`, `GoodsEntry`, `SimEvent`, `TICK_SOURCE` (0) |
 | The tick | `tick.ts` | `tickWorld(world, content)`; one file per pass in `passes/`, order in `references/slice1-rules.md` |
@@ -81,6 +81,13 @@ the same placement checks as the server.
 | Invariants (runs `validateWorld`; tick moves by 0 or 1) | `invariants.ts` | `checkInvariants(before, after, ledger, content)` |
 | Snapshots, versions and the world shape | `snapshot.ts`, `version.ts`, `validate.ts` | `serializeWorld`, `loadWorld(json, content)`, `validateWorld`, `MIGRATIONS`, `SIM_VERSION` |
 | Content data | `packages/content/src/` | `content`, `Content`, `BuildingDef`, `WorldRules` |
+
+`SIM_VERSION` is 4 (`version.ts`): 2 to 3 added Mainland help and 3 to 4 slowed a building waiting for money, both rule
+changes with no new state, so their migrations (`migrateV2`, `migrateV3`) only move the version. Every sim
+helper the client needs takes an `IslandState` or a `MarketState`, never a `WorldState`, because the client has only
+entities: it assembles the island with `islandFromEntities` and calls `checkPlacement`, `checkRoad`, `materialLines`,
+`shownStatus`, `residentsOf` and the rest on that. A new check meant for the client's preview goes in `packages/sim`
+with that signature, and the client's verdict test compares it with the command (`island-testing`).
 
 All paths except the last row are under `packages/sim/src/`. The sim mutates the world it is given; callers that
 need the old state clone it first (`structuredClone`). Relative imports carry `.ts`. ESLint blocks `Date`, timers,

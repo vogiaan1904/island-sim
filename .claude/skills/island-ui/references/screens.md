@@ -2,7 +2,9 @@
 
 Read the section for the piece you are working on. Approved pieces come from spec 6.1, spec 12 (resolved details)
 and the approved mockups; pieces marked **not designed yet** have no approved mockup and need the user's look when
-they are available.
+they are available. **Built in slice 1:** every screen except Views (6, slice 3), watch mode (8), the Add to Home Screen hint and the button sounds;
+`SKILL.md`, "As built", lists the files. Where a section below still says "not designed
+yet", the screen was built from style A blocks and waits for the user's look review (ticket 21).
 
 Contents:
 1. HUD

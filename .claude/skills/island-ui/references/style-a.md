@@ -30,9 +30,9 @@ a pay-to-win mobile game.** So:
 
 ## Mockup palette (starting point, not final)
 
-These values come from the approved mockup (`a-merged.html`). **The final palette is decided in slice 1 after the
-art-direction pass (Q10); update this table then.** Until then use them through shared tokens, never as one-off
-hex values in components.
+These values come from the approved mockup (`a-merged.html`), and `styles/tokens.css` carries them (the solid teal
+`#0f8577`, the Build gradient ends and the muted `#4b5a63`; the second muted gray is not a token). The user's look
+review (ticket 21) may still change them. Use them through the tokens, never as one-off hex values in components.
 
 | Role | Mockup value | Used for |
 |---|---|---|
@@ -54,11 +54,12 @@ well as red.
 
 ## Type
 
-- One rounded, friendly sans-serif. The mockups used **Fredoka** (weights 500, 600, 700). The final font is decided
-  with the palette in slice 1.
+- One rounded, friendly sans-serif. The mockups used **Fredoka** (weights 500, 600, 700). **Built:** the system
+  rounded stack (`--font`: `ui-rounded`, `SF Pro Rounded`, `Nunito`, `Segoe UI`, `system-ui`), so no font file is
+  loaded; whether to self-host Fredoka is part of the look review (ticket 21).
 - Bold (700) for titles and counters, semi-bold (600) for buttons and labels, medium (500) for sentences.
-- The game is an installable PWA that should work from its cache, so plan to self-host the font files instead of
-  loading them from a font CDN at runtime.
+- If a web font is added, self-host it: the game is meant to work from its cache as a PWA (plan 6), so no font CDN at
+  runtime.
 - Sizes: see `layout-and-input.md` (text must be readable without zoom).
 
 ## Building blocks
@@ -125,6 +126,6 @@ every UI sound respects it.
 
 ## Tokens
 
-Keep every color, radius, outline width, shadow, font and duration in one shared set of design tokens (for example
-CSS custom properties) so the slice 1 palette decision changes one file. The location is not fixed yet (suggested:
-under `apps/client/src/ui/`, *planned*). Update this section with the real path when it exists.
+Keep every color, radius, outline width, shadow, font and duration in one shared set of design tokens so a palette
+decision changes one file. **As built:** `apps/client/src/styles/tokens.css` (CSS custom properties; the list is in
+`SKILL.md`, "As built") and `styles/global.css`; each component's CSS sits beside it.
