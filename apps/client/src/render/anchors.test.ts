@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { cameraPose, createCamera, groundPoint, type Pose, type Viewport } from '../camera/controller.ts';
 import { ISLAND_LIMITS } from '../camera/limits.ts';
 import { aliceWorld, islandOf } from '../test/islands.ts';
-import { buildingAnchor, islandAnchor, projectPoint } from './anchors.ts';
+import { startDraft } from '../placement/draft.ts';
+import { buildingAnchor, ghostAnchor, islandAnchor, projectPoint } from './anchors.ts';
 
 const viewport: Viewport = { width: 800, height: 600 };
 const pose = cameraPose(createCamera(ISLAND_LIMITS), ISLAND_LIMITS);
@@ -34,6 +35,20 @@ describe('bubble anchors', () => {
 
   it('has an island anchor in the middle of the grid for rewards with no building to sit over', () => {
     expect(islandAnchor(content)).toMatchObject({ x: 64, z: 64 });
+  });
+});
+
+describe('the ghost anchor', () => {
+  it('floats over a building draft exactly where a building of that size would carry its bubble', () => {
+    const draft = startDraft('cottage', { x: 20, y: 20 }, content);
+    const placed: BuildingState = { ...islandOf(aliceWorld()).buildings[0]!, id: 9, type: 'cottage', x: draft.x, y: draft.y, rotation: 0 };
+    expect(ghostAnchor(draft, content)).toEqual(buildingAnchor(placed, content));
+  });
+
+  it('floats over the last tile dragged for a road, and has none before the first', () => {
+    const road = { kind: 'road' as const, tiles: [{ x: 3, y: 4 }, { x: 4, y: 4 }], cursor: null, pen: 'draw' as const, phase: 'aiming' as const, requestId: null, refusal: null };
+    expect(ghostAnchor(road, content)).toMatchObject({ x: 4 * 4 + 2, z: 4 * 4 + 2 });
+    expect(ghostAnchor({ ...road, tiles: [] }, content)).toBeNull();
   });
 });
 

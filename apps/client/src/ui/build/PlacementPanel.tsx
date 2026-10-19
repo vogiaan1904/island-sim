@@ -1,14 +1,14 @@
 import { content } from '@island/content';
 import { findBuildingDef } from '@island/sim';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { clearRoad, lostDraft, penTo, rotateDraft, sendingDraft, settleDraft, type PlacementDraft } from '../../placement/draft.ts';
-import { roadVerdict } from '../../placement/roadVerdict.ts';
-import { buildingVerdict, type PlacementVerdict } from '../../placement/verdict.ts';
+import type { PlacementVerdict } from '../../placement/verdict.ts';
 import { useGame, useGameState } from '../../session/game.tsx';
 import { Icon } from '../icons.tsx';
 import { BUILDING_NAMES } from '../names.ts';
 import { reasonWords } from '../reasonWords.ts';
 import { BUILDING_BLURBS } from './blurbs.ts';
+import { usePlacementVerdict } from './usePlacementVerdict.ts';
 import './Build.css';
 import { coinsText, needMoreText } from '../coins.ts';
 
@@ -30,10 +30,7 @@ export function PlacementPanel() {
   const phase = draft?.phase ?? null;
   const set = (placement: PlacementDraft | null) => store.getState().setView({ placement });
 
-  const verdict = useMemo(() => {
-    if (draft === null || island === null) return null;
-    return draft.kind === 'road' ? roadVerdict(island.state, content, draft.tiles) : buildingVerdict(island.state, content, draft);
-  }, [island?.state, draft]);
+  const verdict = usePlacementVerdict(draft, island);
 
   // The server's answer (or its loss) settles a command that is out.
   useEffect(() => {

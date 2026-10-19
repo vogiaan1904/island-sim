@@ -1,7 +1,8 @@
 import type { Content } from '@island/content';
 import type { BuildingState } from '@island/sim';
 import { CAMERA_FOV, type Pose, type Viewport } from '../camera/controller.ts';
-import { placedFootprint } from './instances.ts';
+import type { PlacementDraft } from '../placement/draft.ts';
+import { footprintCenter, placedFootprint, type PlacedFootprint } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
 
 // Where the 2D things that belong to the island hang in the world, and where they land on the screen: bubbles over
@@ -21,9 +22,26 @@ const HEIGHT_PER_TILE = 3;
 
 /** The point just above the roof of a building, over the middle of its (turned) footprint. */
 export function buildingAnchor(building: BuildingState, content: Content): Anchor {
-  const placed = placedFootprint(content, building);
-  if (placed === null) return islandAnchor(content);
+  return overFootprint(placedFootprint(content, building)) ?? islandAnchor(content);
+}
+
+function overFootprint(placed: PlacedFootprint | null): Anchor | null {
+  if (placed === null) return null;
   return { x: placed.x, y: BASE_HEIGHT + HEIGHT_PER_TILE * Math.max(placed.w, placed.h), z: placed.z };
+}
+
+/**
+ * Where the ghost's labels float: over the building being placed like a bubble over a built one, or just over the last
+ * tile of a road drag. Null while a road has no tile yet.
+ */
+export function ghostAnchor(draft: PlacementDraft, content: Content): Anchor | null {
+  if (draft.kind === 'building') {
+    return overFootprint(placedFootprint(content, { type: draft.building, x: draft.x, y: draft.y, rotation: draft.rotation }));
+  }
+  const last = draft.tiles.at(-1);
+  if (last === undefined) return null;
+  const middle = footprintCenter(last.x, last.y, 1, 1);
+  return { x: middle.x, y: BASE_HEIGHT, z: middle.z };
 }
 
 /** The middle of the island's grid, a little above the ground: for a bubble with no building to sit over. */

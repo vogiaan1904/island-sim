@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { GameProvider, useGame, useGameState, type Game } from './session/game.tsx';
 import { CalmStatus, RESTING_LINE } from './ui/CalmStates.tsx';
+import { GhostLabels } from './ui/build/GhostLabels.tsx';
 import { PlacementPanel } from './ui/build/PlacementPanel.tsx';
 import { Hud } from './ui/hud/Hud.tsx';
 import { Arrival } from './ui/visit/Arrival.tsx';
@@ -95,6 +96,7 @@ function IslandScreen() {
       </Suspense>
       <Hud />
       <PlacementPanel />
+      <GhostLabels />
       <VisitBanner />
       <Arrival />
       <CalmStatus />
