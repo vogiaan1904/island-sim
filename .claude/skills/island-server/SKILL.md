@@ -63,7 +63,7 @@ crash recovery, replay or fairness quietly stop working.
 
 ```
 packages/protocol/src/
-  version.ts      PROTOCOL_VERSION, CLOSE_CODES
+  version.ts      PROTOCOL_VERSION, CLOSE_CODES, TICK_MS
   fields.ts       shared field schemas: whole(max), WorldId, Slot, MAX_COUNT
   commands.ts     PlayerCommand (the sim's commands minus claim and check-in, without the slot), toSimCommand
   messages.ts     ClientMessage schema; ServerMessage types; WorldStatus, WorldSummary, ServerReason, Reason

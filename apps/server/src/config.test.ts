@@ -1,9 +1,11 @@
+import { TICK_MS } from '@island/protocol';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, configFromEnv } from './config.ts';
 
 describe('configFromEnv', () => {
   it('keeps the defaults when nothing is set', () => {
     expect(configFromEnv({})).toEqual(DEFAULT_CONFIG);
+    expect(DEFAULT_CONFIG.tickMs).toBe(TICK_MS);
     expect(DEFAULT_CONFIG.tickMs * DEFAULT_CONFIG.catchUpCapTicks).toBe(24 * 60 * 60_000);
   });
 

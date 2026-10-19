@@ -1,3 +1,4 @@
+import { TICK_MS } from '@island/protocol';
 import { AccountStore } from '../src/accounts/store.ts';
 import type { Clock } from '../src/clock.ts';
 import { openDatabase, type Db } from '../src/db.ts';
@@ -38,7 +39,7 @@ export function memoryLog(): Log & { entries: LogEntry[] } {
   return { entries, info: add('info'), warn: add('warn'), error: add('error') };
 }
 
-export const TICK_MS = 2_500;
+export { TICK_MS };
 
 /** What a world registry needs, on an in-memory database with the accounts id-alice, id-bob and id-carol. */
 export function worldDeps(db: Db = openDatabase(':memory:'), clock = new ManualClock()) {

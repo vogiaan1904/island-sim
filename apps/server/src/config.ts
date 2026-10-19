@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import { TICK_MS } from '@island/protocol';
 
 export interface ServerConfig {
   /** Address the game listens on; HTTPS is terminated by the reverse proxy in front (spec 5.4, 5.5). */
@@ -40,7 +41,7 @@ export const DEFAULT_CONFIG: ServerConfig = {
   databasePath: 'data/island.sqlite',
   clientDir: fileURLToPath(new URL('../../client/dist', import.meta.url)),
   backupDir: 'data/backups',
-  tickMs: 2_500,
+  tickMs: TICK_MS,
   snapshotMs: 5 * 60_000,
   backupMs: 24 * 60 * 60_000,
   catchUpCapTicks: 34_560,

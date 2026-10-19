@@ -1,8 +1,7 @@
-/**
- * Real milliseconds per tick (one game minute). The server's `tickMs` (apps/server config) is fixed at this value and
- * the protocol does not carry it; this is the client's one copy.
- */
-export const TICK_MS = 2_500;
+import { TICK_MS } from '@island/protocol';
+
+// Real milliseconds per tick (one game minute) is the protocol's `TICK_MS`, the same constant the server ticks by.
+export { TICK_MS };
 
 /**
  * The gliding game clock: the single time source for every animation (water, day and night, movers, counters).

@@ -1,4 +1,4 @@
-export { CLOSE_CODES, PROTOCOL_VERSION } from './version.ts';
+export { CLOSE_CODES, PROTOCOL_VERSION, TICK_MS } from './version.ts';
 export { MAX_COUNT, Slot, WorldId } from './fields.ts';
 export { PlayerCommand, toSimCommand } from './commands.ts';
 export type {
