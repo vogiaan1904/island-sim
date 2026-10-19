@@ -12,11 +12,12 @@ built and merged; `slice1-alive` is next.**
 - Process: the mattpocock skills' main flow (`HARNESS.md`, "Workflow"). The game design spec is
   `docs/design/`; each remaining slice 1 plan becomes a feature in `.scratch/<feature>/` (a spec and tickets).
   No product code before the user approves the tickets.
-- **Next step:** the user's two checks of `slice1-client` (`.scratch/slice1-client/issues/`): ticket 08, the camera on
-  a real phone (steps are in the ticket), and ticket 21, the look review of the lit island and the unmocked screens;
-  tuning follows their notes. After those, `slice1-alive` (crowds, ferry, watch mode, sound) gets its
-  `/grill-with-docs` on the open questions under "Plan 5, `slice1-alive`" in `docs/plans/2026-10-17-slice1-index.md`,
-  then `/to-spec` and `/to-tickets`. Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);
+- **Next step:** `slice1-alive` (crowds, ferry, watch mode, sound) gets its `/grill-with-docs` on the open questions
+  under "Plan 5, `slice1-alive`" in `docs/plans/2026-10-17-slice1-index.md`. The user was offered this or slice 2
+  content first (only the 8 Outpost buildings exist, so the 64-tile island feels empty); confirm the order with them
+  first. Ticket 08 (camera) is approved; ticket 21 (look review) stays open for further look notes (the coast and the
+  outlines are done). Optional small follow-up: start the camera over the dock, not the island's middle. After the
+  grilling, `/to-spec` and `/to-tickets`. Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);
   develop with `pnpm server:dev` and `pnpm client`. `pnpm admin create-account <name>` makes the first account. The
   skills `island-3d-client`, `island-ui`, `island-testing`, `island-server` and `island-game-logic` describe what is
   built.

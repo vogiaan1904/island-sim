@@ -5,7 +5,7 @@ and natural; tuning follows their notes. Real touch cannot be proven by code.
 
 **Blocked by:** 07.
 
-**Status:** ready-for-human
+**Status:** done
 
 - [x] The dev server reachable from the user's phone on the local network (steps written down for the user).
 - [ ] The user checks move, pinch zoom, twist, two-finger tilt, double-tap, momentum, limits, the compass, and that the
@@ -50,3 +50,7 @@ the game server on the Mac, which can keep listening on `127.0.0.1`.
 
 The numbers to tune are in `TUNING` in `apps/client/src/camera/controller.ts` and `SMOOTH_TIME` in
 `apps/client/src/scene/CameraRig.tsx`.
+
+## Comments
+
+- 2026-10-19: the player played on their phone (iPhone, 64-tile island) and said "the camera is ok". No tuning needed.
