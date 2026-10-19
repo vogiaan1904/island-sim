@@ -19,6 +19,10 @@
   --build-top: #ffe27a;
   --build-bottom: #f5b52a;
   --shadow: rgba(0, 0, 0, 0.25);
+  /* The soft look (decision 30): no dark outline; a soft blurred shadow lifts a piece off the island, a smaller one
+     while it is pressed. */
+  --lift: 0 2px 4px rgba(36, 50, 59, 0.16), 0 6px 14px rgba(36, 50, 59, 0.14);
+  --lift-pressed: 0 1px 2px rgba(36, 50, 59, 0.22);
   --sky: #d9f1f8;
   --water: #9bd8ea;
   --font: ui-rounded, 'SF Pro Rounded', 'Nunito', 'Segoe UI', system-ui, sans-serif;

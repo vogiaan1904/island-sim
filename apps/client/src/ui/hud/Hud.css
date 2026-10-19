@@ -142,9 +142,8 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 14px;
-  box-shadow: 0 3px 0 var(--shadow);
+  box-shadow: var(--lift);
 }
 
 .hud-pill-icon {
@@ -268,9 +267,8 @@
   width: 3.5rem;
   height: 3.5rem;
   background: var(--surface);
-  border: 2.5px solid var(--ink);
   border-radius: 50%;
-  box-shadow: 0 4px 0 var(--shadow);
+  box-shadow: var(--lift);
   transition: transform 120ms ease-out;
 }
 
@@ -286,8 +284,8 @@
 
 .hud-btn:active .hud-btn-disc {
   /* A small bounce on touch. */
-  transform: translateY(3px) scale(0.96);
-  box-shadow: 0 1px 0 var(--shadow);
+  transform: translateY(2px) scale(0.96);
+  box-shadow: var(--lift-pressed);
 }
 
 .hud-btn-label {
