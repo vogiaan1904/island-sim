@@ -10,7 +10,7 @@ import { systemClock, type Clock } from './clock.ts';
 import type { ServerConfig } from './config.ts';
 import { openDatabase } from './db.ts';
 import { createApi } from './http/api.ts';
-import { createStaticHandler } from './http/static.ts';
+import { createStaticHandler, pathOf } from './http/static.ts';
 import { consoleLog, type Log } from './log.ts';
 import { Gateway } from './sync/gateway.ts';
 import { Worlds } from './worlds/registry.ts';
@@ -197,8 +197,7 @@ function guarded(
 
 /** True for /api, /ws and what is under them: the paths that are never the client's. */
 function isServerPath(target: string): boolean {
-  const path = target.split(/[?#]/, 1)[0] ?? '';
-  return /^\/(api|ws)(\/|$)/.test(path);
+  return /^\/(api|ws)(\/|$)/.test(pathOf(target));
 }
 
 function errorMessage(error: unknown): string {

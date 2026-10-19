@@ -55,14 +55,14 @@ export function createStaticHandler(clientDir: string): StaticHandler {
     }
     const found = await lookup(rootPath, req.url ?? '/');
     if (found.kind === 'refused') {
-      res.writeHead(found.status, { 'content-type': 'text/plain; charset=utf-8', 'x-content-type-options': 'nosniff' }).end(found.status === 400 ? 'Bad request' : 'Not found');
+      refuse(res, found.status);
       return true;
     }
     const target = found.kind === 'file' ? found : { path: join(rootPath, 'index.html'), relative: 'index.html' };
     const info = await stat(target.path).catch(() => null);
     if (!info?.isFile()) {
       if (found.kind === 'screen') return false;
-      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }).end('Not found');
+      refuse(res, 404);
       return true;
     }
     const etag = `W/"${info.size.toString(16)}-${Math.floor(info.mtimeMs).toString(16)}"`;
@@ -95,10 +95,18 @@ export function createStaticHandler(clientDir: string): StaticHandler {
   };
 }
 
+function refuse(res: ServerResponse, status: 400 | 404): void {
+  res.writeHead(status, { 'content-type': 'text/plain; charset=utf-8', 'x-content-type-options': 'nosniff' }).end(status === 400 ? 'Bad request' : 'Not found');
+}
+
+/** The path of a request target, without its query string or fragment. The raw target, not URL parsing: Node accepts targets such as "//" that `new URL` throws on. */
+export function pathOf(target: string): string {
+  return target.split(/[?#]/, 1)[0] ?? '';
+}
+
 /** Turns a request target into a file inside the build folder, a screen path (index.html), or a refusal. */
 async function lookup(rootPath: string, target: string): Promise<Lookup> {
-  // The raw target, not URL parsing: Node accepts request targets such as "//" that `new URL` throws on.
-  const rawPath = target.split(/[?#]/, 1)[0] ?? '';
+  const rawPath = pathOf(target);
   let decoded: string;
   try {
     decoded = decodeURIComponent(rawPath);

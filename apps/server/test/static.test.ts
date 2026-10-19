@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -127,6 +128,17 @@ describe('unknown paths and the API', () => {
     expect(await raw(server, '//')).toMatchObject({ status: 200, body: INDEX });
     expect(await raw(server, '/assets/index-Missing1.js')).toMatchObject({ status: 404 });
     expect((await raw(server, '/models/nothing.glb')).body).not.toBe(INDEX);
+  });
+
+  it('marks every 404 for a file nosniff, also for a name that is there but is not a regular file', async () => {
+    const clientDir = buildFolder();
+    execFileSync('mkfifo', [join(clientDir, 'assets', 'pipe.js')]);
+    const { server } = await serverWithClient(clientDir);
+    for (const path of ['/assets/index-Missing1.js', '/assets/pipe.js']) {
+      const answer = await raw(server, path);
+      expect(answer.status).toBe(404);
+      expect(answer.headers['x-content-type-options']).toBe('nosniff');
+    }
   });
 
   it('leaves /api and /ws to the server: no index.html, JSON errors as before', async () => {
