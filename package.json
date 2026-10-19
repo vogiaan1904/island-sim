@@ -15,6 +15,7 @@
     "pacing": "node --disable-warning=ExperimentalWarning tools/pacing/src/run.ts",
     "server": "node --disable-warning=ExperimentalWarning apps/server/src/main.ts",
     "server:dev": "ISLAND_ORIGIN=http://localhost:5173 ISLAND_SECURE_COOKIES=0 node --disable-warning=ExperimentalWarning apps/server/src/main.ts",
+    "preview": "node --disable-warning=ExperimentalWarning apps/server/src/dev/preview.ts",
     "client": "pnpm --filter @island/client dev",
     "client:build": "pnpm --filter @island/client build",
     "admin": "node --disable-warning=ExperimentalWarning apps/server/src/admin/cli.ts",

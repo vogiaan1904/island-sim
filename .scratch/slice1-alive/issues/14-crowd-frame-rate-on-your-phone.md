@@ -7,6 +7,8 @@
 
 **Status:** ready-for-human
 
+How: `pnpm client:build`, then `pnpm preview 415 --lan` (rush hour at 07:00) on the Mac, and open the printed address on the phone on the same Wi-Fi; sign in as alice / password-1. Plain http over the network allows no Wake Lock, so check the screen staying awake later on the deployed https build (plan 6).
+
 - [ ] Street zoom at rush hour (shift start or end, ferry docked), per quality tier: frame rate, and the draw calls
       and frame time from the debug readout, noted here.
 - [ ] Whether the start check's 24 ms step-down picks a sensible tier on the phone.

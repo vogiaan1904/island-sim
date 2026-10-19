@@ -15,7 +15,7 @@ built and merged; `slice1-alive` is specified and ticketed (`.scratch/slice1-ali
 - **Next step:** build `slice1-alive` on its branch, ticket by ticket in `.scratch/slice1-alive/issues/` (spec
   `.scratch/slice1-alive/spec.md`, ADR `docs/adr/0001-ferry-manifest.md`, terms in `GLOSSARY.md`). Tickets 10, 13 and
   14 are the user's. Ticket 21 of `slice1-client` (look review) stays open for further look notes. Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);
-  develop with `pnpm server:dev` and `pnpm client`. `pnpm admin create-account <name>` makes the first account. The
+  develop with `pnpm server:dev` and `pnpm client`. `pnpm preview [minute] [--lan]` serves the built client with a prepared village in memory (sign in as alice / password-1), for look checks and, with `--lan`, phone tests. `pnpm admin create-account <name>` makes the first account. The
   skills `island-3d-client`, `island-ui`, `island-testing`, `island-server` and `island-game-logic` describe what is
   built.
 - Art direction (Q10) is decided: the "golden" look, 4-unit tiles (spec 11, 12.6). Assets are rebuilt with
