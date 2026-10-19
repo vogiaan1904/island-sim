@@ -51,12 +51,18 @@ Claimed islands in slot order, each running these passes in this order, then the
 - Evening ferry: commuters go home, then unhappy residents leave in the seats left, then newcomers arrive.
 - Commuters dismissed during the day stay until the evening ferry; they were paid in the morning.
 - Both trips land bought goods from the cargo hold (`ferryCargoHold` units per trip, oldest order first).
+- Every trip, passengers or not, replaces `island.ferry`, the ferry manifest (ADR 0001): the trip's tick, `off`
+  (morning: the commuters who came; both trips: newcomers per home they moved into) and `on` (evening: the commuters
+  going home and the leavers per home they left). `moveInNewcomers` and `moveOutUnhappy` return those per-home lists.
+  The sim reads it for nothing: it exists because a one-tick ferry leaves no trace of who moved where, and the client
+  draws the passengers from it.
 
 ## Labor (`passes/labor.ts`)
 
 - During the day shift, built workplaces (waiting for money or not; only a site under construction gets nobody) are staffed by priority (2 high, 1 normal, 0 low;
   `set-priority`), then id. Each takes resident workers from the nearest homes along roads, then commuters, who
-  walk from the dock. Outside the shift everyone is home and every workplace has 0 workers.
+  walk from the dock. Outside the shift everyone is home and every workplace has 0 workers. The staffing itself is
+  `assignWorkers` (exported, used by the client too); the pass only stores its totals and rates.
 - Children are `childrenPermille` (25%) of each home, rounded down, and do not work (`people.ts`).
 - `ratePermille` = (sum of each resident's home happiness + 1000 per commuter) / jobs: staffing and productivity in
   one number.

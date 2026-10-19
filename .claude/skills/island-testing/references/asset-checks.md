@@ -9,7 +9,8 @@ file covers what the checks assert, when they run, and how they fit the test sui
 | Command | Runs | Needs |
 |---|---|---|
 | `pnpm check` | includes `tools/assets` tests: the checker's unit tests (`check.test.ts`, `pack.test.ts`), `shipped.test.ts` (every shipped file passes and the folders hold exactly the catalog) and `content.test.ts` (content data against the catalog) | Node only |
-| `pnpm assets check` | the same per-file checks over `apps/client/public/models/` and `.../icons/`, printing one line per problem and `assets: no problems` | Node only |
+| `pnpm assets check` | the same per-file checks over `apps/client/public/models/`, `.../icons/` and `.../sounds/` (catalog, an MP4 container, ambience loops 20 to 40 s, button sounds under 1 s, 2 MB for all sounds), printing one line per problem and `assets: no problems` | Node only |
+| `pnpm assets sounds [files]` | cuts, loops and encodes the picked sounds (`tools/assets/src/sounds.ts`) from `assets/raw` into `apps/client/public/sounds/` | ffmpeg |
 | `pnpm assets pack <names>` | the Khronos glTF validator on the staging file (it cannot decode meshopt, so it reads the uncompressed export), then meshopt compression | Node only |
 | `pnpm blender test` | the pipeline's unit tests in `tools/blender/tests/` | Blender 5.2.2 at `/Applications/Blender.app` (or `BLENDER`); **not** part of `pnpm check` |
 

@@ -101,8 +101,12 @@ files import the server tests by relative path instead of through a package.
 
 ## What is not tested by code
 
-3D visuals, frame rate, camera feel on real touch and the look. They go to the user (`phone-performance.md`; tickets
-08 and 21). A passing Vitest run says nothing about them.
+3D visuals, frame rate, camera feel on real touch, the look, the shaders and what reaches the speakers. They go to
+the user (`phone-performance.md`; tickets 08 and 21 of `slice1-client`, 13 and 14 of `slice1-alive`). A passing Vitest
+run says nothing about them. Before handing them over, a headless Chrome smoke check is worth it (the shader compiles,
+things appear where expected): `pnpm client:build`, `pnpm preview <minute>`, Chrome started with `--headless=new
+--remote-debugging-port=<port> --enable-unsafe-swiftshader --use-angle=swiftshader`, then sign in through `/api/login`
+over the DevTools protocol, run steps and take screenshots. Look at the screenshots; never call a look approved.
 
 ## Pure modules
 
@@ -121,9 +125,16 @@ of React and three, so it is plain unit-test material (`render/*.test.ts`, `came
 - a client-side preview agrees with the sim: build the state with the sim's own commands, then compare the verdict with
   what `applyCommand` decides (valid, and each refusal reason);
 - zoomed out to the whole island, bubbles become small dots and only problems remain (spec 12.4);
-- Not built yet, for `slice1-alive`: more people in the sim never means fewer on screen and caps hold (about 200 full
-  characters at street zoom); only allowed character clips are chosen; a person carrying goods gets two clip layers
-  (legs walking or idle, arms holding-both) while a full-body clip plays on both (spec 12.5).
+- people (`render/crowd.test.ts`): build islands with `aliceWorld` plus hand-placed buildings and roads, then ask
+  `moversAt` at pinned game times. Test what a watcher sees: residents leave at the shift's start and arrive after
+  their path's travel time, later time moves walkers forward, a new home adds walkers without moving the ones already
+  shown (compare by `key`), carriers arrive on `arriveTick`, children never commute, nobody walks at night, the zoom
+  switch and its band, the cap keeps the nearest; the ferry passengers come from `island.ferry`;
+- the ferry (`render/ferry.test.ts`), the nature scatter, the watch director (a due ferry wins, each event once, holds
+  and the tour) and the ambience mix (waves by the coast, birds by day, the night chorus at night, the town with
+  buildings): the same pattern, inputs in, plain data out;
+- components with side effects take their engine as a prop (`<Ambience engine={fake} />`, `<UiSounds engine={fake} />`)
+  so a test passes a spy object; jsdom has no `AudioContext`, and the real engine stays silent there.
 
 ## Playwright with two players (plan 6; not built)
 

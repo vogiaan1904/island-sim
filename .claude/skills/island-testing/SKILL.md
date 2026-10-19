@@ -16,7 +16,10 @@ test*. The rules under test belong to the domain skills listed at the end.
 > @island/server exec vitest run <files>` or `pnpm --filter @island/client exec vitest run <files>`. Asset checks:
 > `pnpm assets check` (also inside `pnpm check`) and `pnpm blender test` (needs Blender, outside `pnpm check`).
 > **Not built (plan 6):** Playwright, screenshot checks, emulated-touch gesture tests in a browser, the real-phone
-> checklist's readout. Never claim them. The 3D look, the camera feel and phone speed are checked by the user.
+> checklist's readout. Never claim them. The 3D look, the camera feel, phone speed and how the sounds sound are
+> checked by the user. **To show the user (or yourself) a living island:** `pnpm client:build`, then
+> `pnpm preview [minute] [--lan]`, an in-memory server with a prepared village (`apps/server/src/dev/preview.ts`;
+> sign in as alice / password-1).
 
 ## Implemented so far (slice 1, plans 1 to 5)
 
@@ -27,7 +30,13 @@ test*. The rules under test belong to the domain skills listed at the end.
 - Client (plan 5): the Vitest project `client` in `apps/client` (jsdom), tests beside the code as `*.test.ts` and
   `*.test.tsx`, shared helpers in `apps/client/src/test/`: `stubGame`, `stubApi` and `gameOn`, `aliceWorld` and
   `islandMessage`, `expectNoEmoji`, and an in-process game server for the tests that need the real protocol. The
-  patterns are in `references/client-tests.md`.
+  patterns are in `references/client-tests.md`. `slice1-alive` added the pure modules for people, the ferry, nature,
+  watch mode and the ambience mix (`render/crowd.test.ts`, `render/ferry.test.ts`, `render/nature.test.ts`,
+  `camera/watch.test.ts`, `audio/mix.test.ts`), the audio engine against a stand-in context (`audio/engine.test.ts`)
+  and the sound checks in `tools/assets/src/sounds.test.ts`.
+- A heavy test may get its own timeout when the parallel suite pushes it over the 5 s default, with a comment saying
+  how long it takes alone (`world.test.ts`, "many seeds"). That is not weakening a check; a slow test that is slow
+  alone is a performance question first.
 
 - Unit tests sit next to the code as `*.test.ts`. Shared helpers and whole-run tests live in `packages/sim/test/`.
 - `packages/sim/test/fixtures.ts`: hand-painted 8 x 8 maps (`SMALL`, `DEFAULT_MAP`, `HALL_MAP`, `paint`,

@@ -4,9 +4,15 @@
 
 **Blocked by:** 01, 02, 03, 04, 05, 06, 07, 08, 11, 12.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `island-game-logic`: the worker assignment, the road path, services in reach as client helpers; the ferry
+- [x] `island-game-logic`: the worker assignment, the road path, services in reach as client helpers; the ferry
       manifest, `SIM_VERSION` 5 and its migration.
-- [ ] `island-testing`: the new pure client modules and how to test them, the sound recipe's checks, the crowd phone
+- [x] `island-testing`: the new pure client modules and how to test them, the sound recipe's checks, the crowd phone
       check.
+
+## Comments
+
+- Done: targeted edits (status, the implemented table, SIM_VERSION 5, the ferry manifest and labor rules; the new
+  pure modules, the stand-in engine pattern, the headless smoke check, the sounds commands, `pnpm preview` for phone
+  runs). Following skill-creator's guidance for updating a skill in place; no eval run, at the user's request to keep going.

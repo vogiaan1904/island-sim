@@ -5,9 +5,10 @@ description: Simulation rules and content data for Island Sim, the pure determin
 
 # Island Sim: game logic
 
-> **Status (slice 1, plans 1 to 3 done):** `packages/sim` runs the whole Outpost stage: the clock and the ferry,
+> **Status (slice 1, plans 1 to 3 and `slice1-alive` done):** `packages/sim` runs the whole Outpost stage: the clock and the ferry,
 > commuters, labor, production, goods on the roads, the Mainland market with auto-sell, residents and their needs,
-> goals, and the Island Hall that starts Settlement. The server and protocol (plan 3, `island-server`) wrap it. Every
+> goals, and the Island Hall that starts Settlement. Each ferry trip leaves a ferry manifest for the client (ADR 0001).
+> The server and protocol (plan 3, `island-server`) wrap it. Every
 > rule as built is in `references/slice1-rules.md`. When you change a rule, keep this file and that one in step with
 > the code.
 
@@ -71,7 +72,10 @@ the same placement checks as the server.
 | Ledger (money and goods) and events | `ledger.ts`, `events.ts` | `LedgerEntry`, `GoodsEntry`, `SimEvent`, `TICK_SOURCE` (0) |
 | The tick | `tick.ts` | `tickWorld(world, content)`; one file per pass in `passes/`, order in `references/slice1-rules.md` |
 | Game clock | `clock.ts` | `minuteOfDay`, `dayOf`, `isDayShift` |
-| Road distances, cached per roads string | `roads.ts` | `roadsFrom(island, content, building).to(other)`, `accessTiles` |
+| Road distances, cached per roads string | `roads.ts` | `roadsFrom(island, content, building).to(other)`, `accessTiles`, `roadPath(island, content, from, to)` (the tiles walked, as many as the distance: the client's walkers and carriers follow it) |
+| Who works where (the labor pass stores it; the client draws commutes from it) | `passes/labor.ts` | `assignWorkers(island, content, commuters)`: per workplace (id order) the residents taken from each home and the commuters from the dock; it answers as if the shift were on, whatever the time |
+| Which services reach a home | `passes/needs.ts` | `servicesInReach(island, content, home, need)` (what unmet needs read; the client's market walk uses it) |
+| The last ferry trip | `state.ts` | `island.ferry: FerryManifest \| null`: the trip's tick, `off` and `on` (commuters, and newcomers or leavers per home in id order); written by `passes/ferry.ts` every trip |
 | Building helpers and the condition order | `buildings.ts` | `newBuilding`, `isBuilt`, `shownStatus`, `CONDITION_ORDER` |
 | Stock and goods held | `stock.ts` | `stockOf`, `stockTotal`, `goodsHeld` |
 | Residents | `people.ts` | `residentsOf`, `childrenOf`, `workersOf` |
@@ -82,12 +86,15 @@ the same placement checks as the server.
 | Snapshots, versions and the world shape | `snapshot.ts`, `version.ts`, `validate.ts` | `serializeWorld`, `loadWorld(json, content)`, `validateWorld`, `MIGRATIONS`, `SIM_VERSION` |
 | Content data | `packages/content/src/` | `content`, `Content`, `BuildingDef`, `WorldRules` |
 
-`SIM_VERSION` is 4 (`version.ts`): 2 to 3 added Mainland help and 3 to 4 slowed a building waiting for money, both rule
-changes with no new state, so their migrations (`migrateV2`, `migrateV3`) only move the version. Every sim
+`SIM_VERSION` is 5 (`version.ts`): 2 to 3 added Mainland help and 3 to 4 slowed a building waiting for money, both rule
+changes with no new state, so their migrations (`migrateV2`, `migrateV3`) only move the version; 4 to 5 added the
+ferry manifest (`migrateV4` gives every island `ferry: null`). Every sim
 helper the client needs takes an `IslandState` or a `MarketState`, never a `WorldState`, because the client has only
 entities: it assembles the island with `islandFromEntities` and calls `checkPlacement`, `checkRoad`, `materialLines`,
-`shownStatus`, `residentsOf` and the rest on that. A new check meant for the client's preview goes in `packages/sim`
-with that signature, and the client's verdict test compares it with the command (`island-testing`).
+`shownStatus`, `residentsOf`, `assignWorkers`, `roadPath` and the rest on that. A new check meant for the client's
+preview goes in `packages/sim` with that signature, and the client's verdict test compares it with the command
+(`island-testing`). The same goes for anything the client draws from a rule (who walks where): export the sim's own
+answer rather than let the client work it out a second way that could disagree.
 
 All paths except the last row are under `packages/sim/src/`. The sim mutates the world it is given; callers that
 need the old state clone it first (`structuredClone`). Relative imports carry `.ts`. ESLint blocks `Date`, timers,
