@@ -18,6 +18,8 @@ const scratch = new Vector3();
 const SMOOTH_TIME = 0.2;
 /** Watch mode glides between moments slowly and gently: about 4 seconds to arrive. */
 const WATCH_SMOOTH_TIME = 1.2;
+/** While watching, the camera turns slowly round what it shows, a little every frame: radians per second. */
+const WATCH_ORBIT_SPEED = 0.03;
 
 /**
  * Owns the camera. Input goes through the pure controller (`camera/controller.ts`) into the store's `view.camera`;
@@ -82,6 +84,8 @@ export function CameraRig() {
     impl.getTarget(scratch);
     setLivePose({ x: scratch.x, z: scratch.z, distance: impl.distance, azimuth: impl.azimuthAngle, polar: impl.polarAngle });
     const dt = Math.min(delta, 0.1);
+    // A steady turn while watching, added to where camera-controls is heading so its smoothing never restarts.
+    if (store.getState().view.cameraMode === 'watch') void impl.rotate(WATCH_ORBIT_SPEED * dt, 0, true);
     if (keys.size > 0) store.getState().cameraGesture({ kind: 'keys', held: [...keys] as Key[], dt });
     store.getState().cameraStep(dt);
     const camera = store.getState().view.camera;

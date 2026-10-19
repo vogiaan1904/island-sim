@@ -442,6 +442,21 @@ export function crowdPlan(island: IslandState, content: Content): CrowdPlan {
   return { walks, stations: working, ferry, startMinute: content.rules.startMinute, ticksPerDay: content.rules.ticksPerDay };
 }
 
+const plans = new WeakMap<IslandState, CrowdPlan>();
+
+/**
+ * The crowd plan of an island state, planned once however many places ask (the canvas and watch mode): a mirrored
+ * state is a new object after every update, so the cache follows it without ever going stale.
+ */
+export function crowdPlanFor(island: IslandState, content: Content): CrowdPlan {
+  let plan = plans.get(island);
+  if (plan === undefined) {
+    plan = crowdPlan(island, content);
+    plans.set(island, plan);
+  }
+  return plan;
+}
+
 /** A pool of movers big enough for every walk in the plan, made once and reused every frame. */
 export function newMovers(plan: CrowdPlan): Mover[] {
   return [...plan.walks, ...plan.stations].map(() => ({

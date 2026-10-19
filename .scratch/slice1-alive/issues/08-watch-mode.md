@@ -34,3 +34,8 @@ any input ends it. Spec: "Client: watch mode", "Client: frame rate"; glossary "M
   the pier.
 - For ticket 13: while the ferry comes in, the pier framing leaves the boat just below the screen for the first
   minutes; framing between the pier and the boat may look better.
+
+- 2026-10-19, user: the camera did not move smoothly in watch mode. Cause: the orbit was a fly-to every 500 ms (the
+  camera eased in and out twice a second), and every step rebuilt the crowd plan. Fixed: the rig turns the camera a
+  little every frame while watching (`rotate` with smoothing, 0.03 rad/s), watch mode flies only when the moment
+  changes and hands back the real turn on exit, and `crowdPlanFor` plans each island state once.

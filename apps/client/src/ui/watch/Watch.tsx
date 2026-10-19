@@ -1,7 +1,10 @@
 import { content } from '@island/content';
 import { useEffect, useRef, useState } from 'react';
 import { pickMoment, type Moment } from '../../camera/watch.ts';
-import { crowdPlan } from '../../render/crowd.ts';
+import { cameraPose } from '../../camera/controller.ts';
+import { ISLAND_LIMITS } from '../../camera/limits.ts';
+import { getLivePose } from '../../camera/livePose.ts';
+import { crowdPlanFor } from '../../render/crowd.ts';
 import { useGame, useGameState } from '../../session/game.tsx';
 import type { GameStore } from '../../store/store.ts';
 import { captionText } from './caption.ts';
@@ -9,8 +12,6 @@ import './Watch.css';
 
 /** How often the director looks again, in real milliseconds. */
 export const WATCH_STEP_MS = 500;
-/** While a moment holds, the camera turns slowly around it: radians per step. */
-const ORBIT_STEP = 0.015;
 const WATCH_TILT = 0.85;
 /** Input that ends watch mode; it is stopped, so it does nothing else (no building tap, no camera move). */
 const STOPPING_EVENTS = ['pointerdown', 'touchstart', 'wheel', 'keydown'] as const;
@@ -46,13 +47,16 @@ export function Watch() {
     return () => window.removeEventListener('keydown', down);
   }, [watching, placing, store]);
 
-  // Any input ends it, and goes no further.
+  // Any input ends it, and goes no further. The camera stays where it really is: the rig has been turning it slowly,
+  // so the asked-for camera takes the real camera's turn instead of swinging back.
   useEffect(() => {
     if (!watching) return;
     const stop = (event: Event) => {
       event.preventDefault();
       event.stopPropagation();
+      const real = getLivePose() ?? cameraPose(store.getState().view.camera, ISLAND_LIMITS);
       store.getState().setView({ cameraMode: 'free' });
+      store.getState().cameraGesture({ kind: 'fly-to', x: store.getState().view.camera.x, z: store.getState().view.camera.z, azimuth: real.azimuth });
     };
     for (const type of STOPPING_EVENTS) window.addEventListener(type, stop, { capture: true, passive: false });
     return () => {
@@ -87,7 +91,8 @@ export function Watch() {
     };
   }, [watching]);
 
-  // The director: every step it asks for the moment now, flies to a new one and turns slowly round the one it holds.
+  // The director: every step it asks for the moment now and flies to a new one, keeping the turn the camera has. The
+  // slow orbit while a moment holds is the rig's (scene/CameraRig.tsx), a little every frame, so it never steps.
   const shown = useRef(new Set<string>());
   useEffect(() => {
     if (!watching) {
@@ -101,22 +106,15 @@ export function Watch() {
       if (island === null) return;
       const ticks = clock.ticksAt(performance.now());
       const next = pickMoment(
-        { island: island.state, content, events: island.events, ticks, ferry: crowdPlan(island.state, content).ferry, shown: shown.current, since },
+        { island: island.state, content, events: island.events, ticks, ferry: crowdPlanFor(island.state, content).ferry, shown: shown.current, since },
         current,
       );
-      const camera = store.getState().view.camera;
-      const fresh = next !== current;
-      if (fresh && next.kind === 'event') shown.current.add(next.key);
+      if (next === current) return;
+      if (next.kind === 'event') shown.current.add(next.key);
       current = next;
       setMoment(next);
-      store.getState().cameraGesture({
-        kind: 'fly-to',
-        x: next.x,
-        z: next.z,
-        distance: next.distance,
-        tilt: WATCH_TILT,
-        azimuth: camera.azimuth + ORBIT_STEP,
-      });
+      const real = getLivePose() ?? cameraPose(store.getState().view.camera, ISLAND_LIMITS);
+      store.getState().cameraGesture({ kind: 'fly-to', x: next.x, z: next.z, distance: next.distance, tilt: WATCH_TILT, azimuth: real.azimuth });
     };
     step();
     const timer = setInterval(step, WATCH_STEP_MS);

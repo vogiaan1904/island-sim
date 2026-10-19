@@ -2,7 +2,7 @@ import { content } from '@island/content';
 import { Canvas } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { CAMERA_FOV } from '../camera/controller.ts';
-import { crowdPlan } from '../render/crowd.ts';
+import { crowdPlanFor } from '../render/crowd.ts';
 import { TILE_SIZE } from '../render/look.ts';
 import { guessQuality, pixelRatioFor } from '../render/quality.ts';
 import { useGame, useGameState } from '../session/game.tsx';
@@ -50,7 +50,7 @@ export default function IslandCanvas({ onReady }: { onReady: () => void }) {
   const quality = chosen ?? guessed;
   const watching = useGameState((state) => state.view.cameraMode === 'watch');
   // Who walks where and the ferry's timetable, planned once per island update (render/crowd.ts).
-  const plan = useMemo(() => (island === null ? null : crowdPlan(island, content)), [island]);
+  const plan = useMemo(() => (island === null ? null : crowdPlanFor(island, content)), [island]);
   return (
     <div className="island-canvas">
       <Canvas

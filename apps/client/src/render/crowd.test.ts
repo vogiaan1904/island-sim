@@ -2,7 +2,7 @@ import { content, type BuildingId } from '@island/content';
 import { buildingDefOf, newBuilding, type IslandState } from '@island/sim';
 import { describe, expect, it } from 'vitest';
 import { aliceWorld, islandOf } from '../test/islands.ts';
-import { crowdPlan, moversAt, newMovers, peopleShown, type Mover } from './crowd.ts';
+import { crowdPlan, crowdPlanFor, moversAt, newMovers, peopleShown, type Mover } from './crowd.ts';
 import { ferryPose, newFerryPose } from './ferry.ts';
 import { TILE_SIZE } from './look.ts';
 
@@ -348,5 +348,13 @@ describe('the crowd: ferry passengers', () => {
     ferryPose(plan.ferry!, lastAboard, ferry);
     expect(ferry).toMatchObject({ visible: true });
     expect(ferry.z).toBeCloseTo(plan.ferry!.route.berth.z);
+  });
+});
+
+describe('the crowd plan cache', () => {
+  it('plans an island state once, however many places ask for it', () => {
+    const island = village();
+    expect(crowdPlanFor(island, content)).toBe(crowdPlanFor(island, content));
+    expect(crowdPlanFor(structuredClone(island), content)).not.toBe(crowdPlanFor(island, content));
   });
 });

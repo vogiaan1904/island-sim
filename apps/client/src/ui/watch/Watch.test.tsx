@@ -6,6 +6,7 @@ import { stubGame } from '../../test/game.ts';
 import { aliceWorld, islandMessage } from '../../test/islands.ts';
 import { expectNoEmoji } from '../../test/no-emoji.ts';
 import { Hud } from '../hud/Hud.tsx';
+import { setLivePose } from '../../camera/livePose.ts';
 import { captionText } from './caption.ts';
 import { Watch, WATCH_STEP_MS } from './Watch.tsx';
 
@@ -93,6 +94,33 @@ describe('watch mode', () => {
     fireEvent.keyDown(field, { key: 'v', code: 'KeyV' });
     expect(watching(g)).toBe(false);
     field.remove();
+  });
+});
+
+describe('watch mode moving the camera', () => {
+  it('flies only when the moment changes, and leaves the slow turn to the camera rig', () => {
+    vi.useFakeTimers();
+    const g = game();
+    renderWatch(g);
+    act(() => g.store.getState().setView({ cameraMode: 'watch' }));
+    act(() => vi.advanceTimersByTime(WATCH_STEP_MS));
+    const first = g.store.getState().view.camera;
+    act(() => vi.advanceTimersByTime(WATCH_STEP_MS * 4));
+    expect(g.store.getState().view.camera).toBe(first);
+  });
+
+  it('hands the camera back where it is when watching stops', () => {
+    vi.useFakeTimers();
+    const g = game();
+    renderWatch(g);
+    act(() => g.store.getState().setView({ cameraMode: 'watch' }));
+    act(() => vi.advanceTimersByTime(WATCH_STEP_MS));
+    setLivePose({ x: 100, z: 120, distance: 40, azimuth: 2.5, polar: 0.9 });
+    act(() => {
+      fireEvent.keyDown(window, { key: 'a', code: 'KeyA' });
+    });
+    expect(g.store.getState().view.camera.azimuth).toBeCloseTo(2.5);
+    setLivePose(null);
   });
 });
 
