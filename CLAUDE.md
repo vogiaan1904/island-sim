@@ -3,7 +3,7 @@
 3D web game: build a modern island (citizens, farms, factories, transport, hiring) in deep-management style,
 in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay), 3 (protocol and server) and 4 (art direction and assets) are done. Plan 5 (the client) is half built: `slice1-client` is built (tickets 01 to 20 and 22 done) and waits on the user's two checks, ticket 08 (camera feel on a real phone) and ticket 21 (look review); `slice1-auto-roads` (placing a building lays its road to the dock, decision 27), `slice1-remove-roads`
 (decision 28), `slice1-big-island` (64 x 64 tiles, decision 29) and `slice1-soft-ui` (no dark outlines, decision 30) are
-built and merged; `slice1-alive` is specified and ticketed (`.scratch/slice1-alive/`) and being built on its branch.**
+built and merged; `slice1-alive` (people, the ferry, nature, watch mode, sound) is built on its branch and waits on the user's look check (ticket 13) and phone measurement (ticket 14) before merging.**
 
 ## Resume here
 
@@ -12,9 +12,9 @@ built and merged; `slice1-alive` is specified and ticketed (`.scratch/slice1-ali
 - Process: the mattpocock skills' main flow (`HARNESS.md`, "Workflow"). The game design spec is
   `docs/design/`; each remaining slice 1 plan becomes a feature in `.scratch/<feature>/` (a spec and tickets).
   No product code before the user approves the tickets.
-- **Next step:** build `slice1-alive` on its branch, ticket by ticket in `.scratch/slice1-alive/issues/` (spec
-  `.scratch/slice1-alive/spec.md`, ADR `docs/adr/0001-ferry-manifest.md`, terms in `GLOSSARY.md`). Tickets 10, 13 and
-  14 are the user's. Ticket 21 of `slice1-client` (look review) stays open for further look notes. Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);
+- **Next step:** the user's checks on branch `slice1-alive` (tickets 13 and 14 in `.scratch/slice1-alive/issues/`; spec
+  `.scratch/slice1-alive/spec.md`, ADR `docs/adr/0001-ferry-manifest.md`, terms in `GLOSSARY.md`), fixes from them, then
+  ask to merge into `main`. After that: plan 6 (ship slice 1) or slice 2 content first, the user's choice. Ticket 21 of `slice1-client` (look review) stays open for further look notes. Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);
   develop with `pnpm server:dev` and `pnpm client`. `pnpm preview [minute] [--lan]` serves the built client with a prepared village in memory (sign in as alice / password-1), for look checks and, with `--lan`, phone tests. `pnpm admin create-account <name>` makes the first account. The
   skills `island-3d-client`, `island-ui`, `island-testing`, `island-server` and `island-game-logic` describe what is
   built.
