@@ -75,7 +75,8 @@ the same placement checks as the server.
 | Building helpers and the condition order | `buildings.ts` | `newBuilding`, `isBuilt`, `shownStatus`, `CONDITION_ORDER` |
 | Stock and goods held | `stock.ts` | `stockOf`, `stockTotal`, `goodsHeld` |
 | Residents | `people.ts` | `residentsOf`, `childrenOf`, `workersOf` |
-| Mainland trade | `mainland.ts` | `mainlandPaysEnough`, `buyPriceCents`, `storedForSale` |
+| Mainland trade | `mainland.ts` | `mainlandPaysEnough`, `buyPriceCents(market, content, good)`, `storedForSale` |
+| Placement checks (shared with the client preview) | `placement.ts`, `lookup.ts`, `materials.ts` | `checkPlacement`, `checkRoad` (what `place-road` acts on), `buildingDefOf`, `findBuildingDef`, `materialLines` and `materialsCostCents` (what `buy-materials` reads) |
 | Change sets for the server | `changes.ts` | `captureEntities`, `diffEntities`, `applyChanges`, `worldEntities`, `islandFromEntities(entities, slot)` (the inverse for one island, for the client mirror) |
 | Invariants (runs `validateWorld`; tick moves by 0 or 1) | `invariants.ts` | `checkInvariants(before, after, ledger, content)` |
 | Snapshots, versions and the world shape | `snapshot.ts`, `version.ts`, `validate.ts` | `serializeWorld`, `loadWorld(json, content)`, `validateWorld`, `MIGRATIONS`, `SIM_VERSION` |
