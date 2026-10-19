@@ -6,8 +6,8 @@ import type { ClientApiReason } from '../connection/api.ts';
 import { expectNoEmoji } from '../test/no-emoji.ts';
 import { WorldsScreen, type WorldsScreenProps } from './WorldsScreen.tsx';
 
-const own: WorldInfo = { id: 'w1', slot: 0, islandName: 'Palm Cove', creator: 'Lena', inviteCode: 'ABCDEFGHJK', status: 'running' };
-const friends: WorldInfo = { id: 'w2', slot: 2, islandName: 'Coral Bay', creator: 'Omar', inviteCode: null, status: 'running' };
+const own: WorldInfo = { id: 'w1', slot: 0, islandName: 'Palm Cove', creator: 'Lena', inviteCode: 'ABCDEFGHJK', status: 'running', islands: [] };
+const friends: WorldInfo = { id: 'w2', slot: 2, islandName: 'Coral Bay', creator: 'Omar', inviteCode: null, status: 'running', islands: [] };
 
 function setup(props: Partial<WorldsScreenProps> = {}) {
   const all: WorldsScreenProps = {
@@ -168,6 +168,29 @@ describe('visiting a friend from the world screen', () => {
     await userEvent.click(visit);
     expect(onVisit).toHaveBeenCalledWith('w1', 3);
     expectNoEmoji(container);
+  });
+
+  it("lists the islands the server sent with the world, for a world never opened, and prefers the live list once it is", async () => {
+    const islands = [
+      { slot: 0, name: 'Palm Cove', owner: 'Lena' },
+      { slot: 2, name: 'Coral Reef', owner: 'Omar' },
+    ];
+    const { onVisit, rerender, username, onOpen, onCreate, onJoin, onRegenerate, onLogOut } = setup({ worlds: [{ ...own, islands }], summaries: {} });
+    const group = screen.getByRole('group', { name: 'Visit a friend' });
+    expect(within(group).getAllByRole('button')).toHaveLength(1);
+    expect(within(group).getByRole('button', { name: 'Visit Coral Reef' })).toHaveTextContent("Omar's island");
+    await userEvent.click(within(group).getByRole('button', { name: 'Visit Coral Reef' }));
+    expect(onVisit).toHaveBeenCalledWith('w1', 2);
+
+    rerender(
+      <WorldsScreen
+        {...{ username, onOpen, onCreate, onJoin, onRegenerate, onLogOut, onVisit }}
+        worlds={[{ ...own, islands }]}
+        summaries={summaries}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Visit Coral Reef' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Visit Reef Haven' })).toBeInTheDocument();
   });
 
   it('offers nothing to visit in a world with only the own island, or one not opened yet', () => {

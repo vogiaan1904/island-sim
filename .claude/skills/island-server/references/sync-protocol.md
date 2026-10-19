@@ -182,6 +182,10 @@ Conceptual list; the real messages are in the table under "As built". Invite cod
 - The server and the client are built and deployed together, but an installed PWA can keep running an old cached
   build. The version check in the first message is how it learns to update; the update flow itself belongs to
   `island-3d-client`.
+- An additive field in an HTTP response needs no bump (an older client ignores it): `WorldInfo.islands` (the claimed
+  islands of the world: slot, name, owner as typed; filled in `/api/me`, `/api/register`, `/api/worlds` and
+  `/api/worlds/join`) was added that way. The world screen lists friends to visit from it; the live `summary` of an
+  opened world replaces it.
 - Unknown message types are rejected with `error` / `bad-message`, never ignored, so any new client message needs a
   bump (SKILL.md, add a message type).
 

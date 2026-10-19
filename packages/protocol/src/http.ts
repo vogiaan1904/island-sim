@@ -1,7 +1,7 @@
 import { content } from '@island/content';
 import * as v from 'valibot';
 import { WorldId } from './fields.ts';
-import type { WorldStatus } from './messages.ts';
+import type { IslandSummary, WorldStatus } from './messages.ts';
 
 // Account and world requests are HTTPS, not WebSocket messages, because only an HTTP response can set the httpOnly
 // session cookie (island-server, accounts-and-security.md).
@@ -66,6 +66,9 @@ export interface AccountInfo {
   username: string;
 }
 
+/** A claimed island of a world: enough to list it by name and owner and to visit it. */
+export type WorldIsland = Pick<IslandSummary, 'slot' | 'name' | 'owner'>;
+
 export interface WorldInfo {
   id: string;
   /** The account's own island in this world. */
@@ -76,6 +79,12 @@ export interface WorldInfo {
   /** Shown to the world's creator only, who can share and regenerate it; null for everyone else. */
   inviteCode: string | null;
   status: WorldStatus;
+  /**
+   * Every claimed island of the world in slot order, the account's own included, with the owner's username as typed.
+   * Added without a protocol version bump: an older client ignores the extra field. The world's live summary
+   * (WebSocket) is fresher once the world is open.
+   */
+  islands: WorldIsland[];
 }
 
 /** GET /api/me */

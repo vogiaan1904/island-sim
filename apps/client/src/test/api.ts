@@ -12,7 +12,7 @@ import { createGameStore } from '../store/store.ts';
 export const LENA: AccountInfo = { id: 'id-lena', username: 'Lena' };
 
 export function world(overrides: Partial<WorldInfo> = {}): WorldInfo {
-  return { id: 'w1', slot: 0, islandName: 'Palm Cove', creator: 'Lena', inviteCode: 'ABCDEFGHJK', status: 'running', ...overrides };
+  return { id: 'w1', slot: 0, islandName: 'Palm Cove', creator: 'Lena', inviteCode: 'ABCDEFGHJK', status: 'running', islands: [], ...overrides };
 }
 
 export const ok = <T>(value: T): ApiResult<T> => ({ ok: true, value });

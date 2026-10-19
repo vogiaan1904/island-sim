@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import type { IslandSummary, WorldInfo } from '@island/protocol';
+import type { IslandSummary, WorldInfo, WorldIsland } from '@island/protocol';
 import type { ClientApiReason } from '../connection/api.ts';
 import { apiReasonText } from './apiReasons.ts';
 import { Field } from './Field.tsx';
@@ -78,14 +78,14 @@ export function WorldsScreen({ username, worlds, onOpen, onCreate, onJoin, onReg
   );
 }
 
-/** The other players' islands of a world, when the player has opened that world this session. */
-function friendsIn(world: WorldInfo, summaries: Readonly<Record<string, readonly IslandSummary[]>>): readonly IslandSummary[] {
-  return (summaries[world.id] ?? []).filter((island) => island.slot !== world.slot);
+/** The other players' islands of a world: the live list once the world was opened this session, else the server's. */
+function friendsIn(world: WorldInfo, summaries: Readonly<Record<string, readonly IslandSummary[]>>): readonly WorldIsland[] {
+  return (summaries[world.id] ?? world.islands).filter((island) => island.slot !== world.slot);
 }
 
 interface WorldCardProps {
   world: WorldInfo;
-  friends: readonly IslandSummary[];
+  friends: readonly WorldIsland[];
   onOpen(id: string): void;
   onRegenerate(id: string): Promise<ClientApiReason | null>;
   onVisit(worldId: string, slot: number): void;

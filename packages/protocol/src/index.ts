@@ -26,6 +26,7 @@ export type {
   JoinedResponse,
   MeResponse,
   WorldInfo,
+  WorldIsland,
 } from './http.ts';
 export {
   ChangePasswordRequest,

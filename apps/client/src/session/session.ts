@@ -348,7 +348,7 @@ export function createSession(store: GameStore, clock: GameClock, services: Sess
       const state = store.getState();
       const world = state.session.worlds.find((w) => w.id === worldId);
       if (world === undefined || world.slot === slot) return;
-      if (!state.session.summaries[worldId]?.some((island) => island.slot === slot)) return;
+      if (!(state.session.summaries[worldId] ?? world.islands).some((island) => island.slot === slot)) return;
       state.setSession({ arriving: 'visit' });
       switchTo({ id: worldId, slot });
     },

@@ -34,12 +34,23 @@ describe('registering', () => {
     const signedUp = await bob.post<JoinedResponse>('/api/register', bobSignsUp(inviteCode.toLowerCase()));
     expect(signedUp.status).toBe(201);
     expect(signedUp.setCookie).toMatch(/^island_session=[\w-]{43}; Path=\/; HttpOnly; SameSite=Strict; Max-Age=7776000; Secure$/);
-    expect(signedUp.body.world).toEqual({ id: world.id, slot: 1, islandName: 'Coral Bay', creator: 'alice', inviteCode: null, status: 'running' });
+    expect(signedUp.body.world).toEqual({
+      id: world.id,
+      slot: 1,
+      islandName: 'Coral Bay',
+      creator: 'alice',
+      inviteCode: null,
+      status: 'running',
+      islands: [
+        { slot: 0, name: 'Palm Cove', owner: 'alice' },
+        { slot: 1, name: 'Coral Bay', owner: 'Bob' },
+      ],
+    });
 
     const bobMe = await bob.get<MeResponse>('/api/me');
     expect(bobMe.body).toEqual({ account: { id: signedUp.body.account.id, username: 'Bob' }, worlds: [signedUp.body.world] });
     const aliceMe = await alice.get<MeResponse>('/api/me');
-    expect(aliceMe.body.worlds).toEqual([{ ...world, inviteCode }]);
+    expect(aliceMe.body.worlds).toEqual([{ ...world, inviteCode, islands: signedUp.body.world.islands }]);
   });
 
   it('creates nothing when the world is full', async () => {
@@ -175,6 +186,26 @@ describe('the endpoints', () => {
 });
 
 describe('worlds', () => {
+  it('lists the world\'s claimed islands, by slot, name and owner as typed, in every response that carries a world', async () => {
+    const { server, alice, world, inviteCode } = await aliceWithWorld();
+    expect(world.islands).toEqual([{ slot: 0, name: 'Palm Cove', owner: 'alice' }]);
+
+    await addAccount(server, 'bob');
+    const bob = new Browser(server.url);
+    await bob.login('bob');
+    const joined = await bob.post<JoinedResponse>('/api/worlds/join', { inviteCode, islandName: 'Coral Bay' });
+    const both = [
+      { slot: 0, name: 'Palm Cove', owner: 'alice' },
+      { slot: 1, name: 'Coral Bay', owner: 'bob' },
+    ];
+    expect(joined.body.world.islands).toEqual(both);
+    expect((await bob.get<MeResponse>('/api/me')).body.worlds[0]?.islands).toEqual(both);
+    // The creator sees the friend who joined after, and only the creator got the invite code.
+    const aliceWorld = (await alice.get<MeResponse>('/api/me')).body.worlds[0];
+    expect(aliceWorld?.islands).toEqual(both);
+    expect(aliceWorld?.inviteCode).toBe(inviteCode);
+  });
+
   it('lets an account join with an invite code, once per world', async () => {
     const { server, inviteCode, world } = await aliceWithWorld();
     await addAccount(server, 'bob');

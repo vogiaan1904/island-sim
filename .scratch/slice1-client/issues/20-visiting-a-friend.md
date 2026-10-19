@@ -16,3 +16,10 @@ and 65.
 Built: the world screen lists the other islands of each world opened this session (from the island message's
 `summary`, kept in `session.summaries`) with a Visit button; `session.visit` / `session.home` reuse the open socket;
 `Arrival` plays the fade and flight; `VisitBanner` shows the island name, owner and Home.
+
+## Comments
+
+- Added after the build (story 10): `WorldInfo.islands` (slot, name, owner as typed) comes from the server in `/api/me`,
+  `/api/register`, `/api/worlds` and `/api/worlds/join`, so the world screen lists every world's islands with Visit
+  from the first load, not only for worlds opened this session. The live `summary` replaces it once the world is open.
+  No new message or route; no protocol version bump (an additive HTTP field an older client ignores).

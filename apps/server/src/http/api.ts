@@ -118,6 +118,7 @@ export function createApi(deps: ApiDeps): (req: IncomingMessage, res: ServerResp
       inviteCode: record.creatorId === accountId ? record.inviteCode : null,
       // A world that could not be loaded rests like a paused one until the host acts.
       status: runtime?.status ?? 'paused',
+      islands: runtime?.summary().islands.map(({ slot, name, owner }) => ({ slot, name, owner })) ?? [],
     };
   };
 

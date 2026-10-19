@@ -67,7 +67,7 @@ packages/protocol/src/
   fields.ts       shared field schemas: whole(max), WorldId, Slot, MAX_COUNT
   commands.ts     PlayerCommand (the sim's commands minus claim and check-in, without the slot), toSimCommand
   messages.ts     ClientMessage schema; ServerMessage types; WorldStatus, WorldSummary, ServerReason, Reason
-  http.ts         account and world request schemas, response types, ApiReason
+  http.ts         account and world request schemas, response types (WorldInfo carries the world's claimed islands), ApiReason
 apps/server/src/
   main.ts         pnpm server: start, then a graceful shutdown on SIGINT or SIGTERM
   server.ts       startServer(config, { clock, log, autoTick }): the listeners, worlds, gateway, admin, backups
