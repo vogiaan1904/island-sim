@@ -9,6 +9,7 @@ import { sell } from './sell.ts';
 import { hireCommuters, setAutoSell, setPriority } from './settings.ts';
 import { placeBuilding } from './placeBuilding.ts';
 import { placeRoad } from './placeRoad.ts';
+import { removeRoad } from './removeRoad.ts';
 import type { Command, CommandMeta, CommandResult } from './types.ts';
 
 /**
@@ -36,6 +37,8 @@ export function applyCommand(world: WorldState, content: Content, command: Comma
       return placeBuilding(ctx, command);
     case 'place-road':
       return placeRoad(ctx, command);
+    case 'remove-road':
+      return removeRoad(ctx, command);
     case 'hire-commuters':
       return hireCommuters(ctx, command);
     case 'set-priority':

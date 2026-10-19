@@ -31,7 +31,16 @@ export function isRoad(island: IslandState, size: number, x: number, y: number):
 
 /** Turns the tiles (row-major indexes) into road. */
 export function pave(island: IslandState, tiles: readonly number[]): void {
+  setRoads(island, tiles, '1');
+}
+
+/** Clears the road from the tiles (row-major indexes). */
+export function unpave(island: IslandState, tiles: readonly number[]): void {
+  setRoads(island, tiles, '0');
+}
+
+function setRoads(island: IslandState, tiles: readonly number[], value: '0' | '1'): void {
   const roads = island.roads.split('');
-  for (const index of tiles) roads[index] = '1';
+  for (const index of tiles) roads[index] = value;
   island.roads = roads.join('');
 }

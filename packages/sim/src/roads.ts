@@ -1,4 +1,6 @@
 import type { Content } from '@island/content';
+import { isWhole } from './commands/context.ts';
+import type { ReasonCode } from './commands/types.ts';
 import { NEIGHBORS4, inBounds, isRoad, tileIndex } from './grid.ts';
 import { buildingDefOf } from './lookup.ts';
 import { footprintSize } from './placement.ts';
@@ -95,4 +97,51 @@ export function roadsFrom(island: IslandState, content: Content, building: Build
   return {
     to: (other) => (access.length === 0 ? null : distanceTo(dist, accessTiles(island, content, other))),
   };
+}
+
+/** The ids of the buildings that need road and reach the dock along roads. */
+export function joinedToDock(island: IslandState, content: Content): Set<number> {
+  const joined = new Set<number>();
+  const dock = island.buildings.find((b) => b.type === 'dock');
+  if (!dock) return joined;
+  const fromDock = roadsFrom(island, content, dock);
+  for (const building of island.buildings) {
+    if (buildingDefOf(content, building.type).needsRoad && fromDock.to(building) !== null) joined.add(building.id);
+  }
+  return joined;
+}
+
+/** What a remove-road drag would do: the same answer `remove-road` acts on, so the preview runs the server's rule. */
+export interface RoadRemovalReport {
+  ok: boolean;
+  /** The reason `remove-road` refuses with, or null when it would clear the tiles. */
+  reason: ReasonCode | null;
+  /** Road tiles (row-major indexes, ascending) the drag covers; tiles that are not road are skipped. */
+  removed: number[];
+}
+
+/**
+ * Clearing road is free (spec 12.1). It is refused when it would cut a building that reaches the dock now off from it;
+ * a building that was already cut off does not block it. `tiles` is untrusted, like `checkRoad`'s.
+ */
+export function checkRoadRemoval(island: IslandState, content: Content, tiles: unknown): RoadRemovalReport {
+  const refused = (reason: ReasonCode, removed: number[] = []): RoadRemovalReport => ({ ok: false, reason, removed });
+  if (!Array.isArray(tiles) || tiles.length === 0) return refused('bad-input');
+  if (tiles.length > content.rules.maxRoadTilesPerCommand) return refused('too-many-tiles');
+  const size = content.rules.islandSize;
+  const removed = new Set<number>();
+  for (const tile of tiles as unknown[]) {
+    if (!Array.isArray(tile) || tile.length !== 2) return refused('bad-input');
+    const [x, y] = tile as [unknown, unknown];
+    if (!isWhole(x) || !isWhole(y)) return refused('bad-input');
+    if (!inBounds(size, x, y)) return refused('out-of-bounds');
+    if (isRoad(island, size, x, y)) removed.add(tileIndex(size, x, y));
+  }
+  const list = [...removed].sort((a, b) => a - b);
+  if (list.length === 0) return refused('nothing-to-remove');
+  const roads = island.roads.split('');
+  for (const index of list) roads[index] = '0';
+  const after = joinedToDock({ ...island, roads: roads.join('') }, content);
+  for (const id of joinedToDock(island, content)) if (!after.has(id)) return refused('cuts-off-building', list);
+  return { ok: true, reason: null, removed: list };
 }

@@ -9,6 +9,7 @@ type SimPlayerCommand = Exclude<Command, { type: 'claim-island' | 'check-in' }>;
 const valid: PlayerCommand[] = [
   { type: 'place-building', building: 'cottage', x: 3, y: 4, rotation: 1 },
   { type: 'place-road', tiles: [[1, 2], [1, 3]] },
+  { type: 'remove-road', tiles: [[1, 2]] },
   { type: 'hire-commuters', count: 4 },
   { type: 'set-priority', buildingId: 7, priority: 2 },
   { type: 'set-auto-sell', good: 'wood', keep: null },
@@ -20,7 +21,7 @@ const valid: PlayerCommand[] = [
 describe('PlayerCommand', () => {
   it('has a schema for every command a player sends, and none for those the server applies itself', () => {
     expectTypeOf<PlayerCommand['type']>().toEqualTypeOf<SimPlayerCommand['type']>();
-    expect(new Set(valid.map((command) => command.type)).size).toBe(8);
+    expect(new Set(valid.map((command) => command.type)).size).toBe(9);
   });
 
   it('accepts each command as the sim defines it, without the slot', () => {

@@ -34,6 +34,13 @@ export interface PlaceRoadCommand {
   tiles: ReadonlyArray<readonly [number, number]>;
 }
 
+export interface RemoveRoadCommand {
+  type: 'remove-road';
+  slot: number;
+  /** [x, y] tiles; tiles that are not road are skipped. */
+  tiles: ReadonlyArray<readonly [number, number]>;
+}
+
 /** Sets how many Mainland commuters are hired from the next morning ferry on (0 to the ferry's seats). */
 export interface HireCommutersCommand {
   type: 'hire-commuters';
@@ -84,6 +91,7 @@ export type Command =
   | CheckInCommand
   | PlaceBuildingCommand
   | PlaceRoadCommand
+  | RemoveRoadCommand
   | HireCommutersCommand
   | SetPriorityCommand
   | SetAutoSellCommand
@@ -109,6 +117,8 @@ export type ReasonCode =
   | 'not-enough-coins'
   | 'too-many-tiles'
   | 'nothing-to-build'
+  | 'nothing-to-remove'
+  | 'cuts-off-building'
   | 'not-enough-seats'
   | 'no-such-building'
   | 'unknown-good'

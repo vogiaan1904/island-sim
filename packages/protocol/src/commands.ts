@@ -12,6 +12,11 @@ const Count = whole(MAX_COUNT);
 const GoodId = v.picklist(content.goods.map((good) => good.id));
 const BuildingId = v.picklist(content.buildings.map((building) => building.id));
 const GoalId = v.picklist(content.goals.map((goal) => goal.id));
+const RoadTiles = v.pipe(
+  v.array(v.strictTuple([Coordinate, Coordinate])),
+  v.minLength(1),
+  v.maxLength(content.rules.islandSize * content.rules.islandSize),
+);
 
 export const PlayerCommand = v.variant('type', [
   v.strictObject({
@@ -21,15 +26,9 @@ export const PlayerCommand = v.variant('type', [
     y: Coordinate,
     rotation: v.picklist([0, 1, 2, 3]),
   }),
-  v.strictObject({
-    type: v.literal('place-road'),
-    // At most one road per tile of the island; the sim's own limit per command answers with 'too-many-tiles'.
-    tiles: v.pipe(
-      v.array(v.strictTuple([Coordinate, Coordinate])),
-      v.minLength(1),
-      v.maxLength(content.rules.islandSize * content.rules.islandSize),
-    ),
-  }),
+  // At most one road per tile of the island; the sim's own limit per command answers with 'too-many-tiles'.
+  v.strictObject({ type: v.literal('place-road'), tiles: RoadTiles }),
+  v.strictObject({ type: v.literal('remove-road'), tiles: RoadTiles }),
   v.strictObject({ type: v.literal('hire-commuters'), count: Count }),
   v.strictObject({ type: v.literal('set-priority'), buildingId: Count, priority: whole(HIGH_PRIORITY) }),
   v.strictObject({ type: v.literal('set-auto-sell'), good: GoodId, keep: v.nullable(Count) }),
