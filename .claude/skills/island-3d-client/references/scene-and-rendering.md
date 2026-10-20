@@ -290,6 +290,10 @@ Draw-call accounting (as built: terrain 4, water 1, one instanced mesh per model
 | Glows, smoke, dust | 1 per effect | 0 |
 | Overlays | a handful while in use | 0 |
 
+The preview village's busiest working-day frame is 45 calls in the normal pass, 90 with the shadow pass counted again
+(`render/village.test.ts`, which counts from the render data each 5 minutes; an instanced mesh with no instances costs
+nothing, three.js skips it). People, carts and their loads, boat hulls and loads, the ferry and the site dust are in it.
+
 ## 12. Placement ghost and road preview
 
 What the player sees around the ghost (labels like "Road access", "Need N more coins", the Rotate, Cancel and Place

@@ -36,7 +36,8 @@ check is pending until the user answers.
   iPhone, or Chrome remote debugging (`chrome://inspect`) for Android.
 - **Same island every time:** a test world at a known state (for example the Settlement checkpoint of the golden
   scenario), so runs can be compared. Loading a fixed snapshot on a phone is not built (plan 6). **The simplest
-  route:** `pnpm client:build`, then `pnpm preview 415 --lan` (a prepared village at 06:55, rush hour at 07:00) and open
+  route:** `pnpm client:build`, then `pnpm preview 415 --lan` (a prepared village at 06:55; rush hour, the ferry, a
+  cargo boat and the cart around 07:00) and open
   the printed address on the phone; plain http allows no Wake Lock, so check the screen staying awake on the deployed
   https build. A real world on the Mac also works. **Reaching the Mac from a phone on the same Wi-Fi** (written for ticket 08): the phone talks to
   the Vite server, which forwards `/api` and `/ws` to the game server on 127.0.0.1. Terminal 1:

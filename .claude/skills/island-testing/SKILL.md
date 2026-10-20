@@ -15,11 +15,17 @@ test*. The rules under test belong to the domain skills listed at the end.
 > folder path with `/`, or Vitest's filter also matches other files); one project's file: `pnpm --filter
 > @island/server exec vitest run <files>` or `pnpm --filter @island/client exec vitest run <files>`. Asset checks:
 > `pnpm assets check` (also inside `pnpm check`) and `pnpm blender test` (needs Blender, outside `pnpm check`).
-> **Not built (plan 6):** Playwright, screenshot checks, emulated-touch gesture tests in a browser, the real-phone
+> **Not built (plan 7):** Playwright, screenshot checks, emulated-touch gesture tests in a browser, the real-phone
 > checklist's readout. Never claim them. The 3D look, the camera feel, phone speed and how the sounds sound are
 > checked by the user. **To show the user (or yourself) a living island:** `pnpm client:build`, then
-> `pnpm preview [minute] [--lan]`, an in-memory server with a prepared village (`apps/server/src/dev/preview.ts`;
-> sign in as alice / password-1).
+> `pnpm preview [minute] [--lan]`, an in-memory server with a prepared village (`previewVillage` in
+> `apps/server/src/dev/village.ts`, started by `dev/preview.ts`; sign in as alice / password-1). The village holds
+> something of every kind the client draws (workers at each workplace, a site rising, a hand cart, a fishing boat,
+> hourly sales sending cargo boats, ferries); `slice1-alive-2` ticket 11 lists the minutes to open for each.
+> **The draw-call count** (`apps/client/src/render/village.test.ts`) builds that same village on Alice's world (seed 42)
+> and counts, every 5 game minutes of a working day, the calls the scene would make from the render data: under 150
+> with the shadow pass counted again (45 and 90 when written). When a new thing is drawn, add it to that count, and if
+> it needs the village to show it, add it to `previewVillage` (whose test checks it is there).
 
 ## Implemented so far (slice 1, plans 1 to 5)
 

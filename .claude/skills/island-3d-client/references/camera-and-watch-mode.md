@@ -118,6 +118,7 @@ Changing what a gesture does is a design change: ask the user.
 | Tilt range | Polar angle from straight down | 0 to 1.4 rad (about 80 degrees), and never so low that the eye is under the clearance |
 | Stays around the island | The target is clamped to a box | the island plus one eighth of its width (16 units) on each side |
 | Never below the ground | The eye keeps a clearance above y = 0, which caps the tilt at close range | 3 units. Land is flat at height 0, so there is no terrain lookup yet |
+| Above the roofs (`slice1-alive-2`) | `render/roofs.ts` `roofsOf(island)`: the top over each tile (`BUILDING_TOPS`, measured from the `.glb` bounds; 1 m more over a site's scaffold); `roofTop` looks 1 m round a point. `Limits.roofs` and `roofClearance`; `normalize` backs the eye away along its line of sight until it is above the roof under it. `camera/limits.ts` `limitsFor(island)` adds the island's roofs, once per island state, for the store's gestures and momentum | 2 units above the roof. Everything else reads `ISLAND_LIMITS` (the pose does not depend on roofs). A building finished under a resting camera lifts it at the next gesture |
 | Turn | None: full 360 degrees | |
 
 Prefer the CPU height lookup (`scene-and-rendering.md`, terrain) over raycasting collider meshes every frame on
@@ -194,6 +195,17 @@ placing) and the HUD's Watch button set `view.cameraMode` to `'watch'` and close
 touch, wheel or key in the capture phase ends it and is stopped. The Wake Lock is held while watching (section 8 of
 `state-and-pwa.md`); `scene/frameLoop.ts` draws 30 fps. The camera starts over the dock on opening an island, and
 visits and trips home fly to it (`camera/start.ts`, `ui/visit/Arrival.tsx`).
+
+**Added in `slice1-alive-2`:** the ferry moment frames the pier and the lane south of it: it looks at the middle of the
+pier and where the boat is as the moment starts, from over the island facing south (`Moment.azimuth` is `Math.PI`;
+null for the moments that keep the player's turn), at least 1.4 times that span away, so the incoming boat is on
+screen from the start on a phone held upright. After a due ferry come three timed moments, each shown once
+(`showsOnce`): a cargo boat leaving (8 minutes from its sale's tick, held 12, at the cargo mooring facing south), the
+fishing boat rowing home (its return leg until 2 minutes after landing, framing the spot and the mooring), and a
+building in its last 3 ticks (held 4 ticks after it finishes, for the puff; a landmark waiting for materials is not
+due). A timed moment that is happening takes over from news or the tour, and one on screen holds until it ends; a
+building seen finishing is not shown again from its `construction-finished` event. `WATCH_TILT` (0.85) lives in
+`camera/watch.ts`.
 
 
 - **Enter**: the Watch button (`island-ui`) or V. **Exit**: any touch on a phone, any input on desktop.

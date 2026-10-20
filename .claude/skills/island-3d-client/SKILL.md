@@ -5,17 +5,20 @@ description: How to build, change and review the 3D side of the Island Sim clien
 
 # Island Sim: 3D client
 
-> **Status (2026-10-19): the slice 1 island is built** (`slice1-client`, tickets 03 to 20): terrain, water, instanced
+> **Status (2026-10-20): the slice 1 island is built** (`slice1-client`, tickets 03 to 20): terrain, water, instanced
 > buildings, roads, scaffolds and the pier, day and night with lit windows, one sun and a shadow map, the free camera on
 > touch, trackpad, mouse and keyboard, the placement and road ghosts, the world anchors for bubbles, visiting.
 > **`slice1-alive` built and merged:** people (Mini Characters posed in the vertex shader: commutes, carriers, workers, builders,
 > the market walk, ferry passengers), the ferry from the Mainland in the south, nature props, the camera starting
 > over the dock, watch mode with the Wake Lock, the frame driver (60 fps cap, 30 while watching), the ambience and the
-> button sounds. **Not built:** vehicles and drivers (Village), friends' islands far away (slice 2: the world summary
-> has no positions and the archipelago spacing predates 64-tile islands), smoke and glows, a cheaper level of detail
-> for people, clothing tints, a goods prop for carriers. **Plan 6:** service worker, context-loss recovery. Draw calls
-> and frame rate have not been measured on a phone yet (plan 6), and the look notes of `slice1-client` ticket 21 and
-> `slice1-alive` ticket 13 moved to plan 6 as polish, so numbers marked that way may still move. Where this skill and the design
+> button sounds. **`slice1-alive-2` built (2026-10-20, branch `slice1-alive-2`, look check pending):** work loops at
+> every workplace, buildings rising cut inside their scaffold, carriers holding goods and hand carts from 4 units,
+> fishing and cargo boats, the camera kept above roofs, people walking round footprints by the front door, new watch
+> moments, and a draw-call count of the preview village (45, 90 with shadows). **Not built:** vehicles and drivers
+> (Village), friends' islands far away (slice 2: the world summary has no positions and the archipelago spacing
+> predates 64-tile islands), smoke and glows, a cheaper level of detail for people, clothing tints. **Plan 7:** service
+> worker, context-loss recovery, the phone frame rate. The look notes of `slice1-client` ticket 21 and `slice1-alive`
+> ticket 13 are polish, so numbers marked that way may still move. Where this skill and the design
 > spec (`docs/design/2026-10-16-island-sim-design.md`) disagree, the spec wins.
 
 ## What this skill covers
@@ -117,12 +120,16 @@ store/store.ts   one Zustand vanilla store: island mirror (store/mirror.ts, pure
 render/   pure render data, no React or three imports, unit-tested: instances.ts, island.ts, roads.ts,
    |      construction.ts, terrain.ts, daylight.ts, ghost.ts, roadPreview.ts, anchors.ts, quality.ts, shadow.ts,
    |      look.ts, models.ts (the only place a model URL is made), clips.ts (the character manifest), crowd.ts
-   |      (who walks where: crowdPlan per state, moversAt per frame), ferry.ts (route and pose), nature.ts, waves.ts
+   |      (who walks where: crowdPlan per state, moversAt per frame), ferry.ts (route and pose), nature.ts, waves.ts,
+   |      hash.ts (hash32), work.ts (work loops' places), boats.ts (fishing and cargo boats), around.ts (walking round
+   |      a footprint), roofs.ts (building tops for the camera)
    v
 scene/    R3F components: IslandCanvas > FrameDriver, CameraRig, DayNight, Sun, Water, Terrain, Buildings >
-          ModelInstances, Nature, People (characterMaterial.ts), Ferry, PlacementGhost, RoadGhost, QualityProbe
+          ModelInstances, Nature, People (characterMaterial.ts), Ferry, Boats, SiteDust, PlacementGhost, RoadGhost,
+          QualityProbe
 camera/   pure controller.ts (state + gesture -> state), input.ts (event meaning), useCameraInput.ts (the binding),
-          start.ts (the dock as the start target), watch.ts (watch mode's director)
+          start.ts (the dock as the start target), limits.ts (ISLAND_LIMITS, limitsFor with the roofs), watch.ts
+          (watch mode's director)
 glide/    clock.ts (the gliding game clock), counter.ts (gliding numbers)
 audio/    mix.ts (pure bed gains), engine.ts (the one audio context), sounds.ts (catalog URLs), Ambience.tsx,
           UiSounds.tsx; ui/watch/ holds the Watch component and its captions (island-ui)
@@ -292,14 +299,17 @@ references, marked where ticket 08 or 21 may retune them). What remains:
 - **Settled by slice1-alive** (values in the references): everyone the sim counts is one person on screen (up to 200,
   nearest first; hidden at 0.6 of the farthest distance, back below 0.55), the Mainland lies due south, watch mode's
   order and holds, the sound files and the mix.
+- **Settled by slice1-alive-2:** carriers hold their good's prop and push a hand cart from 4 units, every workplace
+  has a work loop, boats follow the sale manifest and the fishing huts, people walk round footprints.
 - **Still open:** a cheaper level of detail for people (only if the phone measurement asks for it), clothing tints
-  (needs a mask from `island-blender`), a goods prop for carriers (they hold the bag), driver seats (with vehicles),
-  the look of glows and smoke, distant islands (slice 2), and the look-check notes in `slice1-alive` ticket 13.
+  (needs a mask from `island-blender`), driver seats (with vehicles), the look of glows and smoke, distant islands
+  (slice 2), and the look-check notes of `slice1-alive` ticket 13 and `slice1-alive-2` ticket 11 (the cart handles a
+  little below the hands, the rower's seat height, carriers to the dock going round to its sea-side front).
 - **Phone measurements:** frame cost and draw calls per quality tier on the user's phones, whether the start check's
   24 ms threshold fits them, and whether 90/120 Hz screens are capped at 60 fps.
 - **Ticket 08 and 21 (the user):** the camera feel numbers in `camera/controller.ts` (`TUNING`, `SMOOTH_TIME`) and the
   look, including the terrain colors in `render/look.ts`.
-- **Plan 6:** Wake Lock, context-loss recovery, service worker and model caching, test hooks for screenshots.
+- **Plan 7:** context-loss recovery, service worker and model caching, test hooks for screenshots.
 - **Later stages:** the damaged look (spec 12.5) and building levels (spec 12.1; the asset side proposes one model per
   level, `building_market_a-l2.glb`).
 

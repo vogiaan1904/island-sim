@@ -101,8 +101,8 @@ involved, then follow the flow once for the whole bundle.
 
 | Kind | Model | Content data | Sim rules | Server | 3D | UI |
 |---|---|---|---|---|---|---|
-| Building | yes, assembled | building entry, levels | only if it needs new behavior | rarely | place, instance, flows | card, icon, bubbles |
-| Good | for its icon (and in-world look if shown) | good entry, Mainland and floor price, color | storage, transport, needs | no | if carried or shipped | icon, flow color |
+| Building | yes, assembled | building entry, levels | only if it needs new behavior | rarely | place, instance, flows, a work loop if it has jobs, its roof top | card, icon, bubbles |
+| Good | for its icon, and a prop to carry | good entry, Mainland and floor price, color | storage, transport, needs | no | its prop in `GOOD_PROPS` | icon, flow color |
 | Recipe / chain | no (belongs to a building) | recipe entries | if a new pattern | no | flows become walkers and trucks | recipe as pictures, missing-input bubble |
 | House type | yes | building entry with class, no levels | migration, needs | no | lit windows, families off the ferry | card, wish bubbles |
 | Landmark / stage gate | yes | landmark + stage entries, stage goals | gate logic | rarely | scaffold, rising in steps, celebration | stage badge ring, goal icons, news, reward |
@@ -195,6 +195,18 @@ scaffold with workers rising in steps, show each level on the island (an extra f
 lit windows and other activity, and make its status visible on the building itself. Check the placement ghost's
 labels come from the same `sim` rules the server uses.
 
+Two tests in the client fail on purpose when new content forgets its 3D side, because a building with jobs nobody is
+seen doing, or goods that move invisibly, break the point of the game (watching people work):
+
+- **A building with jobs needs a work loop**: an entry in `WORK_LOOPS` (`render/work.ts`) and the steps its workers go
+  round in `render/crowd.ts` (where they stand in the model's own frame, with `onBuilding`; only the chosen clips). A
+  workplace on the water also needs to say where its boat goes (`render/boats.ts`).
+- **A new good needs a prop**: an entry in `GOOD_PROPS` (`render/crowd.ts`), carried in both arms and loaded on hand
+  carts and cargo boats; its model is an `accessory_<prop>_a.glb` built in the carriers' pose (`island-blender`) and
+  listed in `CARRIED_MODELS` (`render/models.ts`).
+- A new building model also needs its top in `BUILDING_TOPS` (`render/roofs.ts`, from its `.glb` bounds), so the
+  camera stays above its roof.
+
 - Done when: it reads at all three zooms (whole island, neighborhood, street) and at night.
 
 ### 7. UI: `island-ui`
@@ -256,7 +268,8 @@ Copy this list into the task and tick it off.
       or goals.
 - [ ] Server and protocol untouched, or the new command or message added through `island-server`.
 - [ ] 3D: placed, instanced, in its stage's bundle, flows animated with the right clips, construction scaffold,
-      smoke and lights, status visible on the building, readable at all three zooms and at night, draw calls kept.
+      smoke and lights, status visible on the building, readable at all three zooms and at night, draw calls kept;
+      a work loop for a workplace, a prop for a good, a roof top for a building model.
 - [ ] UI: card, Build menu icon, a bubble and a Fix for every problem, wish bubbles, rewards, news lines; no emoji.
 - [ ] Pacing harness run; stage times within targets or the difference accepted by the user.
 - [ ] Asset checks pass.

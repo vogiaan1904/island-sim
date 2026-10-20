@@ -250,14 +250,12 @@ function moverAt(flow: FlowView, slot: number, gameMinutes: number, out: MoverPo
   Medium and High (Low has no shadow map). People cost at most 14 draw calls, and the same in the shadow pass.
 - **Walks:** along the sim's own `roadPath` at the road speed (one tile per game minute, about 1.6 m/s real), with a
   hashed sideways offset of up to 0.6 m and a start stagger of up to 4 minutes; phase from distance (a walk cycle is
-  1.1 m). A door is the footprint's edge nearest the walk's first road tile.
-- **Flows:** residents' commute from `assignWorkers` (07:00 there, 17:00 back); carriers, one per 5 units and at most
-  4, in single file 1.2 m apart, the last arriving on `arriveTick` (arms `holding-both` and the bag); up to 2 workers
-  by a staffed workplace's front (1 while understaffed) from its first commuter's arrival to the shift's end; 2
+  1.1 m). A door is the middle of the building's front, and the walk goes round the footprint to the road (section 12).
+- **Flows:** residents' commute from `assignWorkers` (07:00 there, 17:00 back); carriers and workers as in section 12; 2
   builders at a site during the shift (4 at a landmark, none while it still misses materials), one of each pair
   hammering, the other on a work loop (`WorkLoop` in `render/crowd.ts`: steps of walks and in-place clips, phase hashed
-  per person, the same mechanism the workplaces' work loops use) carrying logs (`Carried`: `bag` or `logs`, one
-  instanced accessory mesh each in `scene/People.tsx`); the market walk, one adult per home
+  per person, the same mechanism the workplaces' work loops use) carrying logs (`Carried`, one instanced accessory mesh
+  each in `scene/People.tsx`); the market walk, one adult per home
   its market reaches, leaving 17:15 to 17:26 (hashed per home and day), children along on about 40% of days; ferry
   passengers from `island.ferry` (below). Nobody walks at night.
 - **Looks:** the character is a hash of (slot, home, person index), workers first then children, so a home's people
@@ -268,4 +266,35 @@ function moverAt(flow: FlowView, slot: number, gameMinutes: number, out: MoverPo
   minutes, turning round first; bobbing with `render/waves.ts` (the same formula as the water shader). Passengers walk
   between the bow and the dock across the pier, then the road path: newcomers with bags and their children to their
   homes from 2 minutes after docking, commuters to their workplaces; leavers and commuters set off at docking toward
-  it. They pass through the dock building.
+  it. They go round the dock between the pier's middle and the road (section 12).
+
+## 12. As built (`slice1-alive-2`): work, goods, carts, boats
+
+- **Work loops** (`render/work.ts`, the loops in `render/crowd.ts`): every building with jobs has a loop in
+  `WORK_LOOPS` (a test fails for one without). `workersShown`: up to 2 at a fully staffed workplace, 1 while
+  understaffed, none without workers, from its first commuter's arrival to the shift's end, one round per production
+  cycle, the offset hashed per worker so two never move in step. Lumber camp (`trees`): fell a tree from
+  `lumberTrees` (the nature scatter's trees within 3 tiles of its front and past it), carry logs to the log pile at the
+  front's right corner; with no tree in reach, chop at a chopping block on the left corner. Farm (`field`): walk a
+  furrow (`FURROWS`, rows front to back), pick up at 3 stops, carry a crate out of the front. Fishing hut (`boat`): the
+  first worker rows (below); the second cleans fish at the rack (`FISH_RACK`) and takes the basket in (`HUT_DOOR`).
+  `onBuilding(content, building, x, z)` turns a point in the model's own frame into the world. Only the chosen clips:
+  walk, pick-up (plays once and holds), interact-left and -right (loop in place), holding-both, sit.
+- **Goods in hand and carts:** a shipment is one walker on the sim's road path in the sim's travel time, arriving on
+  `arriveTick`, holding its good's prop (`GOOD_PROPS`: wood logs, vegetables a crate, fish a basket; a test checks every
+  good has one). From 4 units (`CART_FROM`) it is one person pushing `prop_hand-cart_a.glb` with the prop on its bed:
+  `Mover.cart` names the load; the cart and its load follow `root`, the handles a step ahead of the hands. Carried props
+  follow `arm-right` posed by `heldPose` (the last frame of `holding-both`, `render/clips.ts`).
+- **Doors and footprints:** people step out of and into a building's front middle and go round its footprint
+  (`render/around.ts`, `roundFootprint`: the shorter way round by the corners, 0.8 m off the walls) to the first road
+  tile. Ferry passengers start and end at the pier's middle and go round the dock.
+- **Newcomers walk once:** on the day a family comes on the ferry, its working adults' commute walks that set off
+  before they are home leave that day out (`Start.skipDay`); after a morning ferry they walk home to work once, 3
+  minutes after getting home.
+- **Boats** (`render/boats.ts`, `scene/Boats.tsx`; one instanced mesh per hull, one per cargo load good): a staffed
+  fishing hut's boat ties up off its water side (`waterSide`); the first worker walks from the door out of the front and
+  round the hut to the shore (`FishingTrip.ashore`), rows 3 to 5 tiles out to a hashed spot on open water at least 8 m
+  off the ferry's lane, sits (`sit`, last frame, `Mover.y` on the seat) through the shift, rows home by its end and walks
+  in with a basket. A cargo boat ties up beside the pier, clear of the ferry's berth; each entry of the sale manifest
+  sends one boat out south with two props of the good (20 minutes) and back empty (20), so overlapping sales give
+  overlapping boats and the mooring is empty while one is out. Headings turn smoothly (never a jump at the far end).

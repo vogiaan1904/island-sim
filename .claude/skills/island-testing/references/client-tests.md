@@ -175,7 +175,8 @@ of React and three, so it is plain unit-test material (`render/*.test.ts`, `came
 - **Draw calls are checkable here.** The draw-call count is a property of the scene, not of the GPU, so at each fixed
   camera spot read it through a test hook and assert it is under about 150, shadow pass included. In three.js
   `renderer.info` resets on each render call by default; if a frame has several, count the whole frame. Frame rate
-  measured here means nothing (see `phone-performance.md`).
+  measured here means nothing (see `phone-performance.md`). Until Playwright exists, `render/village.test.ts` counts the
+  same from the render data in Vitest (the preview village, a working day, the shadow pass counted again).
 - **WebGL context loss:** use the `WEBGL_lose_context` extension to lose and restore the context; the scene must
   come back without a reload (`island-3d-client` done list).
 - **Updating a baseline:** open the diff image first, then update only that test (for example

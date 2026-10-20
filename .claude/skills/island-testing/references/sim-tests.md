@@ -163,8 +163,9 @@ Each snapshot stores the sim version, and new state fields get their starting va
 migrations in `sim` (spec 12.2). A graceful shutdown always writes a snapshot, so after a deploy the replay window is
 empty and old logs never meet new rules (the server test for that is in `server-tests.md`).
 
-- Keep a snapshot migration test for each released sim version (`packages/sim/src/snapshot.test.ts`). `SIM_VERSION` is 4;
-  the steps from 2 to 3 and 3 to 4 only move the version (no state changed).
+- Keep a snapshot migration test for each released sim version (`packages/sim/src/snapshot.test.ts`). `SIM_VERSION` is 6;
+  the steps from 2 to 3 and 3 to 4 only move the version (no state changed), 4 to 5 adds the ferry manifest and 5 to 6
+  the sale manifest.
 - Loading an old fixture migrates it to the current version; the migrated state passes every invariant and runs
   deterministically (two runs from it give the same hashes).
 - Each migration gets a test that its new fields get the intended starting values.
