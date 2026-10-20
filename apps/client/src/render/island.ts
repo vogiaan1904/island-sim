@@ -2,10 +2,11 @@ import type { Content } from '@island/content';
 import type { IslandState } from '@island/sim';
 import { buildingInstances, pierInstances, scaffoldInstances, sitePileInstances, type ModelInstance, type ModelInstances } from './instances.ts';
 import { roadInstances } from './roads.ts';
+import { workPropInstances } from './work.ts';
 
 /**
  * Everything the scene draws as instances for one island, as one list per model file: buildings (sites rising in
- * their scaffolds), scaffolds and the sites' log piles, road pieces and the pier. A pure function of the island state, so the same mirror
+ * their scaffolds), scaffolds and the sites' log piles, the lumber camps' log piles and chopping blocks, road pieces and the pier. A pure function of the island state, so the same mirror
  * gives the same instances.
  */
 export function islandInstances(island: IslandState, content: Content): ModelInstances {
@@ -14,6 +15,7 @@ export function islandInstances(island: IslandState, content: Content): ModelIns
     buildingInstances(island, content),
     scaffoldInstances(island, content),
     sitePileInstances(island, content),
+    workPropInstances(island, content),
     roadInstances(island.roads, content.rules.islandSize),
     pierInstances(island, content),
   ]) {

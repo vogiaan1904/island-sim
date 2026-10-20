@@ -2,10 +2,12 @@ import { content, type BuildingId } from '@island/content';
 import { buildingDefOf, newBuilding, type IslandState } from '@island/sim';
 import { describe, expect, it } from 'vitest';
 import { aliceWorld, islandOf } from '../test/islands.ts';
-import { crowdPlan, crowdPlanFor, moversAt, newMovers, peopleShown, type Mover } from './crowd.ts';
+import { crowdPlan, crowdPlanFor, moversAt, newMovers, peopleShown, type CrowdPlan, type Mover } from './crowd.ts';
 import { ferryPose, newFerryPose } from './ferry.ts';
+import { hash32 } from './hash.ts';
 import { sitePile } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
+import { campPile, choppingBlock, lumberTrees, onBuilding } from './work.ts';
 
 const SIZE = content.rules.islandSize;
 const ROAD_ROW = 55;
@@ -187,29 +189,6 @@ describe('the crowd: carriers', () => {
 
 describe('the crowd: work at the buildings', () => {
   const NOON = 720;
-  const staffed = (residents: number) => {
-    const island = village();
-    const farm = island.buildings.find((b) => b.id === 103);
-    if (farm?.work) farm.work.residents = residents;
-    return island;
-  };
-  const working = (island: IslandState, minute: number) => movers(island, minute).filter((m) => m.legs.startsWith('interact'));
-
-  it('shows two workers at a fully staffed workplace, one when understaffed, none without workers', () => {
-    expect(working(staffed(4), NOON)).toHaveLength(2);
-    expect(working(staffed(2), NOON)).toHaveLength(1);
-    expect(working(staffed(0), NOON)).toHaveLength(0);
-  });
-
-  it('stands them by the building\'s front once their commute has arrived, until the shift ends', () => {
-    const island = staffed(4);
-    expect(working(island, 425)).toEqual([]);
-    const [worker] = working(island, NOON);
-    const farmFrontZ = 55 * TILE_SIZE;
-    expect(Math.abs((worker as Mover).z - farmFrontZ)).toBeLessThan(2.5);
-    expect(working(island, 1030)).toEqual([]);
-  });
-
   it('puts two builders at a site in the day shift, none at night: one hammering, one fetching logs', () => {
     const island = village();
     const site = built('well', 105, 30, 54);
@@ -248,6 +227,122 @@ describe('the crowd: work at the buildings', () => {
     expect(builders).toHaveLength(4);
     expect(builders.filter((m) => m.legs.startsWith('interact'))).toHaveLength(2);
     expect(new Set(builders.map((m) => m.key)).size).toBe(4);
+  });
+});
+
+describe('the crowd: work loops', () => {
+  const NOON = 720;
+  /** The village with its farm (103) staffed by this many residents and, if given, a workplace of this type at (x, y) as 110. */
+  const staffed = (residents: number, extra?: { type: BuildingId; x: number; y: number }) => {
+    const island = village();
+    if (extra) island.buildings.push(built(extra.type, 110, extra.x, extra.y));
+    for (const b of island.buildings) if (b.work && (b.id === 103 || b.id === 110)) b.work.residents = residents;
+    return island;
+  };
+  const slot = village().slot;
+  const workersOf = (id: number) => [0, 1].map((k) => hash32(slot, id, k, 3));
+  /** The island's people at a minute, planned once per island (planning per sample would make these tests slow). */
+  const sampled = new WeakMap<IslandState, { plan: CrowdPlan; out: Mover[] }>();
+  const everyone = (island: IslandState, minute: number) => {
+    let s = sampled.get(island);
+    if (s === undefined) {
+      const plan = crowdPlan(island, content);
+      s = { plan, out: newMovers(plan) };
+      sampled.set(island, s);
+    }
+    const count = moversAt(s.plan, at(minute), { x: 0, z: 0 }, s.out);
+    return s.out.slice(0, count).map((m) => ({ ...m }));
+  };
+  const working = (island: IslandState, minute: number, id: number) => everyone(island, minute).filter((m) => workersOf(id).includes(m.key));
+  /** Every 0.1 game minute of one round, what one worker does. */
+  const round = (island: IslandState, id: number, k: number, minutes: number, from = NOON) =>
+    Array.from({ length: minutes * 10 }, (_, i) => everyone(island, from + i / 10).find((m) => m.key === workersOf(id)[k]));
+  const farmFront = 55 * TILE_SIZE;
+  const insideFarm = (m: Mover) => m.x > 35 * TILE_SIZE && m.x < 38 * TILE_SIZE && m.z > 53 * TILE_SIZE && m.z < farmFront;
+
+  it('shows two workers at a fully staffed workplace, one when understaffed, none without workers', () => {
+    expect(working(staffed(4), NOON, 103)).toHaveLength(2);
+    expect(working(staffed(2), NOON, 103)).toHaveLength(1);
+    expect(working(staffed(0), NOON, 103)).toHaveLength(0);
+  });
+
+  it('shows them once their commute has arrived, until the shift ends', () => {
+    const island = staffed(4);
+    expect(working(island, 425, 103)).toEqual([]);
+    expect(working(island, 1030, 103)).toEqual([]);
+  });
+
+  it('plays only the chosen clips: walking, picking up, working with the arms, holding with both', () => {
+    const island = staffed(4, { type: 'lumber-camp', x: 25, y: 44 });
+    for (let minute = NOON; minute < NOON + 40; minute += 0.25) {
+      for (const m of [...working(island, minute, 103), ...working(island, minute, 110)]) {
+        expect(['walk', 'pick-up', 'interact-left', 'interact-right']).toContain(m.legs);
+        expect([null, 'holding-both']).toContain(m.arms);
+      }
+    }
+  });
+
+  it('works a farm along a furrow inside its footprint, with pick-up stops, and carries a crate out to the front', () => {
+    const steps = round(staffed(4), 103, 0, 30);
+    const stops = steps.filter((m) => m?.legs === 'pick-up' && m.accessory === null);
+    expect(stops.filter((m) => insideFarm(m!)).length).toBeGreaterThan(0);
+    expect(steps.filter((m) => m?.legs.startsWith('interact')).every((m) => insideFarm(m!))).toBe(true);
+    const crate = steps.filter((m) => m?.accessory === 'vegetable-crate');
+    expect(crate.length).toBeGreaterThan(0);
+    expect(Math.max(...crate.map((m) => m!.z))).toBeGreaterThan(farmFront);
+    // The furrow runs front to back, so the worker stays in one bed.
+    const xs = steps.filter((m) => insideFarm(m!)).map((m) => m!.x);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeLessThan(1.5);
+  });
+
+  it('goes round once per production cycle, and the two workers are not in step', () => {
+    const island = staffed(4);
+    const cycle = content.buildings.find((d) => d.id === 'farm')!.recipe!.cycleTicks;
+    for (const minute of [NOON, NOON + 7.3, NOON + 19.9]) expect(working(island, minute + cycle, 103)).toEqual(working(island, minute, 103));
+    const setDowns = (k: number) => {
+      const steps = round(island, 103, k, cycle);
+      return steps.findIndex((m, i) => m?.accessory === 'vegetable-crate' && steps[i + 1]?.accessory !== 'vegetable-crate');
+    };
+    expect(setDowns(0)).toBeGreaterThanOrEqual(0);
+    expect(setDowns(1)).toBeGreaterThanOrEqual(0);
+    expect(setDowns(0)).not.toBe(setDowns(1));
+  });
+
+  it('sends lumber camp workers to fell the trees in reach and carry the logs to the camp\'s pile', () => {
+    const island = staffed(4, { type: 'lumber-camp', x: 25, y: 44 });
+    const camp = island.buildings.find((b) => b.id === 110)!;
+    const trees = lumberTrees(island, content).get(110)!;
+    const pile = campPile(content, camp)!;
+    const cycle = content.buildings.find((d) => d.id === 'lumber-camp')!.recipe!.cycleTicks;
+    for (const k of [0, 1]) {
+      const steps = round(island, 110, k, cycle);
+      const chopping = steps.filter((m) => m?.legs.startsWith('interact'));
+      expect(chopping.length).toBeGreaterThan(cycle * 5);
+      for (const m of chopping) expect(Math.min(...trees.map((t) => Math.hypot(t.x - m!.x, t.z - m!.z)))).toBeLessThan(1.5);
+      const logs = steps.filter((m) => m?.accessory === 'logs');
+      expect(logs.length).toBeGreaterThan(0);
+      const setDown = steps.filter((m) => m?.legs === 'pick-up' && Math.hypot(m.x - pile.x, m.z - pile.z) < 1.5);
+      expect(setDown.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('chops at the camp\'s block when no tree is in reach', () => {
+    const island = staffed(4, { type: 'lumber-camp', x: 30, y: 50 });
+    const block = choppingBlock(content, island.buildings.find((b) => b.id === 110)!)!;
+    const chopping = round(island, 110, 0, 40).filter((m) => m?.legs.startsWith('interact'));
+    expect(chopping.length).toBeGreaterThan(0);
+    for (const m of chopping) expect(Math.hypot(m!.x - block.x, m!.z - block.z)).toBeLessThan(1.2);
+  });
+
+  it('has a fishing hut\'s second worker clean fish at the door and take the basket in', () => {
+    const island = staffed(2, { type: 'fishing-hut', x: 38, y: 53 });
+    const hut = island.buildings.find((b) => b.id === 110)!;
+    const door = onBuilding(content, hut, -1, 0)!;
+    const steps = round(island, 110, 1, 30);
+    const cleaning = steps.filter((m) => m?.legs.startsWith('interact'));
+    expect(cleaning.length).toBeGreaterThan(30 * 5);
+    for (const m of steps) expect(Math.hypot(m!.x - door.x, m!.z - door.z)).toBeLessThan(2);
+    expect(steps.some((m) => m?.accessory === 'fish-basket')).toBe(true);
   });
 });
 

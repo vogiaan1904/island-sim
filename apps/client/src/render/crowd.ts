@@ -3,8 +3,10 @@ import { TICK_MS } from '@island/protocol';
 import { assignWorkers, childrenOf, findBuildingDef, roadPath, servicesInReach, stockOf, workersOf, type BuildingState, type IslandState } from '@island/sim';
 import { ANIMATION_FPS, CHARACTERS, clip, cycleFrames, type ClipName } from './clips.ts';
 import { MIN_STAY_MINUTES, ferryRoute, ferrySchedule, type FerryRoute, type FerrySchedule, type Point } from './ferry.ts';
+import { hash32, unit } from './hash.ts';
 import { besideFront, placedFootprint, sitePile } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
+import { FISH_RACK, FURROWS, FURROW_END, HUT_DOOR, WORK_LOOPS, campPile, choppingBlock, lumberTrees, onBuilding, type Spot } from './work.ts';
 
 // The crowd (spec 6.2, 12.5; island-3d-client, people): the sim counts citizens, the client draws them as people
 // walking along the sim's own roads, at the sim's own times. Who walks where is planned once per island state
@@ -33,8 +35,8 @@ export interface Mover {
   accessory: Carried | 'wheelchair' | null;
 }
 
-/** What someone holds in both arms: a traveller's bag, or logs. */
-export type Carried = 'bag' | 'logs';
+/** What someone holds in both arms: a traveller's bag, or the goods of a work loop. */
+export type Carried = 'bag' | 'logs' | 'vegetable-crate' | 'fish-basket';
 
 /** Who a person is to look at: the same every day for the same home and person. */
 interface Look {
@@ -64,7 +66,7 @@ interface Walk {
   along: Float64Array;
 }
 
-/** Someone working in one spot (a worker by a workplace's front, a builder at a site) between two minutes of the day. */
+/** Someone working in one spot (a builder hammering at a site) between two minutes of the day. */
 interface Station {
   look: Look;
   x: number;
@@ -81,8 +83,9 @@ type LoopStep =
   | { x: number; z: number; heading: number; clip: ClipName; minutes: number };
 
 /**
- * Someone going round the same steps in one place between two minutes of the day (a builder fetching logs). Where they
- * are in the round comes from the game time and `offset`, hashed per person, so two of them never move in step.
+ * Someone going round the same steps in one place between two minutes of the day (a builder fetching logs, a worker's
+ * work loop). Where they are in the round comes from the game time and `offset`, hashed per person, so two of them
+ * never move in step.
  */
 interface WorkLoop {
   look: Look;
@@ -125,13 +128,22 @@ const UNITS_PER_CARRIER = 5;
 /** ...and never more than this many, in single file this far apart. */
 const MAX_CARRIERS = 4;
 const CARRIER_GAP = 1.2;
-/** At most this many workers show by a workplace (one while it is understaffed), and this many builders at a site. */
+/** At most this many workers show at a workplace (one while it is understaffed). */
 const WORKERS_SHOWN = 2;
 /** Builders at a site, and at a landmark's: half hammer at the scaffold, half fetch logs from the site's pile. */
 const BUILDERS_SHOWN = 2;
 const LANDMARK_BUILDERS_SHOWN = 4;
 /** Game minutes a pick-up takes: the clip, then a moment holding its last frame. */
 const PICK_UP_MINUTES = 0.5;
+/** A woodcutter stands this far from the trunk of the tree they fell, or from the chopping block... */
+const CHOP_REACH = 1;
+/** ...on its side toward the log pile, turned by this much (radians) one way or the other per worker. */
+const CHOP_TURN = 0.6;
+/** A worker sets logs down this far before the pile's middle. */
+const PILE_REACH = 0.7;
+/** A farm worker tends the crops at this many stops along the furrow, and sets the crate down this far past the front. */
+const FURROW_STOPS = 3;
+const CRATE_OUT = 0.6;
 /** Children are drawn at about three quarters of an adult (spec 12.5). */
 const CHILD_SCALE = 0.75;
 /** The evening market walk sets off between these minutes after the shift ends... */
@@ -148,21 +160,6 @@ const STEP_OFF_GAP = 0.35;
 const BOARD_SPREAD = 3;
 /** Clip frames that play per game tick at the clips' own speed. */
 const FRAMES_PER_TICK = (ANIMATION_FPS * TICK_MS) / 1000;
-
-/** A stateless 32-bit hash of whole numbers (stable ids), so looks and timings never use a random generator. */
-export function hash32(...parts: number[]): number {
-  let h = 0x811c9dc5;
-  for (const part of parts) {
-    h = Math.imul(h ^ (part | 0), 0x01000193);
-    h ^= h >>> 15;
-    h = Math.imul(h, 0x2c1b3c6d);
-    h ^= h >>> 12;
-  }
-  return h >>> 0;
-}
-
-/** A share in [0, 1) from a hash. */
-const unit = (h: number) => (h % 10_000) / 10_000;
 
 /** A home's person: the workers come first (the person indexes the work flows use), then the children. */
 function lookOf(slot: number, home: number, person: number, child = false): Look {
@@ -217,11 +214,16 @@ function walkAlong(content: Content, line: readonly Point[], look: Look, start: 
   const side = hash32(look.key, 7);
   const dx = (unit(side) * 2 - 1) * SIDE_STEP;
   const dz = (unit(side >>> 7) * 2 - 1) * SIDE_STEP;
+  return walkThrough(content, line.map((p) => ({ x: p.x + dx, z: p.z + dz })), look, start);
+}
+
+/** A walk through exactly these world points at the sim's road speed: a work loop's, which meets its spots. */
+function walkThrough(content: Content, line: readonly Point[], look: Look, start: Start): Walk {
   const points = new Float64Array(line.length * 2);
   const along = new Float64Array(line.length);
   line.forEach((p, i) => {
-    points[i * 2] = p.x + dx;
-    points[i * 2 + 1] = p.z + dz;
+    points[i * 2] = p.x;
+    points[i * 2 + 1] = p.z;
     if (i > 0) along[i] = (along[i - 1] as number) + Math.hypot(p.x - (line[i - 1]?.x ?? 0), p.z - (line[i - 1]?.z ?? 0));
   });
   const speed = TILE_SIZE / content.rules.roadTicksPerTile;
@@ -287,38 +289,116 @@ function carriers(island: IslandState, content: Content, walks: Walk[]): void {
   }
 }
 
-/** Spots side by side just outside a building's front (its +z face, turned with it), facing the building. */
-function frontSpots(content: Content, building: BuildingState, count: number): Array<{ x: number; z: number; heading: number }> {
-  return Array.from({ length: count }, (_, k) => besideFront(content, building, 1, (k - (count - 1) / 2) * 1.6)).filter((spot) => spot !== null);
+/** A work loop's walk through these points, holding something or not. */
+function walkStep(content: Content, line: readonly Point[], look: Look, carrying: Carried | null): LoopStep {
+  const walk = walkThrough(content, line, look, { tick: 0 });
+  walk.carrying = carrying;
+  return { walk, minutes: (walk.along[walk.along.length - 1] as number) / walk.speed };
+}
+
+const pickUp = (spot: Spot): LoopStep => ({ ...spot, clip: 'pick-up', minutes: PICK_UP_MINUTES });
+const minutesOf = (steps: readonly LoopStep[]) => steps.reduce((sum, step) => sum + step.minutes, 0);
+/** The point `reach` metres from `from` toward `to`. */
+function toward(from: Point, to: Point, reach: number): Point {
+  const d = Math.hypot(to.x - from.x, to.z - from.z) || 1;
+  return { x: from.x + ((to.x - from.x) / d) * reach, z: from.z + ((to.z - from.z) / d) * reach };
+}
+/** A spot facing a point. */
+const facing = (at: Point, what: Point): Spot => ({ ...at, heading: Math.atan2(what.x - at.x, what.z - at.z) });
+
+/** A round of steps beginning at a minute of the day, its phase hashed per person. */
+function round(look: Look, steps: LoopStep[], from: number, until: number): WorkLoop {
+  const period = minutesOf(steps);
+  return { look, steps, period, offset: unit(hash32(look.key, 4)) * period, from, until };
 }
 
 /**
- * People working in place during the day shift: up to two by each staffed workplace (one while understaffed), from
- * when its first commuter arrives. Builders are `builders`.
+ * A lumber camp worker's round, one per production cycle: from the camp's log pile to the tree they fell (one of the
+ * nearest in reach) or, with none in reach, the camp's chopping block; chop, pick the logs up, carry them to the pile
+ * and set them down. Trees never fall.
  */
-function stations(island: IslandState, content: Content, arrivals: Map<number, number>, out: Station[]): void {
+function treeSteps(content: Content, camp: BuildingState, trees: readonly Point[], k: number, look: Look, cycle: number): LoopStep[] | null {
+  const pile = campPile(content, camp);
+  const target = trees.length > 0 ? trees[k % trees.length] : choppingBlock(content, camp);
+  if (pile === null || target === undefined || target === null) return null;
+  const turn = (k % 2 === 0 ? 1 : -1) * CHOP_TURN;
+  const out = toward(target, pile, 1);
+  const dx = out.x - target.x;
+  const dz = out.z - target.z;
+  const chop = facing({ x: target.x + (dx * Math.cos(turn) - dz * Math.sin(turn)) * CHOP_REACH, z: target.z + (dx * Math.sin(turn) + dz * Math.cos(turn)) * CHOP_REACH }, target);
+  const drop = facing(toward(pile, chop, PILE_REACH), pile);
+  const there = walkStep(content, [drop, chop], look, null);
+  const back = walkStep(content, [chop, drop], look, 'logs');
+  const moving = [there, pickUp(chop), back, pickUp(drop)];
+  const clip: ClipName = k % 2 === 0 ? 'interact-right' : 'interact-left';
+  return [there, { ...chop, clip, minutes: Math.max(0, cycle - minutesOf(moving)) }, ...moving.slice(1)];
+}
+
+/**
+ * A farm worker's round, one per production cycle: into a furrow (each worker their own), tending the crops at stops
+ * along it toward the back and picking up at each, then out to the front with a crate of vegetables, set down there.
+ */
+function fieldSteps(content: Content, island: IslandState, farm: BuildingState, k: number, look: Look, cycle: number): LoopStep[] | null {
+  const x = FURROWS[(hash32(island.slot, farm.id, 6) + k * 2) % FURROWS.length] as number;
+  const placed = placedFootprint(content, farm);
+  const depth = placed === null ? 0 : (farm.rotation % 2 === 0 ? placed.h : placed.w) * (TILE_SIZE / 2);
+  const into = onBuilding(content, farm, x, FURROW_END);
+  const drop = onBuilding(content, farm, x, depth + CRATE_OUT, { x: 0, z: 1 });
+  if (into === null || drop === null) return null;
+  const stops: Spot[] = [];
+  for (let i = 1; i <= FURROW_STOPS; i += 1) {
+    const stop = onBuilding(content, farm, x, FURROW_END - (2 * FURROW_END * i) / FURROW_STOPS + 0.4, { x: i % 2 === 0 ? 1 : -1, z: 0 });
+    if (stop !== null) stops.push(stop);
+  }
+  const last = stops[stops.length - 1] ?? into;
+  const walks: LoopStep[] = [walkStep(content, [drop, into, stops[0] ?? into], look, null)];
+  for (let i = 1; i < stops.length; i += 1) walks.push(walkStep(content, [stops[i - 1] as Spot, stops[i] as Spot], look, null));
+  const out = walkStep(content, [last, into, drop], look, 'vegetable-crate');
+  const tend = Math.max(0, cycle - minutesOf([...walks, out, pickUp(drop)]) - stops.length * PICK_UP_MINUTES) / Math.max(1, stops.length);
+  const clip: ClipName = k % 2 === 0 ? 'interact-right' : 'interact-left';
+  return [...stops.flatMap((stop, i) => [walks[i] as LoopStep, { ...stop, clip, minutes: tend }, pickUp(stop)]), out, pickUp(drop)];
+}
+
+/**
+ * A fishing hut's second worker's round, one per production cycle: cleaning fish at the rack by the door, then taking
+ * the basket of fish in at the door and coming back. The first worker rows the hut's boat (fishing boats).
+ */
+function fishSteps(content: Content, hut: BuildingState, k: number, look: Look, cycle: number): LoopStep[] | null {
+  if (k === 0) return null;
+  const rack = onBuilding(content, hut, FISH_RACK.x, FISH_RACK.z, { x: -1, z: 0 });
+  const door = onBuilding(content, hut, HUT_DOOR.x, HUT_DOOR.z, { x: 0, z: -1 });
+  if (rack === null || door === null) return null;
+  const moving = [pickUp(rack), walkStep(content, [rack, door], look, 'fish-basket'), pickUp(door), walkStep(content, [door, rack], look, null)];
+  return [{ ...rack, clip: 'interact-right', minutes: Math.max(0, cycle - minutesOf(moving)) }, ...moving];
+}
+
+/**
+ * Workers doing their building's work during the day shift (its work loop, `WORK_LOOPS`), one round per production
+ * cycle: up to two at a fully staffed workplace, one while it is understaffed, none without workers, from when its
+ * first commuter arrives.
+ */
+function workLoops(island: IslandState, content: Content, arrivals: Map<number, number>, loops: WorkLoop[]): void {
   const rules = content.rules;
+  let trees: Map<number, Point[]> | null = null;
   for (const building of island.buildings) {
     const def = findBuildingDef(content, building.type);
-    if (def === null) continue;
-    let shown = 0;
-    let from = rules.shiftStartMinute;
-    if (building.constructionLeft > 0) continue;
-    if (building.work !== null && def.jobs > 0) {
-      const workers = building.work.residents + building.work.commuters;
-      shown = workers === 0 ? 0 : workers >= def.jobs ? Math.min(WORKERS_SHOWN, def.jobs) : 1;
-      from = arrivals.get(building.id) ?? rules.shiftStartMinute;
-    }
-    frontSpots(content, building, shown).forEach((spot, k) => {
+    const kind = WORK_LOOPS[building.type];
+    if (def === null || def.recipe === null || kind === undefined || building.constructionLeft > 0 || building.work === null) continue;
+    const workers = building.work.residents + building.work.commuters;
+    const shown = workers === 0 ? 0 : workers >= def.jobs ? Math.min(WORKERS_SHOWN, def.jobs) : 1;
+    const from = arrivals.get(building.id) ?? rules.shiftStartMinute;
+    const cycle = def.recipe.cycleTicks;
+    for (let k = 0; k < shown; k += 1) {
       const h = hash32(island.slot, building.id, k, 3);
-      out.push({
-        look: { key: h, character: h % CHARACTERS.length, scale: 1, wheelchair: false },
-        ...spot,
-        clip: k % 2 === 0 ? 'interact-right' : 'interact-left',
-        from,
-        until: rules.shiftEndMinute,
-      });
-    });
+      const look: Look = { key: h, character: h % CHARACTERS.length, scale: 1, wheelchair: false };
+      let steps: LoopStep[] | null;
+      if (kind === 'trees') {
+        trees ??= lumberTrees(island, content);
+        steps = treeSteps(content, building, trees.get(building.id) ?? [], k, look, cycle);
+      } else if (kind === 'field') steps = fieldSteps(content, island, building, k, look, cycle);
+      else steps = fishSteps(content, building, k, look, cycle);
+      if (steps !== null) loops.push(round(look, steps, from, rules.shiftEndMinute));
+    }
   }
 }
 
@@ -349,18 +429,8 @@ function builders(island: IslandState, content: Content, stations: Station[], lo
       }
       const drop = besideFront(content, building, 0.3, across * 0.1 + pair * 0.8);
       if (drop === null) continue;
-      const there = walkAlong(content, [pile, drop], look, { tick: 0 });
-      there.carrying = 'logs';
-      const back = walkAlong(content, [drop, pile], look, { tick: 0 });
-      const length = there.along[there.along.length - 1] as number;
-      const steps: LoopStep[] = [
-        { ...pile, clip: 'pick-up', minutes: PICK_UP_MINUTES },
-        { walk: there, minutes: length / there.speed },
-        { ...drop, clip: 'pick-up', minutes: PICK_UP_MINUTES },
-        { walk: back, minutes: length / back.speed },
-      ];
-      const period = steps.reduce((sum, step) => sum + step.minutes, 0);
-      loops.push({ look, steps, period, offset: unit(hash32(h, 4)) * period, from: rules.shiftStartMinute, until: rules.shiftEndMinute });
+      const steps = [pickUp(pile), walkStep(content, [pile, drop], look, 'logs'), pickUp(drop), walkStep(content, [drop, pile], look, null)];
+      loops.push(round(look, steps, rules.shiftStartMinute, rules.shiftEndMinute));
     }
   }
 }
@@ -497,8 +567,8 @@ export function crowdPlan(island: IslandState, content: Content): CrowdPlan {
     const stay = island.ferry === null ? null : { tick: island.ferry.tick, minutes: Math.max(MIN_STAY_MINUTES, Math.ceil(wait) + 1) };
     ferry = ferrySchedule(route, content, stay);
   }
-  stations(island, content, arrivals, working);
   const loops: WorkLoop[] = [];
+  workLoops(island, content, arrivals, loops);
   builders(island, content, working, loops);
   return { walks, stations: working, loops, ferry, startMinute: content.rules.startMinute, ticksPerDay: content.rules.ticksPerDay };
 }
@@ -633,8 +703,13 @@ export function moversAt(plan: CrowdPlan, ticks: number, target: { x: number; z:
         into -= step.minutes;
         continue;
       }
-      if ('walk' in step) place(step.walk, into * step.walk.speed, mover);
-      else stand(loop.look, step, step.clip, Math.min(clip(step.clip).frames - 1, into * FRAMES_PER_TICK), mover);
+      if ('walk' in step) {
+        place(step.walk, into * step.walk.speed, mover);
+      } else {
+        // Work with the arms loops; a pick-up plays once and holds its last frame.
+        const { frames, loop: repeats } = clip(step.clip);
+        stand(loop.look, step, step.clip, repeats ? (ticks * FRAMES_PER_TICK + (loop.look.key % frames)) % frames : Math.min(frames - 1, into * FRAMES_PER_TICK), mover);
+      }
       break;
     }
     count += 1;

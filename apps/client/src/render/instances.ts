@@ -118,17 +118,25 @@ export function besideFront(content: Content, building: BuildingState, out: numb
   return { x: placed.x + fx * reach + fz * side, z: placed.z + fz * reach - fx * side, heading: turn + Math.PI };
 }
 
-/** Where a site's log pile stands: just past its front, toward its right-hand corner, where builders fetch logs. */
-export function sitePile(content: Content, building: BuildingState): { x: number; z: number; heading: number } | null {
+/**
+ * A spot just past a building's front, toward its right-hand corner (`side` 1) or its left-hand one (-1), facing it:
+ * where a site's or a lumber camp's log pile and the camp's chopping block stand.
+ */
+export function frontCorner(content: Content, building: BuildingState, side: 1 | -1): { x: number; z: number; heading: number } | null {
   const placed = placedFootprint(content, building);
   if (placed === null) return null;
   const across = (building.rotation % 2 === 0 ? placed.w : placed.h) * (TILE_SIZE / 2);
-  return besideFront(content, building, SITE_PILE_OUT, across - SITE_PILE_INSET);
+  return besideFront(content, building, CORNER_OUT, side * (across - CORNER_INSET));
 }
 
-/** The pile's middle sits this far past the front of the footprint, and this far in from its right-hand corner. */
-const SITE_PILE_OUT = 0.8;
-const SITE_PILE_INSET = 0.9;
+/** Where a site's log pile stands: just past its front, toward its right-hand corner, where builders fetch logs. */
+export function sitePile(content: Content, building: BuildingState): { x: number; z: number; heading: number } | null {
+  return frontCorner(content, building, 1);
+}
+
+/** A front corner's spot sits this far past the front of the footprint, and this far in from the corner. */
+const CORNER_OUT = 0.8;
+const CORNER_INSET = 0.9;
 
 /** A log pile by every site under construction, on its road side (sitePile), gone with the scaffold. */
 export function sitePileInstances(island: IslandState, content: Content): ModelInstances {

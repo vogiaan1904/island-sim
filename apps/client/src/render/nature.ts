@@ -1,6 +1,6 @@
 import type { Content } from '@island/content';
 import { footprintSize, type IslandState } from '@island/sim';
-import { hash32 } from './crowd.ts';
+import { hash32, unit } from './hash.ts';
 import type { ModelInstance, ModelInstances } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
 
@@ -20,8 +20,6 @@ const BEACH_CHANCE = 0.05;
 const DOCK_CLEARANCE = 2;
 /** A prop stands up to this far from its tile's middle. */
 const JITTER = 1;
-
-const unit = (h: number) => (h % 10_000) / 10_000;
 
 /** A smooth value in [0, 1) over the map: hashed corners of a coarse grid, blended between them. */
 function clump(slot: number, x: number, y: number): number {

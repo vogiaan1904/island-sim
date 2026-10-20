@@ -31,10 +31,13 @@ describe('island instances', () => {
     const sites = middle.buildings.filter((b) => b.constructionLeft > 0).map((b) => b.id);
     expect(during.get('prop_log-pile_a.glb')?.map((i) => i.id)).toEqual(sites);
 
-    const after = islandInstances(islandOf(runScript(42, OUTPOST_TO_SETTLEMENT, 400).world), content);
+    const later = islandOf(runScript(42, OUTPOST_TO_SETTLEMENT, 400).world);
+    const after = islandInstances(later, content);
     expect(after.has('prop_scaffold_1x2.glb')).toBe(false);
     expect(after.get(buildingModel('fishing-hut'))).toEqual([expect.not.objectContaining({ rise: expect.anything() })]);
-    expect(after.has('prop_log-pile_a.glb')).toBe(false);
+    // The sites' piles are gone; what is left is the lumber camp's own.
+    const camps = later.buildings.filter((b) => b.type === 'lumber-camp').map((b) => b.id);
+    expect(after.get('prop_log-pile_a.glb')?.map((i) => i.id) ?? []).toEqual(camps);
   });
 });
 
@@ -60,10 +63,11 @@ describe('the full Settlement island', () => {
   it('stays far under the draw-call budget: one call per model type plus the terrain chunks and the water', () => {
     const chunks = (content.rules.islandSize / TERRAIN_CHUNK_TILES) ** 2;
     const calls = instancedDrawCalls(instances) + chunks + 1;
-    // Counted from the render data (not a GPU capture): 9 buildings + 3 road pieces + the pier = 13, plus 4 terrain
-    // chunks and the water = 18 in the normal pass, about 35 with the shadow pass. The budget is about 150.
-    expect(instancedDrawCalls(instances)).toBe(13);
-    expect(calls).toBe(18);
+    // Counted from the render data (not a GPU capture): 9 buildings + 3 road pieces + the pier + the lumber camps' log
+    // pile and chopping block = 15, plus 4 terrain chunks and the water = 20 in the normal pass, about 40 with the
+    // shadow pass. The budget is about 150.
+    expect(instancedDrawCalls(instances)).toBe(15);
+    expect(calls).toBe(20);
     expect(calls * 2).toBeLessThan(150);
   });
 });

@@ -1,6 +1,6 @@
 import type { BuildingId, Content, StageId } from '@island/content';
 import type { IslandState, SimEvent } from '@island/sim';
-import { hash32 } from '../render/crowd.ts';
+import { hash32 } from '../render/hash.ts';
 import { MIN_STAY_MINUTES, type FerrySchedule } from '../render/ferry.ts';
 import { placedFootprint } from '../render/instances.ts';
 import { startTarget } from './start.ts';

@@ -26,7 +26,12 @@ import { bakedGeometry } from './modelGeometry.ts';
 
 const WHEELCHAIR_MODEL = 'accessory_wheelchair_a.glb';
 /** What people hold in both arms, each a model following the right arm. */
-const CARRIED_MODELS: Readonly<Record<Carried, string>> = { bag: 'accessory_bag_a.glb', logs: 'accessory_logs_a.glb' };
+const CARRIED_MODELS: Readonly<Record<Carried, string>> = {
+  bag: 'accessory_bag_a.glb',
+  logs: 'accessory_logs_a.glb',
+  'vegetable-crate': 'accessory_vegetable-crate_a.glb',
+  'fish-basket': 'accessory_fish-basket_a.glb',
+};
 const CARRIED = Object.keys(CARRIED_MODELS) as Carried[];
 const ROOT = JOINTS.indexOf('root');
 const ARM_RIGHT = JOINTS.indexOf('arm-right');
@@ -129,7 +134,7 @@ function finish(mesh: InstancedMesh | null, count: number): void {
 
 /**
  * The island's people (spec 6.2): one instanced mesh per character and per accessory (the wheelchair, and what people
- * hold in both arms: travellers' and carriers' bags, builders' logs), posed on the GPU from the joint-animation texture. Who walks where is planned when the island changes; every frame only fills the instance
+ * hold in both arms: travellers' and carriers' bags, builders' and woodcutters' logs, crates of vegetables, baskets of fish), posed on the GPU from the joint-animation texture. Who walks where is planned when the island changes; every frame only fills the instance
  * buffers from the gliding game time, nearest to the camera first, and nobody shows when zoomed out to the whole island.
  */
 export function People({ plan }: { plan: CrowdPlan }) {
