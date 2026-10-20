@@ -1,6 +1,6 @@
 import { content } from '@island/content';
 import { useEffect, useRef, useState } from 'react';
-import { pickMoment, type Moment } from '../../camera/watch.ts';
+import { WATCH_TILT, pickMoment, type Moment } from '../../camera/watch.ts';
 import { cameraPose } from '../../camera/controller.ts';
 import { ISLAND_LIMITS } from '../../camera/limits.ts';
 import { getLivePose } from '../../camera/livePose.ts';
@@ -12,7 +12,6 @@ import './Watch.css';
 
 /** How often the director looks again, in real milliseconds. */
 export const WATCH_STEP_MS = 500;
-const WATCH_TILT = 0.85;
 /** Input that ends watch mode; it is stopped, so it does nothing else (no building tap, no camera move). */
 const STOPPING_EVENTS = ['pointerdown', 'touchstart', 'wheel', 'keydown'] as const;
 
@@ -114,7 +113,7 @@ export function Watch() {
       current = next;
       setMoment(next);
       const real = getLivePose() ?? cameraPose(store.getState().view.camera, ISLAND_LIMITS);
-      store.getState().cameraGesture({ kind: 'fly-to', x: next.x, z: next.z, distance: next.distance, tilt: WATCH_TILT, azimuth: real.azimuth });
+      store.getState().cameraGesture({ kind: 'fly-to', x: next.x, z: next.z, distance: next.distance, tilt: WATCH_TILT, azimuth: next.azimuth ?? real.azimuth });
     };
     step();
     const timer = setInterval(step, WATCH_STEP_MS);

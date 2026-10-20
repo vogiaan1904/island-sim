@@ -1,9 +1,13 @@
 import { content } from '@island/content';
 import { buildingDefOf, newBuilding, type IslandState, type SimEvent } from '@island/sim';
 import { describe, expect, it } from 'vitest';
+import { projectPoint } from '../render/anchors.ts';
 import { crowdPlan } from '../render/crowd.ts';
+import { ferryPose, newFerryPose } from '../render/ferry.ts';
+import { applyGesture, cameraPose, createCamera } from './controller.ts';
+import { ISLAND_LIMITS } from './limits.ts';
 import { aliceWorld, islandOf } from '../test/islands.ts';
-import { HOLD_TICKS, pickMoment, type Moment, type WatchInput } from './watch.ts';
+import { HOLD_TICKS, WATCH_TILT, pickMoment, type Moment, type WatchInput } from './watch.ts';
 
 const at = (minute: number) => minute - content.rules.startMinute + content.rules.ticksPerDay;
 const MORNING = content.rules.shiftStartMinute;
@@ -40,9 +44,33 @@ describe('the watch director', () => {
     const moment = pickMoment(input(state, MORNING - 6), null);
     expect(moment).toMatchObject({ kind: 'ferry', caption: { kind: 'ferry', trip: 'morning' } });
     const pier = crowdPlan(state, content).ferry?.route.pier;
-    expect(Math.hypot(moment.x - (pier?.x ?? 0), moment.z - (pier?.z ?? 0))).toBeLessThan(15);
+    // Between the pier and the lane south of it, facing south.
+    expect(Math.abs(moment.x - (pier?.x ?? 0))).toBeLessThan(5);
+    expect(moment.z).toBeGreaterThan(pier?.z ?? 0);
+    expect(moment.azimuth).toBeCloseTo(Math.PI);
     expect(moment.until).toBeGreaterThan(at(MORNING + 25));
     expect(pickMoment(input(state, MORNING - 12), null).kind).not.toBe('ferry');
+  });
+
+  it('frames the pier and the sea lane south of it, so the incoming ferry is on screen from the start', () => {
+    const state = island();
+    const schedule = crowdPlan(state, content).ferry!;
+    const moment = pickMoment(input(state, MORNING - 8), null);
+    const flown = applyGesture(
+      createCamera(ISLAND_LIMITS),
+      { kind: 'fly-to', x: moment.x, z: moment.z, distance: moment.distance, tilt: WATCH_TILT, azimuth: moment.azimuth ?? 0 },
+      ISLAND_LIMITS,
+    );
+    const pose = cameraPose(flown, ISLAND_LIMITS);
+    const ferry = newFerryPose();
+    for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+      const { pier } = schedule.route;
+      expect(projectPoint(pose, viewport, { x: pier.x, y: 0, z: pier.z }).visible).toBe(true);
+      for (const minute of [MORNING - 8, MORNING - 4, MORNING + 10]) {
+        ferryPose(schedule, at(minute), ferry);
+        expect(projectPoint(pose, viewport, { x: ferry.x, y: 0, z: ferry.z }).visible, `${viewport.width} at ${minute}`).toBe(true);
+      }
+    }
   });
 
   it('lets a due ferry take over from whatever it was showing', () => {

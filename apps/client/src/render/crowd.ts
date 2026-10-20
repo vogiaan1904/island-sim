@@ -5,6 +5,7 @@ import { ANIMATION_FPS, CHARACTERS, clip, cycleFrames, type ClipName } from './c
 import { MIN_STAY_MINUTES, ferryRoute, ferrySchedule, type FerryRoute, type FerrySchedule, type Point } from './ferry.ts';
 import { FISHING_SEAT, FISHING_WATERLINE, boatPlan, fishingBoatAt, type BoatPlan, type BoatPose } from './boats.ts';
 import { hash32, unit } from './hash.ts';
+import { roundFootprint } from './around.ts';
 import { besideFront, placedFootprint, sitePile } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
 import { FISH_RACK, FURROWS, FURROW_END, HUT_DOOR, WORK_LOOPS, campPile, choppingBlock, lumberTrees, onBuilding, workerKey, workersShown, type Spot } from './work.ts';
@@ -56,9 +57,10 @@ interface Look {
 
 /**
  * When a walk sets off: at a minute of every day (commutes), or once at a game tick (a shipment). A daily walk can vary
- * by day: up to `minutes` later, and only on `percent` of days, both hashed from `key` and the day.
+ * by day: up to `minutes` later, and only on `percent` of days, both hashed from `key` and the day; and it can leave out
+ * one day (`skipDay`, counted from the start of the game), the day its walker came on the ferry.
  */
-type Start = { daily: number; vary?: { key: number; minutes: number; percent: number } } | { tick: number };
+type Start = { daily: number; vary?: { key: number; minutes: number; percent: number }; skipDay?: number } | { tick: number };
 
 /** One walk along the roads: a line through world points, set off at its start, at its speed. */
 interface Walk {
@@ -167,6 +169,8 @@ const STEP_OFF_MINUTES = 2;
 const STEP_OFF_GAP = 0.35;
 /** Boarding passengers set off within this many game minutes of the ferry docking. */
 const BOARD_SPREAD = 3;
+/** A newcomer who came on the morning ferry sets off for work this many game minutes after getting home. */
+const SETTLE_MINUTES = 3;
 /** Clip frames that play per game tick at the clips' own speed. */
 const FRAMES_PER_TICK = (ANIMATION_FPS * TICK_MS) / 1000;
 
@@ -194,27 +198,26 @@ function hash2(a: number, b: number): number {
   return (h ^ (h >>> 15)) >>> 0;
 }
 
-/** Where a person steps in or out of a building: its footprint's edge, toward the road tile they walk from. */
-function door(content: Content, building: BuildingState, toward: { x: number; z: number }): { x: number; z: number } {
-  const placed = placedFootprint(content, building);
-  if (placed === null) return toward;
-  const halfW = (placed.w * TILE_SIZE) / 2;
-  const halfH = (placed.h * TILE_SIZE) / 2;
-  return {
-    x: Math.min(placed.x + halfW, Math.max(placed.x - halfW, toward.x)),
-    z: Math.min(placed.z + halfH, Math.max(placed.z - halfH, toward.z)),
-  };
+/** Where a person steps in or out of a building: the middle of its front, the model's door side. */
+function door(content: Content, building: BuildingState): Point {
+  return besideFront(content, building, 0, 0) ?? placedFootprint(content, building) ?? { x: 0, z: 0 };
 }
 
-/** The line walked from one building's door to another's along the sim's road path; null when no road joins them. */
-function lineBetween(content: Content, island: IslandState, from: BuildingState, to: BuildingState): Point[] | null {
+/**
+ * The line walked from one building to another along the sim's road path: out of the first's front (or from `start`),
+ * round its footprint to the road, along the road, and round the second's footprint into its front (or to `end`); null
+ * when no road joins them.
+ */
+function lineBetween(content: Content, island: IslandState, from: BuildingState, to: BuildingState, start: Point | null = null, end: Point | null = null): Point[] | null {
   const tiles = roadPath(island, content, from, to);
   if (tiles === null) return null;
   const size = content.rules.islandSize;
   const centers = tiles.map((t) => ({ x: ((t % size) + 0.5) * TILE_SIZE, z: (Math.floor(t / size) + 0.5) * TILE_SIZE }));
   const first = centers[0] as Point;
   const last = centers[centers.length - 1] as Point;
-  return [door(content, from, first), ...centers, door(content, to, last)];
+  const out = start ?? door(content, from);
+  const into = end ?? door(content, to);
+  return [out, ...roundFootprint(content, from, out, first), ...centers, ...roundFootprint(content, to, into, last).reverse(), into];
 }
 
 /** The walk from one building to another along the sim's road path, at the sim's road speed; null when no road joins them. */
@@ -244,8 +247,12 @@ function walkThrough(content: Content, line: readonly Point[], look: Look, start
   return { look, start, speed, carrying: null, cart: false, points, along };
 }
 
-/** Each home's people in a fixed order: the workers first (the person indexes the work flows use), then the children. */
-function residentsCommute(island: IslandState, content: Content, walks: Walk[], arrivals: Map<number, number>): void {
+/**
+ * Each home's workers to work at the start of the day shift and home at its end. A newcomer (in `settled`, from the
+ * ferry) is not in the walks that set off before they were home on the day they came: after a morning ferry they go on
+ * from home to work once, a little after they get there.
+ */
+function residentsCommute(island: IslandState, content: Content, walks: Walk[], arrivals: Map<number, number>, settled: Map<number, number>): void {
   const rules = content.rules;
   const byId = new Map(island.buildings.map((b) => [b.id, b]));
   const nextPerson = new Map<number, number>();
@@ -262,6 +269,14 @@ function residentsCommute(island: IslandState, content: Content, walks: Walk[], 
         const stagger = unit(hash32(look.key, 1)) * STAGGER_MINUTES;
         const there = walkBetween(content, island, home, work, look, { daily: rules.shiftStartMinute + stagger });
         const back = walkBetween(content, island, work, home, look, { daily: rules.shiftEndMinute + stagger });
+        const homeAt = settled.get(look.key);
+        if (homeAt !== undefined) {
+          const day = Math.floor((homeAt + rules.startMinute) / rules.ticksPerDay);
+          const minute = homeAt + rules.startMinute - day * rules.ticksPerDay;
+          for (const walk of [there, back]) if (walk !== null && 'daily' in walk.start && walk.start.daily < minute) walk.start.skipDay = day;
+          const late = minute < rules.shiftEndMinute ? walkBetween(content, island, home, work, look, { tick: homeAt + SETTLE_MINUTES }) : null;
+          if (late !== null) walks.push(late);
+        }
         if (there) {
           walks.push(there);
           const arrive = rules.shiftStartMinute + stagger + (there.along[there.along.length - 1] as number) / there.speed;
@@ -382,16 +397,16 @@ function fishSteps(content: Content, hut: BuildingState, k: number, look: Look, 
 }
 
 /**
- * A fishing boat's rower on land: from the hut's door to the boat in the morning, and back in with a basket of fish
- * after rowing home. In between they sit in the boat (`moversAt`).
+ * A fishing boat's rower on land: from the hut's door, out of its front and round it, to the boat in the morning, and
+ * back in with a basket of fish after rowing home. In between they sit in the boat (`moversAt`).
  */
 function rowers(content: Content, boats: BoatPlan, walks: Walk[]): void {
   for (const trip of boats.fishing) {
     if (trip.spot === null) continue;
     const look = workerLook(trip.rower);
-    const out = walkThrough(content, [trip.door, trip.shore], look, { daily: 0 });
+    const out = walkThrough(content, trip.ashore, look, { daily: 0 });
     out.start = { daily: trip.boardAt - (out.along[out.along.length - 1] as number) / out.speed };
-    const back = walkThrough(content, [trip.shore, trip.door], look, { daily: trip.landAt });
+    const back = walkThrough(content, [...trip.ashore].reverse(), look, { daily: trip.landAt });
     back.carrying = 'fish-basket';
     walks.push(out, back);
   }
@@ -495,35 +510,35 @@ function family(people: number, content: Content): { adults: number; children: n
 }
 
 /**
- * The people of the last ferry trip (the ferry manifest, ADR 0001), walking across the pier and through the dock. Off
+ * The people of the last ferry trip (the ferry manifest, ADR 0001), walking across the pier and round the dock. Off
  * the boat: newcomers with bags (and their children) to the homes they moved into, commuters to the workplaces that
- * take them. Onto it: leavers with bags from the homes they left, commuters from their workplaces. Returns how long the
- * trip has to wait at the pier for its last boarding passenger, in game minutes.
+ * take them. Onto it: leavers with bags from the homes they left, commuters from their workplaces. Notes in `settled`
+ * when each newcomer of working age is home (by look key), and returns how long the trip has to wait at the pier for
+ * its last boarding passenger, in game minutes.
  */
-function ferryPassengers(island: IslandState, content: Content, route: FerryRoute, walks: Walk[], arrivals: Map<number, number>): number {
+function ferryPassengers(island: IslandState, content: Content, route: FerryRoute, walks: Walk[], arrivals: Map<number, number>, settled: Map<number, number>): number {
   const manifest = island.ferry;
   const dock = island.buildings.find((b) => b.type === 'dock');
   if (manifest === null || dock === undefined) return 0;
   const byId = new Map(island.buildings.map((b) => [b.id, b]));
-  const pier = [route.bow, route.pier];
   const minuteOfTrip = (((manifest.tick + content.rules.startMinute) % content.rules.ticksPerDay) + content.rules.ticksPerDay) % content.rules.ticksPerDay;
   let group = 0;
   let lastAboard = 0;
 
   const stepOff = (to: BuildingState, look: Look, lag: number, carrying: boolean): Walk | null => {
-    const line = lineBetween(content, island, dock, to);
+    const line = lineBetween(content, island, dock, to, route.pier);
     if (line === null) return null;
     const delay = STEP_OFF_MINUTES + group * STEP_OFF_GAP + lag;
-    const walk = walkAlong(content, [...pier, ...line], look, { tick: manifest.tick + delay });
+    const walk = walkAlong(content, [route.bow, ...line], look, { tick: manifest.tick + delay });
     walk.carrying = carrying ? 'bag' : null;
     walks.push(walk);
     return walk;
   };
   const board = (from: BuildingState, look: Look, lag: number, carrying: boolean): void => {
-    const line = lineBetween(content, island, from, dock);
+    const line = lineBetween(content, island, from, dock, null, route.pier);
     if (line === null) return;
     const delay = unit(hash32(look.key, 6)) * BOARD_SPREAD + lag;
-    const walk = walkAlong(content, [...line, route.pier, route.bow], look, { tick: manifest.tick + delay });
+    const walk = walkAlong(content, [...line, route.bow], look, { tick: manifest.tick + delay });
     walk.carrying = carrying ? 'bag' : null;
     walks.push(walk);
     lastAboard = Math.max(lastAboard, delay + (walk.along[walk.along.length - 1] as number) / walk.speed);
@@ -536,7 +551,11 @@ function ferryPassengers(island: IslandState, content: Content, route: FerryRout
     const { adults, children } = family(people, content);
     const workers = workersOf(home.home, content.rules);
     const kids = childrenOf(home.home.residents, content.rules);
-    for (let a = 0; a < adults; a += 1) stepOff(home, lookOf(island.slot, id, Math.max(0, workers - adults) + a), a * 0.15, true);
+    for (let a = 0; a < adults; a += 1) {
+      const look = lookOf(island.slot, id, Math.max(0, workers - adults) + a);
+      const walk = stepOff(home, look, a * 0.15, true);
+      if (walk !== null && 'tick' in walk.start) settled.set(look.key, walk.start.tick + (walk.along[walk.along.length - 1] as number) / walk.speed);
+    }
     for (let c = 0; c < children; c += 1) stepOff(home, lookOf(island.slot, id, workers + Math.max(0, kids - children) + c, true), (adults + c) * 0.15, false);
     group += 1;
   }
@@ -580,16 +599,17 @@ export function crowdPlan(island: IslandState, content: Content): CrowdPlan {
   const walks: Walk[] = [];
   const working: Station[] = [];
   const arrivals = new Map<number, number>();
-  residentsCommute(island, content, walks, arrivals);
-  carriers(island, content, walks);
-  marketWalks(island, content, walks);
+  const settled = new Map<number, number>();
   const route = ferryRoute(island, content);
   let ferry: FerrySchedule | null = null;
   if (route !== null) {
-    const wait = ferryPassengers(island, content, route, walks, arrivals);
+    const wait = ferryPassengers(island, content, route, walks, arrivals, settled);
     const stay = island.ferry === null ? null : { tick: island.ferry.tick, minutes: Math.max(MIN_STAY_MINUTES, Math.ceil(wait) + 1) };
     ferry = ferrySchedule(route, content, stay);
   }
+  residentsCommute(island, content, walks, arrivals, settled);
+  carriers(island, content, walks);
+  marketWalks(island, content, walks);
   const boats = boatPlan(island, content, route, arrivals);
   rowers(content, boats, walks);
   const loops: WorkLoop[] = [];
@@ -709,6 +729,7 @@ export function moversAt(plan: CrowdPlan, ticks: number, target: { x: number; z:
     if ('daily' in walk.start) {
       const vary = walk.start.vary;
       if (vary !== undefined && hash2(vary.key, today) % 100 >= vary.percent && vary.percent < 100) continue;
+      if (walk.start.skipDay === today) continue;
       since = minute - walk.start.daily - (vary === undefined ? 0 : unit(hash2(vary.key + 1, today)) * vary.minutes);
     } else {
       since = ticks - walk.start.tick;

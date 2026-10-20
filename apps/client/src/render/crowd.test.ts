@@ -6,7 +6,7 @@ import { boatPlan, boatsAt, newBoatPoses } from './boats.ts';
 import { GOOD_PROPS, crowdPlan, crowdPlanFor, moversAt, newMovers, peopleShown, type CrowdPlan, type Mover } from './crowd.ts';
 import { ferryPose, ferryRoute, newFerryPose } from './ferry.ts';
 import { hash32 } from './hash.ts';
-import { sitePile } from './instances.ts';
+import { placedFootprint, sitePile } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
 import { campPile, choppingBlock, lumberTrees, onBuilding } from './work.ts';
 
@@ -159,9 +159,10 @@ describe('the crowd: carriers', () => {
   it('walks a shipment of under 4 units along the road with its good in both arms, arriving when the goods land', () => {
     const island = shipping(3, NOON + 20);
     expect(carriersAt(island, NOON)).toEqual([]);
-    const walking = carriersAt(island, NOON + 19);
+    const walking = carriersAt(island, NOON + 17);
     expect(walking).toHaveLength(1);
     expect(walking[0]).toMatchObject({ legs: 'walk', accessory: 'vegetable-crate', cart: null });
+    // On the road, before it goes round the dock to its front.
     expect(onRoadRow(walking[0] as Mover)).toBe(true);
     expect(carriersAt(island, NOON + 19.99)).toHaveLength(1);
     expect(carriersAt(island, NOON + 20.01)).toEqual([]);
@@ -179,7 +180,7 @@ describe('the crowd: carriers', () => {
     for (const amount of [4, 20, 60]) {
       const island = shipping(amount, NOON + 20);
       expect(carriersAt(island, NOON), `${amount} units`).toEqual([]);
-      const pushing = carriersAt(island, NOON + 19);
+      const pushing = carriersAt(island, NOON + 17);
       expect(pushing, `${amount} units`).toHaveLength(1);
       expect(pushing[0]).toMatchObject({ legs: 'walk', arms: 'holding-both', accessory: null, cart: 'vegetable-crate' });
       expect(onRoadRow(pushing[0] as Mover)).toBe(true);
@@ -374,6 +375,31 @@ describe('the crowd: work loops', () => {
     expect(rower(content.rules.shiftEndMinute + 0.1)).toBeUndefined();
   });
 
+  it('walks the rower out of the hut\'s front and round it, never through the hut, whichever side the water is', () => {
+    let trips = 0;
+    for (const rotation of [0, 1, 2, 3] as const) {
+      const island = staffed(2, { type: 'fishing-hut', x: 38, y: 54 });
+      const hut = island.buildings.find((b) => b.id === 110)!;
+      hut.rotation = rotation;
+      const trip = crowdPlan(island, content).boats.fishing[0];
+      if (trip?.spot == null) continue;
+      trips += 1;
+      const middle = placedFootprint(content, hut)!;
+      const turn = (rotation * Math.PI) / 2;
+      for (let minute = trip.boardAt - 6; minute < trip.boardAt; minute += 0.05) {
+        const m = everyone(island, minute).find((p) => p.key === workersOf(110)[0]);
+        if (m === undefined) continue;
+        const dx = m.x - middle.x;
+        const dz = m.z - middle.z;
+        // In the hut's own frame the hut stands across the back half (z from -4 to 0), its door at z 0.2.
+        const x = dx * Math.cos(turn) - dz * Math.sin(turn);
+        const z = dx * Math.sin(turn) + dz * Math.cos(turn);
+        expect(Math.abs(x) < 1.6 && z < -0.3 && z > -3.7, `rotation ${rotation} at ${minute}: ${x}, ${z}`).toBe(false);
+      }
+    }
+    expect(trips).toBeGreaterThan(1);
+  });
+
   it('has a fishing hut\'s second worker clean fish at the door and take the basket in', () => {
     const island = staffed(2, { type: 'fishing-hut', x: 38, y: 53 });
     const hut = island.buildings.find((b) => b.id === 110)!;
@@ -427,6 +453,9 @@ describe('the crowd: the evening market walk', () => {
 
   it('brings the children along on some days, always beside their adult', () => {
     const island = market();
+    // A child walks a step behind: in the last moment of a walk the adult has gone in and the child is at the door.
+    const doors = crowdPlan(island, content).walks.map((w) => ({ x: w.points[w.points.length - 2]!, z: w.points[w.points.length - 1]! }));
+    const atDoor = (m: Mover) => doors.some((d) => Math.hypot(d.x - m.x, d.z - m.z) < 1);
     let childDays = 0;
     for (let day = 0; day < 12; day += 1) {
       let childToday = false;
@@ -434,7 +463,7 @@ describe('the crowd: the evening market walk', () => {
         const walking = walkingOn(island, day, minute);
         for (const child of walking.filter((m) => m.scale < 1)) {
           childToday = true;
-          expect(walking.some((a) => a.scale === 1 && Math.hypot(a.x - child.x, a.z - child.z) < 3)).toBe(true);
+          expect(atDoor(child) || walking.some((a) => a.scale === 1 && Math.hypot(a.x - child.x, a.z - child.z) < 3)).toBe(true);
         }
       }
       if (childToday) childDays += 1;
@@ -468,6 +497,23 @@ describe('the crowd: ferry passengers', () => {
     // Cottage 101 is west of the dock: everyone with a bag goes that way.
     for (const m of adults) expect(m.x).toBeLessThan(DOCK_X + 2 * TILE_SIZE);
     expect(withBags(island, MORNING + 40).filter((m) => m.accessory === 'bag')).toEqual([]);
+  });
+
+  it('walks a new family\'s working adults once on the day they arrive: off the ferry home with bags, then to work', () => {
+    for (const tick of [MORNING, EVENING]) {
+      const island = village();
+      island.ferry = { tick, off: { commuters: 0, homes: [{ home: 101, people: 4 }] }, on: none };
+      const bags = new Set<number>();
+      const unbagged = new Set<number>();
+      for (let t = tick - 30; t < tick + 120; t += 0.5) {
+        const keys = withBags(island, t).map((m) => m.key);
+        expect(new Set(keys).size, `tick ${t}`).toBe(keys.length);
+        for (const m of withBags(island, t)) (m.accessory === 'bag' ? bags : unbagged).add(m.key);
+      }
+      expect(bags.size).toBe(3);
+      // In the morning they go on to the farm once they are home; in the evening the shift is over.
+      for (const key of bags) expect(unbagged.has(key)).toBe(tick === MORNING);
+    }
   });
 
   it('skips a home the manifest names that the island no longer has', () => {
@@ -505,6 +551,57 @@ describe('the crowd: ferry passengers', () => {
     ferryPose(plan.ferry!, lastAboard, ferry);
     expect(ferry).toMatchObject({ visible: true });
     expect(ferry.z).toBeCloseTo(plan.ferry!.route.berth.z);
+  });
+});
+
+describe('the crowd: walking round buildings', () => {
+  /** How far inside a footprint a walker may stray: the side step that keeps walkers apart, and a little. */
+  const STRAY = 0.7;
+  const MORNING = at(content.rules.shiftStartMinute);
+  const none = { commuters: 0, homes: [] };
+  /** The points of every walk in the plan that lie inside a footprint, sampled every quarter metre. */
+  function through(island: IslandState): Array<{ x: number; z: number; building: string }> {
+    const found: Array<{ x: number; z: number; building: string }> = [];
+    for (const walk of crowdPlan(island, content).walks) {
+      const p = walk.points;
+      for (let i = 2; i < p.length; i += 2) {
+        const [x0, z0, x1, z1] = [p[i - 2]!, p[i - 1]!, p[i]!, p[i + 1]!];
+        const steps = Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 0.25);
+        for (let k = 0; k <= steps; k += 1) {
+          const x = x0 + ((x1 - x0) * k) / steps;
+          const z = z0 + ((z1 - z0) * k) / steps;
+          for (const b of island.buildings) {
+            const f = placedFootprint(content, b)!;
+            if (Math.abs(x - f.x) < (f.w * TILE_SIZE) / 2 - STRAY && Math.abs(z - f.z) < (f.h * TILE_SIZE) / 2 - STRAY) found.push({ x, z, building: b.type });
+          }
+        }
+      }
+    }
+    return found;
+  }
+
+  it('leaves and enters by a building\'s front and walks round it to the road', () => {
+    const island = village();
+    const home = island.buildings.find((b) => b.id === 101)!;
+    home.rotation = 2;
+    island.transit.push({ id: 900, good: 'vegetables', amount: 3, from: 103, to: 101, arriveTick: MORNING + 30 });
+    expect(through(island)).toEqual([]);
+    const middle = placedFootprint(content, home)!;
+    for (const walk of crowdPlan(island, content).walks) {
+      const ends = [[walk.points[0]!, walk.points[1]!], [walk.points[walk.points.length - 2]!, walk.points[walk.points.length - 1]!]];
+      // The cottage faces north, away from the road: whoever walks to or from it uses its north side.
+      for (const [x, z] of ends) if (Math.hypot(x! - middle.x, z! - middle.z) < TILE_SIZE) expect(z).toBeLessThan(middle.z);
+    }
+  });
+
+  it('walks ferry passengers round the dock between the pier and the road', () => {
+    const island = village();
+    island.ferry = { tick: MORNING, off: { commuters: 2, homes: [{ home: 101, people: 2 }] }, on: { commuters: 1, homes: [] } };
+    expect(crowdPlan(island, content).walks.length).toBeGreaterThan(4);
+    expect(through(island)).toEqual([]);
+    const evening = village();
+    evening.ferry = { tick: at(content.rules.shiftEndMinute), off: none, on: { commuters: 2, homes: [{ home: 101, people: 2 }] } };
+    expect(through(evening)).toEqual([]);
   });
 });
 

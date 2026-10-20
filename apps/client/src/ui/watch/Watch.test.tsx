@@ -119,7 +119,10 @@ describe('watch mode moving the camera', () => {
     act(() => {
       fireEvent.keyDown(window, { key: 'a', code: 'KeyA' });
     });
-    expect(g.store.getState().view.camera.azimuth).toBeCloseTo(2.5);
+    // The same turn, maybe by a whole circle more or less (the ferry moment faces south).
+    const { azimuth } = g.store.getState().view.camera;
+    expect(Math.cos(azimuth)).toBeCloseTo(Math.cos(2.5));
+    expect(Math.sin(azimuth)).toBeCloseTo(Math.sin(2.5));
     setLivePose(null);
   });
 });

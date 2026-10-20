@@ -1,6 +1,7 @@
 import type { Content, GoodId } from '@island/content';
 import { findBuildingDef, type IslandState } from '@island/sim';
 import type { FerryRoute, Point } from './ferry.ts';
+import { roundFootprint } from './around.ts';
 import { hash32, unit } from './hash.ts';
 import { footprintCenter, waterSide } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
@@ -56,9 +57,8 @@ export interface FishingTrip {
   rower: number;
   /** Where the boat is tied up, bow out to sea. */
   mooring: Spot;
-  /** The hut's door, and the shore beside the boat, where the rower steps in and out. */
-  door: Point;
-  shore: Point;
+  /** The rower's way from the hut's door out of its front and round its footprint to the shore beside the boat. */
+  ashore: Point[];
   /** Where it fishes, or null when no spot is on open water: the boat stays at the mooring and nobody rows. */
   spot: Point | null;
   /** Minutes of the day the rower steps into the boat and back out; the rows take `row` minutes each. */
@@ -126,8 +126,10 @@ const ahead = (p: Point, heading: number, metres: number): Point => ({ x: p.x + 
 function fishingTrip(island: IslandState, content: Content, hutId: number, from: number, route: FerryRoute | null): FishingTrip | null {
   const hut = island.buildings.find((b) => b.id === hutId);
   const water = hut === undefined ? null : waterSide(island, content, hut);
+  const def = hut === undefined ? null : findBuildingDef(content, hut.type);
   const door = hut === undefined ? null : onBuilding(content, hut, HUT_DOOR.x, HUT_DOOR.z);
-  if (hut === undefined || water === null || door === null) return null;
+  const front = hut === undefined || def === null ? null : onBuilding(content, hut, HUT_DOOR.x, (def.footprint.h * TILE_SIZE) / 2);
+  if (hut === undefined || water === null || door === null || front === null) return null;
   const size = content.rules.islandSize;
   const heading = (water.side * Math.PI) / 2;
   const shore = ahead(footprintCenter(water.tx, water.ty, 1, 1), heading, -TILE_SIZE / 2);
@@ -140,11 +142,12 @@ function fishingTrip(island: IslandState, content: Content, hutId: number, from:
     if (onWater(island, size, mooring, at) && ferryLaneDistance(route, at) > FERRY_CLEARANCE) spot = at;
   }
   const speed = TILE_SIZE / content.rules.roadTicksPerTile;
-  const walk = Math.hypot(shore.x - door.x, shore.z - door.z) / speed;
+  const ashore = [door, front, ...roundFootprint(content, hut, front, shore), shore];
+  const walk = ashore.reduce((sum, p, i) => (i === 0 ? 0 : sum + Math.hypot(p.x - ashore[i - 1]!.x, p.z - ashore[i - 1]!.z)), 0) / speed;
   const boardAt = from + walk;
   const landAt = content.rules.shiftEndMinute - walk;
   if (landAt <= boardAt) return null;
-  return { hut: hut.id, rower: workerKey(island.slot, hut, 0), mooring, door, shore, spot, boardAt, landAt, row: Math.min(ROW_MINUTES, (landAt - boardAt) / 2) };
+  return { hut: hut.id, rower: workerKey(island.slot, hut, 0), mooring, ashore, spot, boardAt, landAt, row: Math.min(ROW_MINUTES, (landAt - boardAt) / 2) };
 }
 
 function cargoRoute(island: IslandState, content: Content, route: FerryRoute | null): CargoRoute | null {

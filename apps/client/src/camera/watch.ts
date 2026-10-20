@@ -1,7 +1,7 @@
 import type { BuildingId, Content, StageId } from '@island/content';
 import type { IslandState, SimEvent } from '@island/sim';
 import { hash32 } from '../render/hash.ts';
-import { MIN_STAY_MINUTES, type FerrySchedule } from '../render/ferry.ts';
+import { MIN_STAY_MINUTES, ferryPose, newFerryPose, type FerrySchedule } from '../render/ferry.ts';
 import { placedFootprint } from '../render/instances.ts';
 import { startTarget } from './start.ts';
 
@@ -10,6 +10,8 @@ import { startTarget } from './start.ts';
 // people watching the same island see the same thing. Order: a ferry that is due, then the most important event not
 // shown yet, then a slow tour of busy spots.
 
+/** The tilt watch mode looks at its moments with. */
+export const WATCH_TILT = 0.85;
 /** How long the camera holds an event or a tour spot: 10 ticks, about 25 seconds. */
 export const HOLD_TICKS = 10;
 /** The camera reaches the pier this many game minutes before the ferry docks... */
@@ -22,6 +24,8 @@ const MIN_IMPORTANCE = 30;
 const RECENT_TICKS = 60;
 /** How far the camera stands back from each kind of moment. */
 const DISTANCE = { ferry: 42, event: 34, tour: 38 } as const;
+/** The ferry moment stands back at least this many times the span from the pier to where the boat comes into view. */
+const FERRY_FIT = 1.4;
 /** The evening market walk, in minutes of the day (render/crowd.ts). */
 const MARKET_FROM = 1035;
 const MARKET_UNTIL = 1075;
@@ -38,6 +42,8 @@ export interface Moment {
   x: number;
   z: number;
   distance: number;
+  /** The way the camera faces it, or null to keep the player's. */
+  azimuth: number | null;
   /** The game tick it ends at. */
   until: number;
   caption: Caption;
@@ -63,6 +69,13 @@ function centerOf(island: IslandState, content: Content, id: unknown): { x: numb
   return placed === null ? null : { x: placed.x, z: placed.z };
 }
 
+/** Where the ferry is as its moment starts, reused so nothing piles up. */
+const incoming = newFerryPose();
+
+/**
+ * The ferry about to dock, from a little before until it has sailed: framed from over the island looking south, with
+ * the pier near and the lane it comes in by beyond, so the boat is on screen from the start.
+ */
 function dueFerry({ ferry, ticks }: WatchInput): Moment | null {
   if (ferry === null) return null;
   const day = ferry.ticksPerDay;
@@ -72,13 +85,15 @@ function dueFerry({ ferry, ticks }: WatchInput): Moment | null {
     const tripTick = Math.round(ticks - since);
     const stay = ferry.stay !== null && ferry.stay.tick === tripTick ? Math.max(MIN_STAY_MINUTES, ferry.stay.minutes) : MIN_STAY_MINUTES;
     if (since < -FERRY_LEAD_MINUTES || since >= stay + FERRY_TAIL_MINUTES) continue;
-    const { pier, berth } = ferry.route;
+    const { pier } = ferry.route;
+    ferryPose(ferry, tripTick - FERRY_LEAD_MINUTES, incoming);
     return {
       key: `ferry/${tripTick}`,
       kind: 'ferry',
-      x: (pier.x + berth.x) / 2,
-      z: (pier.z + berth.z) / 2,
-      distance: DISTANCE.ferry,
+      x: (pier.x + incoming.x) / 2,
+      z: (pier.z + incoming.z) / 2,
+      distance: Math.max(DISTANCE.ferry, FERRY_FIT * Math.hypot(incoming.x - pier.x, incoming.z - pier.z)),
+      azimuth: Math.PI,
       until: tripTick + stay + FERRY_TAIL_MINUTES,
       caption: { kind: 'ferry', trip: index === 0 ? 'morning' : 'evening' },
     };
@@ -106,6 +121,7 @@ function newsMoment({ island, content, events, ticks, shown, since }: WatchInput
     kind: 'event',
     ...at,
     distance: DISTANCE.event,
+    azimuth: null,
     until: ticks + HOLD_TICKS,
     caption: { kind: 'event', type: best.type, building, stage },
   };
@@ -137,6 +153,7 @@ function tourMoment({ island, content, ticks }: WatchInput): Moment {
     kind: 'tour',
     ...at,
     distance: DISTANCE.tour,
+    azimuth: null,
     until: (window + 1) * HOLD_TICKS,
     caption: chosen ? { kind: 'tour', spot: chosen.spot, building: chosen.building } : { kind: 'tour', spot: 'dock', building: 'dock' },
   };
