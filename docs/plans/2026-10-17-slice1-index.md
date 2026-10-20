@@ -3,7 +3,7 @@
 **Spec:** `docs/design/2026-10-16-island-sim-design.md` (section 8.1 defines slice 1 and when it is done).
 
 Slice 1 builds a thin version of every layer: simulation, server, phone client, 3D assets and multiplayer. That is too
-much for one plan, so it is split into seven plans that each produce working, tested software. Each plan is written
+much for one plan, so it is split into eight plans that each produce working, tested software. Each plan is written
 only when its turn comes, so it builds on the real code of the plans before it instead of guesses. Each plan ends
 by updating the project skills it touched, using the official skill-creator.
 
@@ -21,8 +21,9 @@ the islands keep running while you're away, and you can watch each other's islan
 | 3 | Protocol and server | `packages/protocol`, `apps/server`: the always-running worlds behind accounts and invite codes | plans 1-2 | done: `2026-10-18-slice1-plan3-protocol-server.md` |
 | 4 | Art direction and asset pipeline | The chosen look, the conventions, and every slice 1 model and icon | the user and Blender (can run beside plans 1-3) | done: `2026-10-18-slice1-plan4-art-assets.md` |
 | 5 | Client | `apps/client`: the 3D island and the style A UI on phones. Two features: `slice1-client` (the playable island, plus the soft lock fix) then `slice1-alive` (crowds, ferry, watch mode, sound) | plans 1-3; plan 4 for final models | done 2026-10-19: both features built and merged; the user approved the camera (ticket 08) and the look of the living island (`slice1-alive` 13). The look review notes (`slice1-client` 21) and the phone frame rate (`slice1-alive` 14) moved into plan 6 |
-| 6 | Slice 1 alive, part 2 | What a watcher sees still falls short (user, 2026-10-19): people's actions at work, buildings growing from the ground, the ferry and ships, vehicles; plus the look polish plan 5 carried over | plans 1-5 | grilled 2026-10-20; spec and 12 tickets in `.scratch/slice1-alive-2/` (ADR 0002, the sale manifest), approved 2026-10-20, being built |
-| 7 | Ship slice 1 | Installable app, two-player end-to-end test, deployment, phone performance check | plans 1-6 | later: the user moved it after plan 6 (2026-10-19), "we are still far from it"; its questions are under "Plan 7, ship slice 1" below |
+| 6 | Slice 1 alive, part 2 | What a watcher sees still falls short (user, 2026-10-19): people's actions at work, buildings growing from the ground, the ferry and ships, vehicles; plus the look polish plan 5 carried over | plans 1-5 | done 2026-10-20: spec and 12 tickets in `.scratch/slice1-alive-2/` (ADR 0002, the sale manifest), built and merged; the user's look check (ticket 11) is still to come, its fixes follow on `main` |
+| 7 | Slice 1 builders | Builders from the Mainland: a crew per building comes on the builders' boat each morning, builds in the day shift and goes home; calling builders for a fee; the welcome crew for a new island's first building | plans 1-6 | grilled 2026-10-20 (the user chose game logic over shipping); spec in `.scratch/slice1-builders/`, tickets next |
+| 8 | Ship slice 1 | Installable app, two-player end-to-end test, deployment, phone performance check | plans 1-7 | later: postponed by the user (2026-10-20) until the game rules stop changing, since a live world turns every rule change into a migration; its questions are under "Plan 8, ship slice 1" below |
 
 ## What each later plan covers
 
@@ -148,10 +149,19 @@ logic of building growing from the ground, the ship, the vehicles". What the cod
 - The ferry: one houseboat on a straight lane due south, turning at the pier (`render/ferry.ts`). No other boats.
 - Vehicles: none. The spec puts the first trucks in Village (slice 3) and fishing boats in Settlement (slice 2).
 - Also seen: at the closest zoom the camera can end up inside a building's roof.
-Plus the polish from plan 5 listed under plan 7's "Carried over" (the user took four of the five: back-wall exits,
+Plus the polish from plan 5 listed under plan 8's "Carried over" (the user took four of the five: back-wall exits,
 passengers through the dock, the new family in that morning's commute, watch mode framing the pier).
 
-**Plan 7, ship slice 1** (spec 6.2, 9; later, not grilled). Its `/grill-with-docs` runs on the merged `main`, with the
+**Plan 7, slice 1 builders** (grilled 2026-10-20). Spec `.scratch/slice1-builders/spec.md`; the words are in the glossary
+(Builder, Crew, Builders' boat, Waiting for builders, Call builders). More game-logic changes from the user follow as
+their own features, each grilled while the one before is built.
+
+**Plan 8, ship slice 1** (spec 6.2, 9; later). A first grilling round on 2026-10-20 was stopped before any answer,
+when the user moved game logic first; its suggestions, to confirm when this plan's turn comes: one feature
+`slice1-ship`, tickets that need no one first; Hetzner CX22 with Caddy and systemd; a domain of the user's or
+`<ip>.sslip.io`; `vite-plugin-pwa` precaching all of `public/`; the app icon from a rendered building icon; the
+performance readout as a Settings switch; GitHub Actions running `pnpm check` and Playwright; screenshot comparisons
+on the Mac only, draw-call counts everywhere; the user's phones and the friend playtest as the last tickets. Its `/grill-with-docs` runs on the merged `main`, with the
 skills `island-server` (operations), `island-3d-client` (`state-and-pwa.md`), `island-ui`, `island-testing`
 (`phone-performance.md`, `client-tests.md`) as inputs.
 - PWA: manifest and icons, service worker and model and sound caching (what is cached, how a new build replaces it),
@@ -169,10 +179,8 @@ skills `island-server` (operations), `island-3d-client` (`state-and-pwa.md`), `i
     time; whether the start check's 24 ms step-down fits real phones; 90/120 Hz screens capped at 60 (built); watch
     mode at 30 fps (built; if a slow pan still looks choppy, decide 60 on desktop or everywhere); a cheaper level of
     detail for people only if the numbers ask for it. `pnpm preview 415 --lan` serves a ready village to the phone.
-  - The look review notes (`slice1-client` ticket 21) and the rough spots from `slice1-alive` ticket 13: carriers hold
-    the bag (no goods prop), people step out of a building's back wall when its road runs behind it, ferry passengers
-    walk through the dock building, a newly arrived family also shows in that morning's commute, watch mode frames the
-    pier so the incoming ferry is below the screen at first. The user called the look good; these are polish, to take
-    or leave.
+  - The look review notes (`slice1-client` ticket 21) and the rough spots from `slice1-alive` ticket 13: all four the
+    user took, and the goods props, were built in plan 6 (`slice1-alive-2`).
+  - The look check of plan 6 (`slice1-alive-2` ticket 11), if the user has not done it before plan 7 starts.
   - Slice 2 (noted in `slice1-alive`): friends' islands far away need positions in the world summary and a wider
     archipelago spacing (48 tiles is less than a 64-tile island).

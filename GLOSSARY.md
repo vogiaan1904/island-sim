@@ -54,3 +54,26 @@ _Avoid_: job animation, task, routine
 An island's record of its sales to the Mainland in the last game hour (tick, good and amount per sale), from which a
 cargo boat leaves the pier for each sale.
 _Avoid_: shipment (goods on the roads), sales log, export
+
+**Builder**:
+A construction worker in uniform from the Mainland who puts up the island's buildings; not a resident and not a
+commuter, and never takes a ferry seat.
+_Avoid_: worker, laborer, constructor
+
+**Crew**:
+The builders one construction site needs, all present before it can rise; bigger buildings need bigger crews.
+_Avoid_: team, squad, gang
+
+**Builders' boat**:
+The boat that brings builders from the Mainland in the morning and takes them home in the evening, and also comes
+when builders are called.
+_Avoid_: ferry (that carries commuters and newcomers), barge, tender
+
+**Waiting for builders**:
+The condition of a placed building whose crew is not on site; nothing is built until it is.
+_Avoid_: queued, pending, paused
+
+**Call builders**:
+Paying extra for the builders' boat to bring a crew within the hour, during the day, instead of waiting for the next
+morning.
+_Avoid_: rush, hurry, express order
