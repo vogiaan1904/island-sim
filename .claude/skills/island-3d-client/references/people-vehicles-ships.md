@@ -163,7 +163,7 @@ the same thing (spec 6.2).
 | Goods per route | Before trucks exist (Outpost, Settlement): people carrying (legs `walk`, arms `holding-both`); from Village: delivery trucks |
 | Ferry and ship timetables | The ferry and ships, plus people boarding and leaving them |
 | Staffing per building | A few workers using `interact-left` / `interact-right` at the site; fewer when understaffed, none with no workers |
-| Construction | Workers using the interact clips at the scaffold while construction is going; none while a landmark waits for materials |
+| Construction | Two builders at a site, four at a landmark, in the day shift: half hammer at the scaffold's front (interact clips), half go round a work loop fetching logs from the site's pile (`pick-up`, walk with logs, `pick-up`, walk back); none while a landmark waits for materials |
 | Landmark materials | Carried from storage to the site (spec 12.1), as carriers. Materials bought from the Mainland on the landmark's card arrive on the next ferry as cargo and are carried from the dock to the site |
 
 **Slots, not agents.** Each flow has slots 0, 1, 2 and so on. A slot's position, clip layers and look are computed
@@ -254,7 +254,10 @@ function moverAt(flow: FlowView, slot: number, gameMinutes: number, out: MoverPo
 - **Flows:** residents' commute from `assignWorkers` (07:00 there, 17:00 back); carriers, one per 5 units and at most
   4, in single file 1.2 m apart, the last arriving on `arriveTick` (arms `holding-both` and the bag); up to 2 workers
   by a staffed workplace's front (1 while understaffed) from its first commuter's arrival to the shift's end; 2
-  builders at a site during the shift, none at a landmark still missing materials; the market walk, one adult per home
+  builders at a site during the shift (4 at a landmark, none while it still misses materials), one of each pair
+  hammering, the other on a work loop (`WorkLoop` in `render/crowd.ts`: steps of walks and in-place clips, phase hashed
+  per person, the same mechanism the workplaces' work loops use) carrying logs (`Carried`: `bag` or `logs`, one
+  instanced accessory mesh each in `scene/People.tsx`); the market walk, one adult per home
   its market reaches, leaving 17:15 to 17:26 (hashed per home and day), children along on about 40% of days; ferry
   passengers from `island.ferry` (below). Nobody walks at night.
 - **Looks:** the character is a hash of (slot, home, person index), workers first then children, so a home's people

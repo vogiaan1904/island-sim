@@ -3,7 +3,7 @@ import type { BuildingState, IslandState } from '@island/sim';
 import { describe, expect, it } from 'vitest';
 import { aliceWorld, islandOf } from '../test/islands.ts';
 import { constructionRise } from './construction.ts';
-import { buildingAtTile, buildingInstances, pierInstances, placedFootprint, rotationY, scaffoldInstances } from './instances.ts';
+import { buildingAtTile, buildingInstances, pierInstances, placedFootprint, rotationY, scaffoldInstances, sitePileInstances } from './instances.ts';
 
 function withBuilding(island: IslandState, building: Partial<BuildingState> & Pick<BuildingState, 'id' | 'type' | 'x' | 'y' | 'rotation'>): IslandState {
   const dock = island.buildings[0]!;
@@ -50,15 +50,18 @@ describe('a building under construction', () => {
   // A cottage takes 120 ticks to build.
   const site = (left: number) => withBuilding(islandOf(aliceWorld()), { id: 6, type: 'cottage', x: 34, y: 55, rotation: 0, constructionLeft: left });
 
-  it('has no building yet at step 0, only its scaffold', () => {
+  it('has no building yet before its first tick of work, only its scaffold and a log pile on its road side', () => {
     const island = site(120);
     expect(buildingInstances(island, content).has('building_cottage_a.glb')).toBe(false);
     expect(scaffoldInstances(island, content).get('prop_scaffold_1x1.glb')).toEqual([{ id: 6, x: 138, z: 222, rotationY: 0 }]);
+    // The cottage's front faces +z: the pile stands 0.8 past its front edge (z 224), 0.9 in from its right-hand corner.
+    expect(sitePileInstances(island, content).get('prop_log-pile_a.glb')).toEqual([{ id: 6, x: 138 + 2 - 0.9, z: 224 + 0.8, rotationY: 0 }]);
   });
 
-  it('rises inside its scaffold in steps as the sim progress advances', () => {
-    const rises = [90, 60, 30].map((left) => buildingInstances(site(left), content).get('building_cottage_a.glb')![0]!.rise);
-    expect(rises).toEqual([constructionRise(1), constructionRise(2), constructionRise(3)]);
+  it('rises inside its scaffold with every tick of the sim progress', () => {
+    const rises = [119, 90, 60, 30].map((left) => buildingInstances(site(left), content).get('building_cottage_a.glb')![0]!.rise);
+    expect(rises).toEqual([1 / 120, 0.25, 0.5, 0.75].map((r) => expect.closeTo(r)));
+    expect(rises.map((r, i) => r === constructionRise([119, 90, 60, 30][i]!, 120))).toEqual([true, true, true, true]);
     const risen = buildingInstances(site(60), content).get('building_cottage_a.glb')![0]!;
     expect(risen).toMatchObject({ id: 6, x: 138, z: 222, rotationY: 0 });
   });
@@ -66,6 +69,7 @@ describe('a building under construction', () => {
   it('is replaced by the finished building: full height and no scaffold', () => {
     const island = site(0);
     expect(scaffoldInstances(island, content).size).toBe(0);
+    expect(sitePileInstances(island, content).size).toBe(0);
     expect(buildingInstances(island, content).get('building_cottage_a.glb')).toEqual([{ id: 6, x: 138, z: 222, rotationY: 0 }]);
   });
 

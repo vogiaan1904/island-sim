@@ -3,7 +3,7 @@ import { TICK_MS } from '@island/protocol';
 import { assignWorkers, childrenOf, findBuildingDef, roadPath, servicesInReach, stockOf, workersOf, type BuildingState, type IslandState } from '@island/sim';
 import { ANIMATION_FPS, CHARACTERS, clip, cycleFrames, type ClipName } from './clips.ts';
 import { MIN_STAY_MINUTES, ferryRoute, ferrySchedule, type FerryRoute, type FerrySchedule, type Point } from './ferry.ts';
-import { placedFootprint, rotationY } from './instances.ts';
+import { besideFront, placedFootprint, sitePile } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
 
 // The crowd (spec 6.2, 12.5; island-3d-client, people): the sim counts citizens, the client draws them as people
@@ -30,8 +30,11 @@ export interface Mover {
   /** The arms clip, or null when the arms follow the legs clip. */
   arms: ClipName | null;
   armsPhase: number;
-  accessory: 'bag' | 'wheelchair' | null;
+  accessory: Carried | 'wheelchair' | null;
 }
+
+/** What someone holds in both arms: a traveller's bag, or logs. */
+export type Carried = 'bag' | 'logs';
 
 /** Who a person is to look at: the same every day for the same home and person. */
 interface Look {
@@ -53,8 +56,8 @@ interface Walk {
   start: Start;
   /** Metres per game minute. */
   speed: number;
-  /** Goods in both arms. */
-  carrying: boolean;
+  /** What is held in both arms, if anything. */
+  carrying: Carried | null;
   /** x, z pairs. */
   points: Float64Array;
   /** Distance walked at each point. */
@@ -72,9 +75,29 @@ interface Station {
   until: number;
 }
 
+/** One step of a work loop: a walk (holding something or not), or a clip played in one spot, for some game minutes. */
+type LoopStep =
+  | { walk: Walk; minutes: number }
+  | { x: number; z: number; heading: number; clip: ClipName; minutes: number };
+
+/**
+ * Someone going round the same steps in one place between two minutes of the day (a builder fetching logs). Where they
+ * are in the round comes from the game time and `offset`, hashed per person, so two of them never move in step.
+ */
+interface WorkLoop {
+  look: Look;
+  steps: LoopStep[];
+  /** Game minutes one round takes: the steps' minutes added up. */
+  period: number;
+  offset: number;
+  from: number;
+  until: number;
+}
+
 export interface CrowdPlan {
   walks: Walk[];
   stations: Station[];
+  loops: WorkLoop[];
   /** The ferry's lane and timetable, or null when the island has no pier. */
   ferry: FerrySchedule | null;
   startMinute: number;
@@ -104,7 +127,11 @@ const MAX_CARRIERS = 4;
 const CARRIER_GAP = 1.2;
 /** At most this many workers show by a workplace (one while it is understaffed), and this many builders at a site. */
 const WORKERS_SHOWN = 2;
+/** Builders at a site, and at a landmark's: half hammer at the scaffold, half fetch logs from the site's pile. */
 const BUILDERS_SHOWN = 2;
+const LANDMARK_BUILDERS_SHOWN = 4;
+/** Game minutes a pick-up takes: the clip, then a moment holding its last frame. */
+const PICK_UP_MINUTES = 0.5;
 /** Children are drawn at about three quarters of an adult (spec 12.5). */
 const CHILD_SCALE = 0.75;
 /** The evening market walk sets off between these minutes after the shift ends... */
@@ -198,7 +225,7 @@ function walkAlong(content: Content, line: readonly Point[], look: Look, start: 
     if (i > 0) along[i] = (along[i - 1] as number) + Math.hypot(p.x - (line[i - 1]?.x ?? 0), p.z - (line[i - 1]?.z ?? 0));
   });
   const speed = TILE_SIZE / content.rules.roadTicksPerTile;
-  return { look, start, speed, carrying: false, points, along };
+  return { look, start, speed, carrying: null, points, along };
 }
 
 /** Each home's people in a fixed order: the workers first (the person indexes the work flows use), then the children. */
@@ -254,7 +281,7 @@ function carriers(island: IslandState, content: Content, walks: Walk[]): void {
       // The leader is k gaps ahead of the last carrier, so it set off that much earlier.
       const ahead = (count - 1 - k) * CARRIER_GAP;
       walk.start = { tick: shipment.arriveTick - travel - ahead / walk.speed };
-      walk.carrying = true;
+      walk.carrying = 'bag';
       walks.push(walk);
     }
   }
@@ -262,21 +289,12 @@ function carriers(island: IslandState, content: Content, walks: Walk[]): void {
 
 /** Spots side by side just outside a building's front (its +z face, turned with it), facing the building. */
 function frontSpots(content: Content, building: BuildingState, count: number): Array<{ x: number; z: number; heading: number }> {
-  const placed = placedFootprint(content, building);
-  if (placed === null) return [];
-  const turn = rotationY(building.rotation);
-  const fx = Math.sin(turn);
-  const fz = Math.cos(turn);
-  const out = (building.rotation % 2 === 0 ? placed.h : placed.w) * (TILE_SIZE / 2) + 1;
-  return Array.from({ length: count }, (_, k) => {
-    const side = (k - (count - 1) / 2) * 1.6;
-    return { x: placed.x + fx * out + fz * side, z: placed.z + fz * out - fx * side, heading: turn + Math.PI };
-  });
+  return Array.from({ length: count }, (_, k) => besideFront(content, building, 1, (k - (count - 1) / 2) * 1.6)).filter((spot) => spot !== null);
 }
 
 /**
  * People working in place during the day shift: up to two by each staffed workplace (one while understaffed), from
- * when its first commuter arrives; two builders at each site, except a landmark whose materials have not all come.
+ * when its first commuter arrives. Builders are `builders`.
  */
 function stations(island: IslandState, content: Content, arrivals: Map<number, number>, out: Station[]): void {
   const rules = content.rules;
@@ -285,10 +303,8 @@ function stations(island: IslandState, content: Content, arrivals: Map<number, n
     if (def === null) continue;
     let shown = 0;
     let from = rules.shiftStartMinute;
-    if (building.constructionLeft > 0) {
-      const waiting = def.landmark?.materials.some((m) => stockOf(building.stock, m.good) < m.amount) ?? false;
-      shown = waiting ? 0 : BUILDERS_SHOWN;
-    } else if (building.work !== null && def.jobs > 0) {
+    if (building.constructionLeft > 0) continue;
+    if (building.work !== null && def.jobs > 0) {
       const workers = building.work.residents + building.work.commuters;
       shown = workers === 0 ? 0 : workers >= def.jobs ? Math.min(WORKERS_SHOWN, def.jobs) : 1;
       from = arrivals.get(building.id) ?? rules.shiftStartMinute;
@@ -303,6 +319,49 @@ function stations(island: IslandState, content: Content, arrivals: Map<number, n
         until: rules.shiftEndMinute,
       });
     });
+  }
+}
+
+/**
+ * Builders at every site during the day shift: two, four at a landmark, none at a landmark whose materials have not
+ * all come (the sim holds it). Every other one hammers at the scaffold's front, left of its middle; the rest go round
+ * fetching logs from the site's pile on its right and setting them down at the front.
+ */
+function builders(island: IslandState, content: Content, stations: Station[], loops: WorkLoop[]): void {
+  const rules = content.rules;
+  for (const building of island.buildings) {
+    const def = findBuildingDef(content, building.type);
+    const placed = def === null ? null : placedFootprint(content, building);
+    if (def === null || placed === null || building.constructionLeft <= 0) continue;
+    const waiting = def.landmark?.materials.some((m) => stockOf(building.stock, m.good) < m.amount) ?? false;
+    const shown = waiting ? 0 : def.landmark ? LANDMARK_BUILDERS_SHOWN : BUILDERS_SHOWN;
+    const across = (building.rotation % 2 === 0 ? placed.w : placed.h) * (TILE_SIZE / 2);
+    const pile = sitePile(content, building);
+    for (let k = 0; k < shown; k += 1) {
+      const h = hash32(island.slot, building.id, k, 3);
+      const look: Look = { key: h, character: h % CHARACTERS.length, scale: 1, wheelchair: false };
+      const pair = Math.floor(k / 2);
+      if (k % 2 === 0 || pile === null) {
+        const spot = besideFront(content, building, 0.9, -across / 2 - pair * 1.6);
+        if (spot === null) continue;
+        stations.push({ look, ...spot, clip: pair % 2 === 0 ? 'interact-right' : 'interact-left', from: rules.shiftStartMinute, until: rules.shiftEndMinute });
+        continue;
+      }
+      const drop = besideFront(content, building, 0.3, across * 0.1 + pair * 0.8);
+      if (drop === null) continue;
+      const there = walkAlong(content, [pile, drop], look, { tick: 0 });
+      there.carrying = 'logs';
+      const back = walkAlong(content, [drop, pile], look, { tick: 0 });
+      const length = there.along[there.along.length - 1] as number;
+      const steps: LoopStep[] = [
+        { ...pile, clip: 'pick-up', minutes: PICK_UP_MINUTES },
+        { walk: there, minutes: length / there.speed },
+        { ...drop, clip: 'pick-up', minutes: PICK_UP_MINUTES },
+        { walk: back, minutes: length / back.speed },
+      ];
+      const period = steps.reduce((sum, step) => sum + step.minutes, 0);
+      loops.push({ look, steps, period, offset: unit(hash32(h, 4)) * period, from: rules.shiftStartMinute, until: rules.shiftEndMinute });
+    }
   }
 }
 
@@ -363,7 +422,7 @@ function ferryPassengers(island: IslandState, content: Content, route: FerryRout
     if (line === null) return null;
     const delay = STEP_OFF_MINUTES + group * STEP_OFF_GAP + lag;
     const walk = walkAlong(content, [...pier, ...line], look, { tick: manifest.tick + delay });
-    walk.carrying = carrying;
+    walk.carrying = carrying ? 'bag' : null;
     walks.push(walk);
     return walk;
   };
@@ -372,7 +431,7 @@ function ferryPassengers(island: IslandState, content: Content, route: FerryRout
     if (line === null) return;
     const delay = unit(hash32(look.key, 6)) * BOARD_SPREAD + lag;
     const walk = walkAlong(content, [...line, route.pier, route.bow], look, { tick: manifest.tick + delay });
-    walk.carrying = carrying;
+    walk.carrying = carrying ? 'bag' : null;
     walks.push(walk);
     lastAboard = Math.max(lastAboard, delay + (walk.along[walk.along.length - 1] as number) / walk.speed);
   };
@@ -439,7 +498,9 @@ export function crowdPlan(island: IslandState, content: Content): CrowdPlan {
     ferry = ferrySchedule(route, content, stay);
   }
   stations(island, content, arrivals, working);
-  return { walks, stations: working, ferry, startMinute: content.rules.startMinute, ticksPerDay: content.rules.ticksPerDay };
+  const loops: WorkLoop[] = [];
+  builders(island, content, working, loops);
+  return { walks, stations: working, loops, ferry, startMinute: content.rules.startMinute, ticksPerDay: content.rules.ticksPerDay };
 }
 
 const plans = new WeakMap<IslandState, CrowdPlan>();
@@ -459,7 +520,7 @@ export function crowdPlanFor(island: IslandState, content: Content): CrowdPlan {
 
 /** A pool of movers big enough for every walk in the plan, made once and reused every frame. */
 export function newMovers(plan: CrowdPlan): Mover[] {
-  return [...plan.walks, ...plan.stations].map(() => ({
+  return [...plan.walks, ...plan.stations, ...plan.loops].map(() => ({
     key: 0,
     x: 0,
     z: 0,
@@ -479,6 +540,21 @@ const WALK_CYCLE = cycleFrames(clip('walk'));
 const HOLD_FRAME = clip('holding-both').frames - 1;
 const WHEEL_CYCLE = cycleFrames(clip('wheelchair-move-forward'));
 
+/** Places someone standing in one spot playing a clip on both layers, at a frame of it. */
+function stand(look: Look, spot: { x: number; z: number; heading: number }, name: ClipName, phase: number, out: Mover): void {
+  out.key = look.key;
+  out.x = spot.x;
+  out.z = spot.z;
+  out.heading = spot.heading;
+  out.character = look.character;
+  out.scale = look.scale;
+  out.legs = name;
+  out.legsPhase = phase;
+  out.arms = null;
+  out.armsPhase = 0;
+  out.accessory = null;
+}
+
 /** Places one walker at a distance along its walk. */
 function place(walk: Walk, walked: number, out: Mover): void {
   const { points, along, look } = walk;
@@ -497,12 +573,12 @@ function place(walk: Walk, walked: number, out: Mover): void {
   if (span > 0) out.heading = Math.atan2(x1 - x0, z1 - z0);
   out.character = look.character;
   out.scale = look.scale;
-  out.arms = walk.carrying ? 'holding-both' : null;
-  out.armsPhase = walk.carrying ? HOLD_FRAME : 0;
-  if (walk.carrying) {
+  out.arms = walk.carrying !== null ? 'holding-both' : null;
+  out.armsPhase = walk.carrying !== null ? HOLD_FRAME : 0;
+  if (walk.carrying !== null) {
     out.legs = 'walk';
     out.legsPhase = (walked / (STRIDE * look.scale)) * WALK_CYCLE;
-    out.accessory = 'bag';
+    out.accessory = walk.carrying;
   } else if (look.wheelchair) {
     out.legs = 'wheelchair-move-forward';
     out.legsPhase = (walked / WHEEL_STRIDE) * WHEEL_CYCLE;
@@ -543,19 +619,24 @@ export function moversAt(plan: CrowdPlan, ticks: number, target: { x: number; z:
     if (minute < station.from || minute >= station.until) continue;
     const mover = out[count];
     if (mover === undefined) break;
-    const { look } = station;
     const frames = clip(station.clip).frames;
-    mover.key = look.key;
-    mover.x = station.x;
-    mover.z = station.z;
-    mover.heading = station.heading;
-    mover.character = look.character;
-    mover.scale = 1;
-    mover.legs = station.clip;
-    mover.legsPhase = (ticks * FRAMES_PER_TICK + (look.key % frames)) % frames;
-    mover.arms = null;
-    mover.armsPhase = 0;
-    mover.accessory = null;
+    stand(station.look, station, station.clip, (ticks * FRAMES_PER_TICK + (station.look.key % frames)) % frames, mover);
+    count += 1;
+  }
+  for (const loop of plan.loops) {
+    if (minute < loop.from || minute >= loop.until) continue;
+    const mover = out[count];
+    if (mover === undefined) break;
+    let into = (minute - loop.from + loop.offset) % loop.period;
+    for (const step of loop.steps) {
+      if (into >= step.minutes) {
+        into -= step.minutes;
+        continue;
+      }
+      if ('walk' in step) place(step.walk, into * step.walk.speed, mover);
+      else stand(loop.look, step, step.clip, Math.min(clip(step.clip).frames - 1, into * FRAMES_PER_TICK), mover);
+      break;
+    }
     count += 1;
   }
   if (count <= cap) return count;

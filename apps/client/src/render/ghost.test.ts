@@ -1,7 +1,9 @@
 import { content } from '@island/content';
 import { describe, expect, it } from 'vitest';
 import { startDraft } from '../placement/draft.ts';
-import { dustPuff, ghostInstance, landingBounce, LANDING_SECONDS } from './ghost.ts';
+import type { SimEvent } from '@island/sim';
+import { aliceWorld, islandOf } from '../test/islands.ts';
+import { dustPuff, finishPuffTime, finishedSites, ghostInstance, landingBounce, LANDING_SECONDS } from './ghost.ts';
 import { TILE_SIZE } from './look.ts';
 
 describe('the ghost instance', () => {
@@ -49,5 +51,31 @@ describe('the puff of dust', () => {
     const b = dustPuff(0.4, 4, 8, 8);
     expect(a.x).toBeCloseTo(-b.x);
     expect(a.z).toBeCloseTo(-b.z);
+  });
+});
+
+describe('the puff when a site finishes', () => {
+  // A well finished at tick 500 on Alice's island; its 1x1 footprint's top-left tile is (28,54).
+  const island = (() => {
+    const isle = structuredClone(islandOf(aliceWorld()));
+    const dock = isle.buildings[0]!;
+    isle.buildings.push({ ...structuredClone(dock), id: 77, type: 'well', x: 28, y: 54, rotation: 0, constructionLeft: 0, work: null });
+    return isle;
+  })();
+  const finished: SimEvent = { tick: 500, source: 0, index: 0, type: 'construction-finished', slot: island.slot, data: { buildingId: 77, building: 'well' } };
+
+  it('plays at the footprint from the finish tick, and is gone once a landing is over', () => {
+    const [site] = finishedSites([finished], island, content);
+    expect(site).toEqual({ id: 77, x: 28.5 * TILE_SIZE, z: 54.5 * TILE_SIZE, reach: TILE_SIZE / 2, tick: 500 });
+    expect(finishPuffTime(500, 499.9)).toBeNull();
+    const t = finishPuffTime(500, 500)!;
+    expect(dustPuff(t, 0, 8, site!.reach).opacity).toBeGreaterThan(0);
+    expect(finishPuffTime(500, 500.2)).toBeGreaterThan(t);
+    expect(finishPuffTime(500, 501)).toBeNull();
+  });
+
+  it('ignores other events and other islands', () => {
+    expect(finishedSites([{ ...finished, type: 'stage-reached' }], island, content)).toEqual([]);
+    expect(finishedSites([{ ...finished, slot: island.slot + 1 }], island, content)).toEqual([]);
   });
 });

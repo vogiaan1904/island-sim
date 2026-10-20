@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { aliceWorld, islandOf } from '../test/islands.ts';
 import { crowdPlan, crowdPlanFor, moversAt, newMovers, peopleShown, type Mover } from './crowd.ts';
 import { ferryPose, newFerryPose } from './ferry.ts';
+import { sitePile } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
 
 const SIZE = content.rules.islandSize;
@@ -209,23 +210,44 @@ describe('the crowd: work at the buildings', () => {
     expect(working(island, 1030)).toEqual([]);
   });
 
-  it('puts two builders at a site during the day shift, none at night', () => {
+  it('puts two builders at a site in the day shift, none at night: one hammering, one fetching logs', () => {
     const island = village();
     const site = built('well', 105, 30, 54);
     site.constructionLeft = 30;
     island.buildings.push(site);
-    expect(working(island, NOON)).toHaveLength(2);
-    expect(working(island, 1200)).toEqual([]);
+    const atSite = movers(island, NOON);
+    expect(atSite).toHaveLength(2);
+    expect(atSite.filter((m) => m.legs.startsWith('interact'))).toHaveLength(1);
+    expect(movers(island, 1200)).toEqual([]);
   });
 
-  it('puts no builders at a landmark still waiting for its materials', () => {
+  it('sends a builder round from the site\'s log pile to its front: logs in both arms there, empty-handed back', () => {
+    const island = village();
+    const site = built('well', 105, 30, 54);
+    site.constructionLeft = 30;
+    island.buildings.push(site);
+    const pile = sitePile(content, site)!;
+    const seen = new Set<string>();
+    for (let minute = NOON; minute < NOON + 6; minute += 0.05) {
+      const fetcher = movers(island, minute).find((m) => !m.legs.startsWith('interact'))!;
+      if (fetcher.legs === 'pick-up') seen.add(Math.hypot(fetcher.x - pile.x, fetcher.z - pile.z) < 0.01 ? 'pick-up at the pile' : 'set down');
+      else if (fetcher.accessory === 'logs') seen.add('carrying logs');
+      else seen.add(fetcher.arms === null && fetcher.accessory === null ? 'walking back' : 'other');
+    }
+    expect([...seen].sort()).toEqual(['carrying logs', 'pick-up at the pile', 'set down', 'walking back']);
+  });
+
+  it('puts four builders at a landmark whose materials have come, and none while it waits for them', () => {
     const island = village();
     const hall = built('island-hall', 106, 24, 50);
     hall.constructionLeft = 1_000;
     island.buildings.push(hall);
-    expect(working(island, NOON)).toEqual([]);
+    expect(movers(island, NOON)).toEqual([]);
     hall.stock = { wood: 150 };
-    expect(working(island, NOON)).toHaveLength(2);
+    const builders = movers(island, NOON);
+    expect(builders).toHaveLength(4);
+    expect(builders.filter((m) => m.legs.startsWith('interact'))).toHaveLength(2);
+    expect(new Set(builders.map((m) => m.key)).size).toBe(4);
   });
 });
 

@@ -8,9 +8,10 @@ import { startServer } from '../server.ts';
 // pnpm preview [minute-of-day]: a throwaway server (in memory, nothing saved) with the built client and one prepared
 // village, for looking at the living island without growing one for hours: the look check, the phone measurement,
 // screenshots. Sign in as alice / password-1 at the printed address. The village is placed with the sim's own
-// command next to the dock: a farm and a lumber camp further out, a well, a market with fish, two full cottages and
-// two empty ones (the morning ferry brings newcomers to fill the open jobs), 4 hired commuters and one shipment on the
-// road. The world starts at the given minute of its second day (default 415, five game minutes before the day shift).
+// command next to the dock: a farm and a lumber camp further out, a well, a market with fish, two full cottages, an
+// empty one and one still being built (the morning ferry brings newcomers to fill the open jobs), 4 hired commuters and
+// one shipment on the road. The world starts at the given minute of its second day (default 415, five game minutes
+// before the day shift).
 // Build the client first: pnpm client:build. With --lan it also listens on this machine's local network address, so a
 // phone on the same Wi-Fi can open it (plain http: the browser then allows no Wake Lock); without it, only this machine.
 
@@ -75,7 +76,13 @@ const plan: Array<[BuildingId, number]> = [
 ];
 plan.forEach(([type, from], i) => place(world, island, type, from, 100 + i));
 let cottages = 0;
+const site = island.buildings.filter((b) => b.type === 'cottage').at(-1);
 for (const building of island.buildings) {
+  if (building === site) {
+    // The last cottage is still being built, half way up its scaffold, with its builders at work.
+    building.constructionLeft = Math.ceil(buildingDefOf(content, 'cottage').buildTicks / 2);
+    continue;
+  }
   building.constructionLeft = 0;
   building.conditions = [];
   if (building.home) Object.assign(building.home, { residents: cottages < 2 ? 4 : 0, happiness: 1000 });

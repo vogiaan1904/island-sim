@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { OUTPOST_TO_SETTLEMENT } from '../../../../packages/sim/test/scenarios.ts';
 import { runScript } from '../../../../packages/sim/test/harness.ts';
 import { aliceWorld, islandOf } from '../test/islands.ts';
-import { constructionRise } from './construction.ts';
 import { islandInstances, instancedDrawCalls } from './island.ts';
 import { buildingModel } from './models.ts';
 import { TERRAIN_CHUNK_TILES } from './terrain.ts';
@@ -29,11 +28,13 @@ describe('island instances', () => {
     expect(during.get('prop_scaffold_1x2.glb')?.map((i) => i.id)).toEqual([hut.id]);
     expect(during.get(buildingModel('fishing-hut'))?.[0]?.rise).toBeGreaterThan(0);
     expect(during.get(buildingModel('fishing-hut'))?.[0]?.rise).toBeLessThan(1);
+    const sites = middle.buildings.filter((b) => b.constructionLeft > 0).map((b) => b.id);
+    expect(during.get('prop_log-pile_a.glb')?.map((i) => i.id)).toEqual(sites);
 
     const after = islandInstances(islandOf(runScript(42, OUTPOST_TO_SETTLEMENT, 400).world), content);
     expect(after.has('prop_scaffold_1x2.glb')).toBe(false);
     expect(after.get(buildingModel('fishing-hut'))).toEqual([expect.not.objectContaining({ rise: expect.anything() })]);
-    expect(constructionRise(4)).toBe(1);
+    expect(after.has('prop_log-pile_a.glb')).toBe(false);
   });
 });
 

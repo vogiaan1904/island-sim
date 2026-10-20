@@ -1,8 +1,8 @@
 import type { BuildingDef, BuildingId, Content } from '@island/content';
 import { findBuildingDef, footprintSize, isBuilt, type BuildingState, type IslandState, type Rotation } from '@island/sim';
-import { constructionRise, constructionStep } from './construction.ts';
+import { constructionRise } from './construction.ts';
 import { TILE_SIZE } from './look.ts';
-import { PIER_MODEL, buildingModel, scaffoldModel } from './models.ts';
+import { LOG_PILE_MODEL, PIER_MODEL, buildingModel, scaffoldModel } from './models.ts';
 
 // Instance lists per model type, from the island state alone: what the scene draws as one instanced mesh per model.
 // Buildings, their scaffolds and the pier are here; road pieces are in roads.ts and `islandInstances` (island.ts)
@@ -18,7 +18,7 @@ export interface ModelInstance {
   rotationY: number;
   /** Height of the model's base above the ground when it is not 0 (the pier's posts reach into the sea). */
   y?: number;
-  /** How much of the model's height shows when it is not all of it: a site rising in steps (0 to 1). */
+  /** How much of the model's height shows when it is not all of it: a site rising with its progress (above 0, below 1). */
   rise?: number;
 }
 
@@ -67,8 +67,8 @@ function add(instances: Map<string, ModelInstance[]>, file: string, instance: Mo
 
 /**
  * Every building as an instance of its model at its footprint center and the sim's rotation. A finished building is
- * whole; a site under construction rises in steps with the sim's progress (`rise` is the share of its height that
- * shows) and has no instance at all at step 0.
+ * whole; a site under construction is cut at the share of its height that its progress has reached (`rise`), and has
+ * no instance at all before its first tick of work.
  */
 export function buildingInstances(island: IslandState, content: Content): ModelInstances {
   const instances = new Map<string, ModelInstance[]>();
@@ -81,7 +81,7 @@ export function buildingInstances(island: IslandState, content: Content): ModelI
       add(instances, buildingModel(building.type), at);
       continue;
     }
-    const rise = constructionRise(constructionStep(building.constructionLeft, def.buildTicks));
+    const rise = constructionRise(building.constructionLeft, def.buildTicks);
     if (rise > 0) add(instances, buildingModel(building.type), { ...at, rise });
   }
   return instances;
@@ -103,6 +103,40 @@ export function scaffoldInstances(island: IslandState, content: Content): ModelI
       z: placed.z,
       rotationY: rotationY(building.rotation),
     });
+  }
+  return instances;
+}
+
+/** A point beside a building's front, `out` metres past its footprint and `side` metres to its right, facing it. */
+export function besideFront(content: Content, building: BuildingState, out: number, side: number): { x: number; z: number; heading: number } | null {
+  const placed = placedFootprint(content, building);
+  if (placed === null) return null;
+  const turn = rotationY(building.rotation);
+  const fx = Math.sin(turn);
+  const fz = Math.cos(turn);
+  const reach = (building.rotation % 2 === 0 ? placed.h : placed.w) * (TILE_SIZE / 2) + out;
+  return { x: placed.x + fx * reach + fz * side, z: placed.z + fz * reach - fx * side, heading: turn + Math.PI };
+}
+
+/** Where a site's log pile stands: just past its front, toward its right-hand corner, where builders fetch logs. */
+export function sitePile(content: Content, building: BuildingState): { x: number; z: number; heading: number } | null {
+  const placed = placedFootprint(content, building);
+  if (placed === null) return null;
+  const across = (building.rotation % 2 === 0 ? placed.w : placed.h) * (TILE_SIZE / 2);
+  return besideFront(content, building, SITE_PILE_OUT, across - SITE_PILE_INSET);
+}
+
+/** The pile's middle sits this far past the front of the footprint, and this far in from its right-hand corner. */
+const SITE_PILE_OUT = 0.8;
+const SITE_PILE_INSET = 0.9;
+
+/** A log pile by every site under construction, on its road side (sitePile), gone with the scaffold. */
+export function sitePileInstances(island: IslandState, content: Content): ModelInstances {
+  const instances = new Map<string, ModelInstance[]>();
+  for (const building of inIdOrder(island)) {
+    if (isBuilt(building)) continue;
+    const pile = sitePile(content, building);
+    if (pile !== null) add(instances, LOG_PILE_MODEL, { id: building.id, x: pile.x, z: pile.z, rotationY: rotationY(building.rotation) });
   }
   return instances;
 }

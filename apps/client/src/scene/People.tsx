@@ -18,14 +18,16 @@ import { cameraPose } from '../camera/controller.ts';
 import { ISLAND_LIMITS } from '../camera/limits.ts';
 import { getLivePose } from '../camera/livePose.ts';
 import { CHARACTERS, JOINTS, characterModel, clip, variantRow, type ClipName } from '../render/clips.ts';
-import { PEOPLE_CAP, moversAt, newMovers, peopleShown, type CrowdPlan, type Mover } from '../render/crowd.ts';
+import { PEOPLE_CAP, moversAt, newMovers, peopleShown, type Carried, type CrowdPlan, type Mover } from '../render/crowd.ts';
 import { modelUrl } from '../render/models.ts';
 import { useGame } from '../session/game.tsx';
 import { useCharacterMaterials } from './characterMaterial.ts';
 import { bakedGeometry } from './modelGeometry.ts';
 
 const WHEELCHAIR_MODEL = 'accessory_wheelchair_a.glb';
-const BAG_MODEL = 'accessory_bag_a.glb';
+/** What people hold in both arms, each a model following the right arm. */
+const CARRIED_MODELS: Readonly<Record<Carried, string>> = { bag: 'accessory_bag_a.glb', logs: 'accessory_logs_a.glb' };
+const CARRIED = Object.keys(CARRIED_MODELS) as Carried[];
 const ROOT = JOINTS.indexOf('root');
 const ARM_RIGHT = JOINTS.indexOf('arm-right');
 
@@ -126,9 +128,8 @@ function finish(mesh: InstancedMesh | null, count: number): void {
 }
 
 /**
- * The island's people (spec 6.2): one instanced mesh per character and per accessory (the wheelchair, and the bag that
- * carriers and travellers hold), posed on the GPU from the
- * joint-animation texture. Who walks where is planned when the island changes; every frame only fills the instance
+ * The island's people (spec 6.2): one instanced mesh per character and per accessory (the wheelchair, and what people
+ * hold in both arms: travellers' and carriers' bags, builders' logs), posed on the GPU from the joint-animation texture. Who walks where is planned when the island changes; every frame only fills the instance
  * buffers from the gliding game time, nearest to the camera first, and nobody shows when zoomed out to the whole island.
  */
 export function People({ plan }: { plan: CrowdPlan }) {
@@ -136,14 +137,15 @@ export function People({ plan }: { plan: CrowdPlan }) {
   const { material, depth } = useCharacterMaterials();
   const gltfs = useGLTF(CHARACTERS.map((_, i) => modelUrl(characterModel(i))), false, true);
   const wheelchair = useGLTF(modelUrl(WHEELCHAIR_MODEL), false, true);
-  const bag = useGLTF(modelUrl(BAG_MODEL), false, true);
+  const carriedGltfs = useGLTF(CARRIED.map((c) => modelUrl(CARRIED_MODELS[c])), false, true);
   const geometries = useMemo(() => gltfs.map((g) => characterGeometry(g.scene)), [gltfs]);
   const wheelchairGeometry = useMemo(() => accessoryGeometry(wheelchair.scene, ROOT), [wheelchair]);
-  const bagGeometry = useMemo(() => accessoryGeometry(bag.scene, ARM_RIGHT), [bag]);
+  const carriedGeometries = useMemo(() => carriedGltfs.map((g) => accessoryGeometry(g.scene, ARM_RIGHT)), [carriedGltfs]);
   const pool = useMemo(() => newMovers(plan), [plan]);
   const meshes = useRef<Array<InstancedMesh | null>>([]);
   const wheelchairs = useRef<InstancedMesh | null>(null);
-  const bags = useRef<InstancedMesh | null>(null);
+  const carriedMeshes = useRef<Array<InstancedMesh | null>>([]);
+  const carriedCounts = useMemo(() => new Array<number>(CARRIED.length).fill(0), []);
   const counts = useMemo(() => new Array<number>(CHARACTERS.length).fill(0), []);
   const shown = useRef(true);
 
@@ -153,7 +155,7 @@ export function People({ plan }: { plan: CrowdPlan }) {
     const count = shown.current ? moversAt(plan, clock.ticksAt(performance.now()), pose, pool) : 0;
     counts.fill(0);
     let chairs = 0;
-    let carried = 0;
+    carriedCounts.fill(0);
     for (let k = 0; k < count; k += 1) {
       const m = pool[k] as Mover;
       const mesh = meshes.current[m.character];
@@ -164,14 +166,16 @@ export function People({ plan }: { plan: CrowdPlan }) {
         writePerson(wheelchairs.current, chairs, m);
         chairs += 1;
       }
-      if (m.accessory === 'bag' && bags.current) {
-        writePerson(bags.current, carried, m);
-        carried += 1;
+      const held = m.accessory === null || m.accessory === 'wheelchair' ? -1 : CARRIED.indexOf(m.accessory);
+      const holding = carriedMeshes.current[held];
+      if (holding) {
+        writePerson(holding, carriedCounts[held] ?? 0, m);
+        carriedCounts[held] = (carriedCounts[held] ?? 0) + 1;
       }
     }
     meshes.current.forEach((mesh, i) => finish(mesh, counts[i] ?? 0));
     finish(wheelchairs.current, chairs);
-    finish(bags.current, carried);
+    carriedMeshes.current.forEach((mesh, i) => finish(mesh, carriedCounts[i] ?? 0));
   });
 
   return (
@@ -190,7 +194,18 @@ export function People({ plan }: { plan: CrowdPlan }) {
         />
       ))}
       <instancedMesh ref={wheelchairs} args={[wheelchairGeometry, material, PEOPLE_CAP]} customDepthMaterial={depth} castShadow frustumCulled={false} />
-      <instancedMesh ref={bags} args={[bagGeometry, material, PEOPLE_CAP]} customDepthMaterial={depth} castShadow frustumCulled={false} />
+      {carriedGeometries.map((geometry, i) => (
+        <instancedMesh
+          key={i}
+          ref={(mesh) => {
+            carriedMeshes.current[i] = mesh;
+          }}
+          args={[geometry, material, PEOPLE_CAP]}
+          customDepthMaterial={depth}
+          castShadow
+          frustumCulled={false}
+        />
+      ))}
     </>
   );
 }

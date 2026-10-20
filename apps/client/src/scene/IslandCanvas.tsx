@@ -13,6 +13,7 @@ import { Nature } from './Nature.tsx';
 import { FrameDriver } from './frameLoop.ts';
 import { People } from './People.tsx';
 import { PlacementGhost } from './PlacementGhost.tsx';
+import { SiteDust } from './SiteDust.tsx';
 import { QualityProbe } from './QualityProbe.tsx';
 import { DayNight, Sun } from './Sun.tsx';
 import { Terrain } from './Terrain.tsx';
@@ -74,6 +75,7 @@ export default function IslandCanvas({ onReady }: { onReady: () => void }) {
         <Suspense fallback={null}>
           <PlacementGhost />
         </Suspense>
+        <SiteDust />
         <Suspense fallback={null}>{island !== null && <Nature island={island} />}</Suspense>
         <Suspense fallback={null}>{plan !== null && <People plan={plan} />}</Suspense>
         <Suspense fallback={null}>{plan?.ferry != null && <Ferry schedule={plan.ferry} />}</Suspense>

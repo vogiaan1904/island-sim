@@ -31,18 +31,20 @@ export function scaffoldModel(w: number, h: number): string {
 
 /** One tile of walkway on the water beside the dock. */
 export const PIER_MODEL = 'prop_pier_a.glb';
+/** The log pile beside a site, where its builders fetch logs. */
+export const LOG_PILE_MODEL = 'prop_log-pile_a.glb';
 
 const ROAD_PIECES: readonly RoadPieceName[] = ['single', 'end', 'straight', 'corner', 't', 'cross'];
 
 /**
- * The model files an island in this stage can show, in load order: what the stage's buildings, their scaffolds, the
- * roads and the pier need, plus everything earlier stages need. The game loads the Outpost list first and the rest of
- * the stages in the background (a building is only placed in a stage it is available from).
+ * The model files an island in this stage can show, in load order: what the stage's buildings, their scaffolds and the
+ * sites' log pile, the roads and the pier need, plus everything earlier stages need. The game loads the Outpost list
+ * first and the rest of the stages in the background (a building is only placed in a stage it is available from).
  */
 export function stageModels(content: Content, stage: StageId): string[] {
   const reached = content.stages.find((s) => s.id === stage)?.order ?? 0;
   const orderOf = (id: StageId) => content.stages.find((s) => s.id === id)?.order ?? Number.POSITIVE_INFINITY;
-  const files: string[] = [PIER_MODEL, ...ROAD_PIECES.map(roadModel)];
+  const files: string[] = [PIER_MODEL, LOG_PILE_MODEL, ...ROAD_PIECES.map(roadModel)];
   for (const def of content.buildings) {
     if (orderOf(def.availableFrom) > reached) continue;
     files.push(buildingModel(def.id), scaffoldModel(def.footprint.w, def.footprint.h));

@@ -42,7 +42,7 @@ checked against the installed versions. Anything marked "open" is still undecide
 | Water | One surface, cheap wave and shore foam | 1 | |
 | Distant islands | Friends' islands as simple far-away shapes | 1 | Section 7 |
 | Static models | Buildings, roads, nature, props | one per model type on screen | Shared palette material |
-| Construction | Scaffolds, buildings rising in steps | one per scaffold type, plus the rising models | Section 9 |
+| Construction | Scaffolds, sites' log piles, buildings rising (cut) inside them, the finish puff | one per scaffold type and the log pile, plus the rising models (and the puff while it plays) | Section 9 |
 | People | Characters, accessories (bag, wheelchair) | one per character mesh and accessory type | On the shared palette; see `people-vehicles-ships.md` |
 | Vehicles and ships | Trucks, buses, ferry, fishing boats, cargo and trade ships | one per model type | Move along road and sea-lane curves |
 | Effects | Street-light glows, smoke, dust puffs | one per effect type | Instanced sprites |
@@ -174,18 +174,26 @@ is open too.
 
 ## 9. Construction, effects and world anchors
 
-**Construction** (spec 12.5): a frame or scaffold with workers using the interact clip, and the building rises in
-steps.
+**Construction** (spec 12.5; slice1-alive-2): a scaffold with builders at work, and the finished model growing up
+from the ground inside it.
 
 - The scaffold is a model from `island-blender`, drawn instanced like any other model type.
-- **As built** (`render/construction.ts`, `render/instances.ts`): a site is drawn inside `prop_scaffold_<w>x<h>.glb`
-  (a farm 3x2 and a turned 2x3 use the same model, turned). The step comes from the sim's own progress,
-  `constructionStep(constructionLeft, buildTicks)`: 0 when placed up to 3 while ticks are left, 4 (`CONSTRUCTION_STEPS`)
-  when built, so every viewer sees the same step. `constructionRise(step)` is step / 4 and becomes the instance's
-  `rise`: the building model is scaled vertically to that share of its height inside the scaffold (no shader discard,
-  so finished buildings pay nothing). A landmark site waiting for materials stays at step 0.
-- Workers at the site are movers from the construction flow (`people-vehicles-ships.md`), using
-  `interact-left` and `interact-right`. Prices are paid up front (spec 2.3, 12.1), so ordinary construction does not
+- **As built** (`render/construction.ts`, `render/instances.ts`, `scene/palette.ts`, `scene/ModelInstances.tsx`): a
+  site is drawn inside `prop_scaffold_<w>x<h>.glb` (a farm 3x2 and a turned 2x3 use the same model, turned).
+  `constructionRise(constructionLeft, buildTicks)` is the sim's own progress, `(buildTicks - constructionLeft) /
+  buildTicks` (0 when placed, 1 when built), updated each tick, and becomes the instance's `rise`; a site has no
+  building instance before its first tick of work. `ModelInstances` writes `rise x model height` into the per-instance
+  `aCut` attribute (`CUT_ATTRIBUTE`); the shared palette material discards fragments above it in model space and draws
+  back faces under a cut in a flat darker shade of their own color (`CUT_SHADE`), so the cut looks solid. 0 means no
+  cut, so models without the attribute draw whole. The shadow pass uses `paletteDepthMaterial()`, the same cut. A
+  landmark site waiting for materials does not progress in the sim, so it holds.
+- A log pile (`prop_log-pile_a.glb`, `sitePileInstances`) stands by each site just past its front, toward its
+  right-hand corner (`sitePile`), and goes with the scaffold.
+- On the finish tick the scaffold goes and `scene/SiteDust.tsx` plays the placement landing's dust puff at the
+  footprint: `finishedSites` (per update, from the mirrored `construction-finished` events) and `finishPuffTime`
+  (per frame) in `render/ghost.ts`; one instanced mesh, drawn only while a puff plays.
+- Builders at the site are movers (`people-vehicles-ships.md`): half hammer at the scaffold (`interact-left` and
+  `interact-right`), half fetch logs from the pile. Prices are paid up front (spec 2.3, 12.1), so ordinary construction does not
   wait for money. A landmark waits while materials are missing (they are carried from storage; missing ones can be
   bought on the landmark's card, spec 12.1); while a site waits, no workers are busy there.
 

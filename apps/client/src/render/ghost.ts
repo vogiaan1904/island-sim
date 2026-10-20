@@ -1,4 +1,6 @@
 import type { Content } from '@island/content';
+import { TICK_MS } from '@island/protocol';
+import type { IslandState, SimEvent } from '@island/sim';
 import type { BuildingDraft } from '../placement/draft.ts';
 import { placedFootprint, rotationY } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
@@ -45,6 +47,9 @@ export function landingBounce(t: number): { lift: number; squash: number } {
   return { lift: 0, squash: 1 };
 }
 
+/** The dust's opacity as a puff starts. */
+export const DUST_OPACITY = 0.7;
+
 export interface DustPiece {
   /** Offset from the footprint center on the ground. */
   x: number;
@@ -65,6 +70,40 @@ export function dustPuff(t: number, index: number, count: number, reach: number)
     z: Math.sin(angle) * out,
     y: 0.4 + 1.6 * progress,
     scale: 0.6 + 1.4 * progress,
-    opacity: t < DROP_SECONDS ? 0 : 0.7 * (1 - progress),
+    opacity: t < DROP_SECONDS ? 0 : DUST_OPACITY * (1 - progress),
   };
+}
+
+/** A site that has finished: where its puff of dust plays, how far it spreads, and the tick it finished on. */
+export interface FinishedSite {
+  id: number;
+  x: number;
+  z: number;
+  reach: number;
+  tick: number;
+}
+
+/**
+ * The finished sites a puff may still be due at: one per `construction-finished` event of this island, in event order.
+ * Planned when the island changes (the mirror keeps its events); `finishPuffTime` says each frame whether it plays.
+ */
+export function finishedSites(events: readonly SimEvent[], island: IslandState, content: Content): FinishedSite[] {
+  const sites: FinishedSite[] = [];
+  for (const event of events) {
+    if (event.type !== 'construction-finished' || event.slot !== island.slot) continue;
+    const building = island.buildings.find((b) => b.id === event.data.buildingId);
+    const placed = building === undefined ? null : placedFootprint(content, building);
+    if (building === undefined || placed === null) continue;
+    sites.push({ id: building.id, x: placed.x, z: placed.z, reach: (Math.max(placed.w, placed.h) * TILE_SIZE) / 2, tick: event.tick });
+  }
+  return sites;
+}
+
+/**
+ * Seconds into `dustPuff`'s timeline at this gliding game time for a site finished on `tick`, or null when its puff is
+ * not playing. It starts after the ghost's drop, which a finished site does without, and lasts the rest of a landing.
+ */
+export function finishPuffTime(tick: number, ticks: number): number | null {
+  const seconds = ((ticks - tick) * TICK_MS) / 1000;
+  return seconds < 0 || seconds >= LANDING_SECONDS - DROP_SECONDS ? null : DROP_SECONDS + seconds;
 }

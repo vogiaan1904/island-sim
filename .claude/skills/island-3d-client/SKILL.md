@@ -26,8 +26,8 @@ the client state the renderer reads, and the ambience sound:
 
 - scene structure, terrain, water, instanced models, loading models per stage, friends' islands in the distance
 - people (Kenney Mini Characters, children, bags), vehicles, ferries and ships, derived from sim flows
-- construction (scaffold, workers, the building rising in steps), level of detail by zoom, day and night, shadows,
-  glows, smoke, dust and other effects
+- construction (scaffold, builders, the building growing up cut inside it, the finish puff), level of detail by zoom,
+  day and night, shadows, glows, smoke, dust and other effects
 - the camera, every gesture on the island, "Show me" fly-tos, visiting a friend's island, watch mode
 - the placement ghost, road drag preview, the Goods flow view and the other view overlays
 - the phone budget, quality tiers, frame-rate control
@@ -77,7 +77,7 @@ Each rule has a reason. If a task seems to need breaking one, stop and ask inste
    its own material is fixed in Blender (`island-blender`), not worked around in client code.
 3. **The sim decides, the client draws.** No game rules in 3D code. The placement ghost asks `sim`'s own checks; the
    server's answer is final, and the landing bounce waits for it. Visuals never write island state.
-4. **Visuals are a pure function of island state + game time.** Crowds, vehicles, ships, construction steps, lit
+4. **Visuals are a pure function of island state + game time.** Crowds, vehicles, ships, construction heights, lit
    windows and their looks come from the mirrored state and the gliding game clock only: no `Math.random`, no
    `Date.now()` or frame counts for placement, no state that piles up frame by frame, and never the sim's seeded
    random generator (use a stateless hash of stable ids). This keeps the scene stable, lets a visiting friend see
@@ -192,7 +192,8 @@ client must do with them:
   `marker_waterline` (put this at the water surface); `prop_pier_a.glb` (one tile of walkway the client places on the
   water beside the dock) carries `marker_deck` at its deck top, its origin at the bottom of its posts. Markers are
   root-level nodes found by name.
-- **Construction**: `prop_scaffold_<w>x<h>.glb` per footprint, tall enough to raise the building inside it.
+- **Construction**: `prop_scaffold_<w>x<h>.glb` per footprint, tall enough to raise the building inside it, and
+  `prop_log-pile_a.glb` by each site.
 - **Characters**: 12 `character_*.glb` (rigid skin, 7 joints) on the palette, and `characters-animation.bin` /
   `.json`, the joint-animation texture: details, including the rest-position matrix and how to combine the two clip
   layers, in `references/people-vehicles-ships.md`.
@@ -213,8 +214,8 @@ client must do with them:
 4. Draw it through the shared instanced path: a pure function in `render/` returns `ModelInstance`s per model file
    (`{ id, x, z, rotationY, y?, rise? }`), `islandInstances` merges them, and `ModelInstances` draws one instanced mesh
    per file. A new kind of thing adds its list to `islandInstances` and nothing else.
-5. Decide where it shows: zoom levels, night look (lit windows, glows), casts a shadow or not, how its construction
-   steps look, and how each building level (1-3, from slice 2) shows on the island.
+5. Decide where it shows: zoom levels, night look (lit windows, glows), casts a shadow or not, how it looks cut while
+   it rises, and how each building level (1-3, from slice 2) shows on the island.
 6. Add its draw calls (normal pass and shadow pass) to the budget and re-measure the worst view.
 7. Add or update screenshot checks (`island-testing`).
 
@@ -285,7 +286,7 @@ Read only the one the task needs.
 
 ## Still open (update this skill when decided)
 
-Slice 1 settled the camera numbers, quality tiers, terrain chunks, construction steps and the light (values in the
+Slice 1 settled the camera numbers, quality tiers, terrain chunks, construction and the light (values in the
 references, marked where ticket 08 or 21 may retune them). What remains:
 
 - **Settled by slice1-alive** (values in the references): everyone the sim counts is one person on screen (up to 200,

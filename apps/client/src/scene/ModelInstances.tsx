@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef } from 'react';
-import { Euler, Matrix4, Quaternion, Vector3, type InstancedMesh, type Material } from 'three';
+import { Euler, InstancedBufferAttribute, Matrix4, Quaternion, Vector3, type InstancedMesh, type Material } from 'three';
 import type { ModelInstance } from '../render/instances.ts';
 import { useModelGeometry } from './modelGeometry.ts';
-import { usePaletteMaterial } from './palette.ts';
+import { CUT_ATTRIBUTE, paletteDepthMaterial, usePaletteMaterial } from './palette.ts';
 
 const matrix = new Matrix4();
 const place = new Vector3();
@@ -17,7 +17,9 @@ function capacityFor(count: number): number {
 
 /**
  * One model type as one instanced draw call on the shared palette material. React renders it when its instance list
- * changes (at most once per tick); the matrices are written imperatively, never one component per instance.
+ * changes (at most once per tick); the matrices are written imperatively, never one component per instance. A site
+ * under construction is cut at its `rise` share of the model's height (the palette material's per-instance cut), in
+ * the shadow pass too.
  */
 export function ModelInstances({ file, instances, material: own }: { file: string; instances: readonly ModelInstance[]; material?: Material }) {
   const geometry = useModelGeometry(file);
@@ -30,17 +32,36 @@ export function ModelInstances({ file, instances, material: own }: { file: strin
   useLayoutEffect(() => {
     const target = mesh.current;
     if (target === null) return;
+    // The geometry is this component's own bake (useModelGeometry), so the cut attribute is not shared with a ghost.
+    let cuts = geometry.getAttribute(CUT_ATTRIBUTE) as InstancedBufferAttribute | undefined;
+    if (cuts === undefined || cuts.count < capacity) {
+      cuts = new InstancedBufferAttribute(new Float32Array(capacity), 1);
+      geometry.setAttribute(CUT_ATTRIBUTE, cuts);
+    }
+    if (geometry.boundingBox === null) geometry.computeBoundingBox();
+    const top = geometry.boundingBox?.max.y ?? 0;
     instances.forEach((instance, i) => {
       place.set(instance.x, instance.y ?? 0, instance.z);
       turn.setFromEuler(euler.set(0, instance.rotationY, 0));
-      // A site rises in steps: its height is scaled to the share of the building that shows.
-      scale.set(1, instance.rise ?? 1, 1);
       target.setMatrixAt(i, matrix.compose(place, turn, scale));
+      // 0 draws the model whole; a rising site is cut at its share of the height (rise > 0 whenever it is drawn).
+      cuts.setX(i, instance.rise === undefined ? 0 : instance.rise * top);
     });
     target.count = instances.length;
     target.instanceMatrix.needsUpdate = true;
+    cuts.needsUpdate = true;
     target.computeBoundingSphere();
-  }, [instances]);
+  }, [instances, geometry, capacity]);
 
-  return <instancedMesh key={capacity} ref={mesh} args={[geometry, material, capacity]} castShadow={own === undefined} receiveShadow={own === undefined} />;
+  const casts = own === undefined;
+  return (
+    <instancedMesh
+      key={capacity}
+      ref={mesh}
+      args={[geometry, material, capacity]}
+      customDepthMaterial={casts ? paletteDepthMaterial() : undefined}
+      castShadow={casts}
+      receiveShadow={casts}
+    />
+  );
 }
