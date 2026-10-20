@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Roofs } from '../render/roofs.ts';
 import {
   applyGesture,
   cameraPose,
@@ -331,6 +332,41 @@ describe('limits', () => {
       expect(eyeHeight(state)).toBeGreaterThanOrEqual(limits.clearance - 1e-6);
       expect(poseOf(state).polar).toBeGreaterThanOrEqual(limits.minPolar - 1e-9);
     }
+  });
+});
+
+describe('roofs', () => {
+  /** A street of cottage roofs (4.28 m) on every tile within `reach` tiles of the island's middle. */
+  const street = (reach: number): Roofs => {
+    const tops = new Float64Array(32 * 32);
+    for (let y = 16 - reach; y < 16 + reach; y += 1) for (let x = 16 - reach; x < 16 + reach; x += 1) tops[y * 32 + x] = 4.28;
+    return { size: 32, tops };
+  };
+  const eye = (state: CameraState, within = limits) => {
+    const pose = cameraPose(state, within);
+    const out = pose.distance * Math.sin(pose.polar);
+    return { x: pose.x + out * Math.sin(pose.azimuth), y: pose.distance * Math.cos(pose.polar), z: pose.z + out * Math.cos(pose.azimuth) };
+  };
+  /** Low over the middle, looking across, then zoomed all the way in. */
+  const zoomedIn = (within: typeof limits) =>
+    [{ kind: 'fly-to', x: middle.x, z: middle.z, distance: 30, tilt: 1.4 }, { kind: 'wheel', deltaY: -3000, x: 400, y: 300, viewport }].reduce<CameraState>(
+      (s, g) => applyGesture(s, g as Gesture, within),
+      createCamera(within),
+    );
+
+  it('zooming in over the roofs stops with the eye above them', () => {
+    const within = { ...limits, roofs: street(5) };
+    const state = zoomedIn(within);
+    const at = eye(state, within);
+    expect(Math.abs(at.x - middle.x)).toBeLessThan(5 * 4);
+    expect(Math.abs(at.z - middle.z)).toBeLessThan(5 * 4);
+    expect(at.y).toBeGreaterThanOrEqual(4.28 + limits.roofClearance - 1e-6);
+    expect(eye(zoomedIn(limits)).y).toBeLessThan(4.28 + limits.roofClearance);
+  });
+
+  it('changes nothing over open ground', () => {
+    const open = { ...limits, roofs: { size: 32, tops: new Float64Array(32 * 32) } };
+    expect(zoomedIn(open)).toEqual(zoomedIn(limits));
   });
 });
 

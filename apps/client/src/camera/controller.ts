@@ -1,3 +1,5 @@
+import { roofTop, type Roofs } from '../render/roofs.ts';
+
 // The camera controller (spec 6.1, 12.5): pure. A camera state plus one normalized gesture gives the next camera state,
 // with the limits (around the island, never below the ground, tilt range), auto-tilt and momentum. It knows nothing of
 // events, React or three.js: the binding in `input.ts` and `useCameraInput.ts` only turns browser events into the
@@ -26,6 +28,9 @@ export interface Limits {
   maxPolar: number;
   /** The eye stays at least this high above the ground. */
   clearance: number;
+  /** What stands on the island, and how far above its top the eye stays (null: open ground everywhere). */
+  roofs: Roofs | null;
+  roofClearance: number;
   /** Radians added to the player's tilt when fully zoomed in; fades to nothing when zoomed out. */
   autoTilt: number;
   center: { x: number; z: number };
@@ -44,6 +49,8 @@ export function limitsForIsland(tiles: number, tileSize: number): Limits {
     minPolar: 0,
     maxPolar: 1.4,
     clearance: 3,
+    roofs: null,
+    roofClearance: 2,
     autoTilt: 0.26,
     center: { x: world / 2, z: world / 2 },
     startDistance: 150,
@@ -176,13 +183,31 @@ function polarRange(distance: number, limits: Limits): { low: number; high: numb
 function normalize(state: CameraState, limits: Limits): CameraState {
   const distance = clamp(state.distance, limits.minDistance, limits.maxDistance);
   const { low, high } = polarRange(distance, limits);
-  return {
+  const inside = {
     ...state,
     x: clamp(state.x, limits.bounds.minX, limits.bounds.maxX),
     z: clamp(state.z, limits.bounds.minZ, limits.bounds.maxZ),
     distance,
     tilt: clamp(state.tilt, low, Math.max(low, high - autoTiltOffset(distance, limits))),
   };
+  return limits.roofs === null ? inside : aboveRoofs(inside, limits, limits.roofs);
+}
+
+/**
+ * Backs the eye away along its line of sight until it is above the roofs under it. Backing away moves the eye over
+ * other ground, so it looks again a few times; zooming out also lessens the auto-tilt, which only raises the eye.
+ */
+function aboveRoofs(state: CameraState, limits: Limits, roofs: Roofs): CameraState {
+  let next = state;
+  for (let i = 0; i < 4; i += 1) {
+    const pose = cameraPose(next, limits);
+    const out = pose.distance * Math.sin(pose.polar);
+    const top = roofTop(roofs, pose.x + out * Math.sin(pose.azimuth), pose.z + out * Math.cos(pose.azimuth));
+    const wanted = (top + limits.roofClearance) / Math.cos(pose.polar);
+    if (top === 0 || pose.distance >= wanted - 1e-9) return next;
+    next = { ...next, distance: Math.min(limits.maxDistance, wanted) };
+  }
+  return next;
 }
 
 export function createCamera(limits: Limits): CameraState {

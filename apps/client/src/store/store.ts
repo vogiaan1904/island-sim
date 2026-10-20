@@ -1,7 +1,7 @@
 import type { AccountInfo, IslandSummary, PlayerCommand, ServerMessage, WorldInfo } from '@island/protocol';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { applyGesture, step, type Gesture } from '../camera/controller.ts';
-import { ISLAND_LIMITS } from '../camera/limits.ts';
+import { limitsFor } from '../camera/limits.ts';
 import { applyMessage, commandSent, commandsLost, initialClientState, type ClientState } from './mirror.ts';
 import type { PanelId, ViewState } from './view.ts';
 
@@ -70,10 +70,10 @@ export function createGameStore(): GameStore {
     togglePanel: (panel) =>
       set((state) => ({ view: { ...state.view, openPanel: state.view.openPanel === panel ? null : panel } })),
     cameraGesture: (gesture) =>
-      set((state) => ({ view: { ...state.view, camera: applyGesture(state.view.camera, gesture, ISLAND_LIMITS) } })),
+      set((state) => ({ view: { ...state.view, camera: applyGesture(state.view.camera, gesture, limitsFor(state.island?.state ?? null)) } })),
     cameraStep: (dt) =>
       set((state) => {
-        const camera = step(state.view.camera, dt, ISLAND_LIMITS);
+        const camera = step(state.view.camera, dt, limitsFor(state.island?.state ?? null));
         return camera === state.view.camera ? state : { view: { ...state.view, camera } };
       }),
     setSession: (patch) => set((state) => ({ session: { ...state.session, ...patch } })),
