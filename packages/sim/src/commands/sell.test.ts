@@ -26,6 +26,37 @@ describe('sell', () => {
     expect(world.market.sold.fish).toBe(4);
   });
 
+  it('records each sale in the sale manifest, merging a sale of the same good on the same tick', () => {
+    const world = village(600);
+    buildingOf(world, 4).stock = { fish: 10, wood: 10 };
+    sell(world, 'fish', 2);
+    sell(world, 'wood', 3);
+    sell(world, 'fish', 1);
+    expect(islandOf(world, 0).sales).toEqual([
+      { tick: world.tick, good: 'fish', amount: 3 },
+      { tick: world.tick, good: 'wood', amount: 3 },
+    ]);
+  });
+
+  it('keeps an hour of sales: an entry older than 60 ticks goes when the next sale comes', () => {
+    const world = village(600);
+    buildingOf(world, 4).stock = { fish: 10 };
+    const first = world.tick;
+    sell(world, 'fish', 1);
+    world.tick = first + 60;
+    sell(world, 'fish', 2);
+    expect(islandOf(world, 0).sales).toEqual([
+      { tick: first, good: 'fish', amount: 1 },
+      { tick: first + 60, good: 'fish', amount: 2 },
+    ]);
+    world.tick = first + 61;
+    sell(world, 'fish', 3);
+    expect(islandOf(world, 0).sales).toEqual([
+      { tick: first + 60, good: 'fish', amount: 2 },
+      { tick: first + 61, good: 'fish', amount: 3 },
+    ]);
+  });
+
   it('refuses below the floor price and changes nothing', () => {
     const world = village(600);
     buildingOf(world, 4).stock = { fish: 10 };

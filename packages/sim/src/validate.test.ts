@@ -61,6 +61,16 @@ describe('validateWorld', () => {
     ['an unclaimed island with a ferry manifest', (w) => {
       islandOf(w, 1).ferry = { tick: w.tick, off: { commuters: 0, homes: [] }, on: { commuters: 0, homes: [] } };
     }, /unclaimed island/],
+    ['a sale from the future', (w) => { islandOf(w, 0).sales = [{ tick: w.tick + 1, good: 'fish', amount: 1 }]; }, /sales/],
+    ['a sale of an unknown good', (w) => { islandOf(w, 0).sales = [{ tick: w.tick, good: 'gold', amount: 1 }] as never; }, /sales/],
+    ['a sale of nothing', (w) => { islandOf(w, 0).sales = [{ tick: w.tick, good: 'fish', amount: 0 }]; }, /sales/],
+    ['sales out of tick order', (w) => {
+      islandOf(w, 0).sales = [{ tick: w.tick, good: 'fish', amount: 1 }, { tick: w.tick - 1, good: 'wood', amount: 1 }];
+    }, /sales/],
+    ['two sales of a good on one tick', (w) => {
+      islandOf(w, 0).sales = [{ tick: w.tick, good: 'fish', amount: 1 }, { tick: w.tick, good: 'fish', amount: 2 }];
+    }, /sales/],
+    ['an unclaimed island with a sale', (w) => { islandOf(w, 1).sales = [{ tick: w.tick, good: 'fish', amount: 1 }]; }, /unclaimed island/],
     ['a dock holding more than its storage', (w) => { dockOf(w).stock = { wood: 31 }; }, /more than its storage/],
     ['an unknown good in stock', (w) => { dockOf(w).stock = { gold: 1 } as never; }, /unknown good gold/],
     ['a zero amount in stock', (w) => { dockOf(w).stock = { fish: 0 }; }, /fish must be a whole amount/],

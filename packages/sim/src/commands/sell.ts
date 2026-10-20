@@ -14,6 +14,6 @@ export function sell(ctx: CommandContext, command: SellCommand): CommandResult {
   if (storedForSale(island, content, good.id) < amount) return reject('not-enough-goods');
   if (!mainlandPaysEnough(world, good)) return reject('price-below-floor');
   const priceCents = world.market.prices[good.id];
-  const earnedCents = sellToMainland(world, content, island, good.id, amount, ctx.ledger);
+  const earnedCents = sellToMainland(world, content, island, good.id, amount, world.tick, ctx.ledger);
   return accept(ctx, { amount, priceCents, earnedCents });
 }

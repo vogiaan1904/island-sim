@@ -32,13 +32,17 @@ export function storedForSale(island: IslandState, content: Content, good: GoodI
   return total;
 }
 
-/** Sells units from the stores at the current price; callers check the amount and the floor price first. */
+/**
+ * Sells units from the stores at the current price, on `tick` (a command's world tick, or the tick a pass runs), and
+ * records the sale in the island's sale manifest; callers check the amount and the floor price first.
+ */
 export function sellToMainland(
   world: WorldState,
   content: Content,
   island: IslandState,
   good: GoodId,
   amount: number,
+  tick: number,
   ledger: LedgerEntry[],
 ): number {
   let left = amount;
@@ -54,5 +58,17 @@ export function sellToMainland(
   const earned = amount * world.market.prices[good];
   if (earned > 0) credit(island, earned, 'sale', ledger);
   world.market.sold[good] += amount;
+  recordSale(island, tick, good, amount);
   return earned;
+}
+
+/** How long a sale stays in the manifest, in ticks: a cargo boat's trip out and back fits inside it. */
+const SALE_MEMORY_TICKS = 60;
+
+/** Adds a sale to the manifest, merged with one of the same tick and good, and drops the entries older than an hour. */
+function recordSale(island: IslandState, tick: number, good: GoodId, amount: number): void {
+  island.sales = island.sales.filter((sale) => tick - sale.tick <= SALE_MEMORY_TICKS);
+  const same = island.sales.find((sale) => sale.tick === tick && sale.good === good);
+  if (same) same.amount += amount;
+  else island.sales.push({ tick, good, amount });
 }

@@ -101,6 +101,16 @@ export interface FerryManifest {
   on: FerryPassengers;
 }
 
+/**
+ * One entry of the sale manifest (glossary; ADR 0002): what the island sold to the Mainland on one tick, per good. A
+ * sale happens in one tick and leaves no other trace, so the client reads these to send a cargo boat for each.
+ */
+export interface SaleState {
+  tick: number;
+  good: GoodId;
+  amount: number;
+}
+
 export interface KeyStaffState {
   id: number;
   role: KeyStaffRole;
@@ -130,6 +140,8 @@ export interface IslandState {
   commuters: { hired: number; present: number };
   /** The last ferry trip, replaced by every trip; null before the first one. */
   ferry: FerryManifest | null;
+  /** The sale manifest: the sales of the last game hour, in tick order, one entry per tick and good. */
+  sales: SaleState[];
   /** Bought goods waiting for the next ferry, oldest first. */
   cargo: CargoState[];
   /** Goods on the roads, sorted by id. */

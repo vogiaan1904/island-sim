@@ -38,6 +38,7 @@ describe('determinism and replay over Outpost to Settlement', () => {
     it(`rebuilds the live world from a snapshot at tick ${snapshotAtTick} plus the command log`, () => {
       const live = runScript(42, OUTPOST_TO_SETTLEMENT, 14_465, { snapshotAtTick });
       if (!live.snapshot) throw new Error('no snapshot taken');
+      expect(live.world.islands[0]?.sales.length).toBeGreaterThan(0); // auto-sell runs, so the replay covers the manifest
       expect(stateHash(replay(live.snapshot, live.log, 14_465))).toBe(stateHash(live.world));
     }, 60_000);
   }

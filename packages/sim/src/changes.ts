@@ -54,6 +54,7 @@ const HEADER_FIELDS = [
   'lastCheckInTick',
   'commuters',
   'ferry',
+  'sales',
   'cargo',
   'autoSell',
   'staff',

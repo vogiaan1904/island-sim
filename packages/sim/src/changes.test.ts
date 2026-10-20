@@ -44,6 +44,16 @@ describe('change sets', () => {
     });
   });
 
+  it('send the sale manifest with the island after a sale', () => {
+    const world = village(600);
+    buildingOf(world, 4).stock = { fish: 10 };
+    const mirror = worldEntities(structuredClone(world));
+    const capture = captureEntities(world);
+    applyCommand(world, SMALL, { type: 'sell', slot: 0, good: 'fish', amount: 2 }, { sequence: 1 });
+    applyChanges(mirror, diffEntities(capture, world).changes);
+    expect(islandFromEntities(mirror, 0).sales).toEqual([{ tick: world.tick, good: 'fish', amount: 2 }]);
+  });
+
   it('send removed entities by key', () => {
     const world = village(1100);
     buildingOf(world, 2).stock = { vegetables: 5 };

@@ -68,3 +68,9 @@ export function migrateV4(data: Data): Data {
   const islands = (data.islands as Data[]).map((island) => ({ ...island, ferry: null }));
   return { ...data, islands };
 }
+
+/** Version 5 to 6 (slice1-alive-2 ticket 01): every island gains its sale manifest, empty until the next sale. */
+export function migrateV5(data: Data): Data {
+  const islands = (data.islands as Data[]).map((island) => ({ ...island, sales: [] }));
+  return { ...data, islands };
+}

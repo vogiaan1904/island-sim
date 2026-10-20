@@ -97,6 +97,10 @@ Claimed islands in slot order, each running these passes in this order, then the
 
 - Sales come from the built stores, lowest id first, at the current price; `sell` refuses below the floor price
   (`price-below-floor`), and auto-sell skips the good. Buying costs the price x `buyMarkupPermille` (150%).
+- Every sale (both go through `sellToMainland`) is recorded in `island.sales`, the sale manifest (ADR 0002): one entry
+  `{ tick, good, amount }` per tick and good, in tick order, merged when the same good sells again on the same tick
+  (a command's `world.tick`, or the tick an auto-sell pass runs). Each new sale first drops the entries older than 60
+  ticks. Nothing else changes it; the client sends one cargo boat per entry.
 - Every game hour, per good in content order: close `priceRevertPermille` (10%) of the gap to the base price, drift
   at random by up to `priceDriftPermille` (2%) of the base, move by `priceReactionPermille` (0.2%) of the base per
   unit bought minus sold in the hour, clamp to the min and max price, reset the counters. Magnitudes round down.

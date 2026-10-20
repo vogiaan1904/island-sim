@@ -40,7 +40,7 @@ function sellListed(ctx: TickContext, island: IslandState, good: GoodId, reserve
   if (keep === undefined || !def || !mainlandPaysEnough(ctx.world, def)) return 0;
   const amount = Math.min(storedForSale(island, ctx.content, good) - keep - reserve, limit);
   if (amount <= 0) return 0;
-  sellToMainland(ctx.world, ctx.content, island, good, amount, ctx.ledger);
+  sellToMainland(ctx.world, ctx.content, island, good, amount, ctx.tick, ctx.ledger);
   return amount;
 }
 

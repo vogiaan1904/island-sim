@@ -22,6 +22,14 @@ describe('auto-sell', () => {
     expect(ledger).toContainEqual({ kind: 'money', slot: 0, deltaCents: 15 * 600, reason: 'sale' });
   });
 
+  it('records the hourly sale in the sale manifest, on the tick it runs', () => {
+    const world = harbor();
+    buildingOf(world, 4).stock = { wood: 20 };
+    islandOf(world, 0).autoSell = { wood: 5 };
+    tickWorld(world, SMALL);
+    expect(islandOf(world, 0).sales).toEqual([{ tick: world.tick, good: 'wood', amount: 15 }]);
+  });
+
   it('leaves goods that are not listed, and sells nothing below the floor price', () => {
     const world = harbor();
     buildingOf(world, 4).stock = { wood: 20, fish: 10 };
@@ -29,6 +37,7 @@ describe('auto-sell', () => {
     world.market.prices.wood = 359;
     tickWorld(world, SMALL);
     expect(buildingOf(world, 4).stock).toEqual({ wood: 20, fish: 10 });
+    expect(islandOf(world, 0).sales).toEqual([]);
   });
 
   it('always keeps the food residents need for the next days (a safety rule)', () => {

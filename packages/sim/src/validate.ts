@@ -131,6 +131,7 @@ function validateIsland(raw: unknown, slot: number, ctx: Ctx): void {
 
   validateCommuters(raw.commuters, at, ctx);
   validateFerry(raw.ferry, at, ctx);
+  validateSales(raw.sales, at, ctx);
   validateCargo(raw.cargo, at, placed, ctx);
   validateTransit(raw.transit, at, placed, ctx);
   validateSiteTotals(raw, at, placed, ctx);
@@ -146,6 +147,7 @@ function validateIsland(raw: unknown, slot: number, ctx: Ctx): void {
       lastCheckIn === null &&
       isEmptyList(buildings) &&
       raw.ferry === null &&
+      isEmptyList(raw.sales) &&
       isEmptyList(raw.cargo) &&
       isEmptyList(raw.transit) &&
       isEmptyList(raw.staff) &&
@@ -329,6 +331,27 @@ function validateFerry(raw: unknown, at: string, ctx: Ctx): void {
   if (!ok) {
     ctx.problems.push(`${at}: ferry must be null or a past trip's tick with commuters and people per home (ascending ids), off and on, within ${seats} seats`);
   }
+}
+
+/** The sale manifest: known goods, whole amounts above 0, ticks not in the future, in tick order, one per tick and good. */
+function validateSales(raw: unknown, at: string, ctx: Ctx): void {
+  const goods = new Set<string>(ctx.content.goods.map((g) => g.id));
+  const sale = (entry: unknown): entry is { tick: number; good: string; amount: number } =>
+    isRecord(entry) && isCount(entry.tick, ctx.tick) && typeof entry.good === 'string' && goods.has(entry.good) &&
+    isCount(entry.amount) && entry.amount > 0;
+  let ok = Array.isArray(raw);
+  let lastTick = 0;
+  let soldThisTick = new Set<string>();
+  for (const entry of ok ? (raw as unknown[]) : []) {
+    if (!sale(entry) || entry.tick < lastTick || (entry.tick === lastTick && soldThisTick.has(entry.good))) {
+      ok = false;
+      break;
+    }
+    if (entry.tick > lastTick) soldThisTick = new Set();
+    lastTick = entry.tick;
+    soldThisTick.add(entry.good);
+  }
+  if (!ok) ctx.problems.push(`${at}: sales must be sales of known goods, in tick order, one per tick and good, none in the future`);
 }
 
 /** Where goods of a kind may be carried: a built store, a built service that sells them, or a site that needs them. */
