@@ -55,7 +55,7 @@ Name check (the checker's `parseName`): `^(category)_([a-z0-9]+(-[a-z0-9]+)*)_([
 | The look | recolors the palette image only (never the UVs): `look` in `conventions.json`, "golden": saturation 1.1, lightness 1.0, warmth 0.06; sun color [1.0, 0.85, 0.68] linear, energy 3.2, elevation 30, azimuth 40; sky [0.62, 0.62, 0.7]; water [0.1, 0.32, 0.45] |
 | Windows | slot 0 (`palette.WINDOW_SLOT`, color 226, 238, 255): pack glass moves there automatically; a pane drawn in a swatch moves with `palette.move_slot`. The client lights it at night |
 | Compression | meshopt (`EXT_meshopt_compression`) by glTF Transform in `pnpm assets pack`; never Draco |
-| Extra nodes | only empties named `marker_*` (the ferry's `marker_deck`, `marker_waterline`; the pier's `marker_deck`); `pack` moves them to the scene root |
+| Extra nodes | only empties named `marker_*` (`kit.marker`): the ferry's, the fishing boat's and the cargo boat's `marker_deck` and `marker_waterline`; the pier's `marker_deck`; the hand cart's `marker_load` and `marker_handle`; `pack` moves them to the scene root |
 | Geometry clean-up | `kit.finish` welds, triangulates and drops sliver triangles, so rebuilds are byte-exact |
 | Terrain and water | not models: the client builds them (plan 5), colors from the look's palette and `water` |
 | Goods colors | content data (`island-content`), not assets |
@@ -86,6 +86,8 @@ stage download: **Open** (plan 6).
 | Animation | `characters-animation.bin` (RGBA32F) and `.json`, layout in `characters.md` |
 | Children | the same models drawn at 0.75 by the client |
 | Accessories | `accessory_bag_a.glb` (made in Blender, follows `arm-right`), `accessory_wheelchair_a.glb` (the pack's, follows `root`); `accessories` in `conventions.json` names each one's joint |
+| Goods props | `accessory_logs_a.glb`, `accessory_vegetable-crate_a.glb`, `accessory_fish-basket_a.glb`: built upright between the hands in the carriers' pose (the last frame of `holding-both`), then moved into the rest pose of `arm-right` (`recipes/accessories.held`); to load one on a cart or a boat, apply that pose's `arm-right` matrix, then set it on the marker |
+| Work and transport props | `prop_hand-cart_a.glb` (Fantasy Town `cart` at 1.3, handles at the back), `prop_chopping-block_a.glb`, `prop_log-pile_a.glb`; `ship_fishing-boat_a.glb` (Watercraft `boat-row-small`), `ship_cargo-boat_a.glb` (Watercraft `ship-cargo-c` at 0.6, deck aft) |
 | Construction | `prop_scaffold_<w>x<h>.glb`, one per footprint: as tall as the tallest building of that footprint plus a quarter tile |
 | Portraits | `portrait_<name>_a.png` for each port master candidate (`icons.md`) |
 

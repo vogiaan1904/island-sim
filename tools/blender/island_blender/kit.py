@@ -106,6 +106,27 @@ def place(piece, x: float = 0.0, y: float = 0.0, z: float = 0.0, turns: int = 0)
     return piece
 
 
+def stand(piece, x: float = 0.0, y: float = 0.0, z: float = 0.0, turns: int = 0):
+    """Like place, but puts the middle of the piece's bottom (of its turned bounding box) at (x, y, z): for pack pieces
+    whose origin is not their middle."""
+    place(piece, x, y, z, turns)
+    bpy.context.view_layer.update()
+    corners = [piece.matrix_world @ Vector(c) for c in piece.bound_box]
+    piece.location = (2 * x - (min(c.x for c in corners) + max(c.x for c in corners)) / 2,
+                      2 * y - (min(c.y for c in corners) + max(c.y for c in corners)) / 2,
+                      2 * z - min(c.z for c in corners))
+    return piece
+
+
+def marker(model, name: str, location) -> None:
+    """An empty named marker_* (the only extra node a model may carry) at location in the model's space, parented to
+    it, so the client can find a spot on the model (a deck, a waterline, a load spot)."""
+    empty = bpy.data.objects.new(name, None)
+    bpy.context.scene.collection.objects.link(empty)
+    empty.parent = model
+    empty.location = location
+
+
 def finish(parts: list, name: str, footprint_center=(0.0, 0.0), grounded: bool = True):
     """Joins the parts into one mesh named name, on the palette material, origin at the footprint's bottom center.
 

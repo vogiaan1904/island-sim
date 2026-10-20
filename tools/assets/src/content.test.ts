@@ -37,7 +37,20 @@ describe('the shipped files against content data', () => {
   });
 
   it('every catalog entry is used', () => {
-    const known = new Set([...buildingModels, ...scaffolds, ...characters, ...ROADS, 'ship_ferry_a.glb', 'prop_pier_a.glb']);
+    const known = new Set([
+      ...buildingModels,
+      ...scaffolds,
+      ...characters,
+      ...ROADS,
+      'ship_ferry_a.glb',
+      'prop_pier_a.glb',
+      // Work loops, carts and boats (slice1-alive-2).
+      'prop_chopping-block_a.glb',
+      'prop_log-pile_a.glb',
+      'prop_hand-cart_a.glb',
+      'ship_fishing-boat_a.glb',
+      'ship_cargo-boat_a.glb',
+    ]);
     const unused = catalog.models.filter((f) => !known.has(f) && !/^(nature|accessory)_/.test(f));
     expect(unused).toEqual([]);
   });

@@ -21,14 +21,15 @@ tools/blender/island_blender/
   conventions.py  load() (tools/assets/conventions.json), pack_scale(pack), tile()
   palette.py      build_palette, remap_uvs, remap_flat, glb_colors, move_slot, slot_uv, recolor, palette_material,
                   WINDOW_SLOT, NEUTRAL_LOOK
-  kit.py          import_glb (the only door from a pack into Blender), piece, import_piece, place, join, finish,
-                  box, swatch_uv, use_palette, mapping
+  kit.py          import_glb (the only door from a pack into Blender), piece, import_piece, place, stand, join,
+                  finish, box, swatch_uv, marker, use_palette, mapping
   export.py       export_glb(obj, animations=False) -> assets/build/staging/<name>.glb (with marker_ children)
   characters.py   prepare, play, freeze, NAMES, PACK, FPS
   bake.py         skinning_matrices, add_character, manifest (the joint-animation texture)
   icons.py        use_engine, rig(size, look), frame(camera, objects, focus), render(objects, path, size, look, focus)
   cli.py          palette | build | icons | characters (each resets Blender to factory settings)
-  recipes/        __init__ (registry, @recipe), roads, nature, ships, buildings, scaffolds, goods, portraits, accessories
+  recipes/        __init__ (registry, @recipe), roads, nature, ships, buildings, scaffolds, goods, portraits, accessories,
+                  props
 tools/blender/tests/                 unittest suites for pnpm blender test
 tools/assets/                        Node: conventions.json; src/ rules, glb, pack, check, catalog, shipped, cli, blender
 ```
@@ -72,7 +73,9 @@ def well():
 - Fantasy Town helpers in `recipes/buildings.py`: `wall(name, cx, cy, side)` puts a wall on an edge of a 2 m module
   (its walls stand on the cell's +X edge; `SIDE` gives the turns), `gabled_house(cx, cy, walls, rows, levels)`
   builds a two-module-wide house with a `roof-high` gable.
-- Markers: an empty named `marker_*` parented to the model (see `recipes/ships.py`).
+- `kit.stand(piece, x, y, z, turns)`: like `place`, but by the middle of the piece's bottom (pack pieces are rarely
+  centered).
+- Markers: `kit.marker(model, "marker_...", location)` after `finish` (see `recipes/ships.py`).
 
 ## 4. The checks
 

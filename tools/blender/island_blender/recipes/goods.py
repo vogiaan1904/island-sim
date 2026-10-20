@@ -18,12 +18,19 @@ def fish():
     return kit.finish([kit.place(kit.piece(FOOD, "fish"), turns=1)], "good_fish_a")
 
 
+def vegetable_crate(size: float = 1.0, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> list:
+    """A Survival Kit `box-large-open` crate at scale 4 x size, long along X, holding Food Kit `cabbage`, `carrot`,
+    `tomato` and `corn` at scale 1.5 x size, heaped above its rim; its bottom's middle at (x, y, z). The icon and the
+    carried prop (recipes/accessories.py) share it."""
+    parts = [kit.place(kit.import_piece(SURVIVAL, "box-large-open", kit.mapping(), 4.0 * size), x, y, z, turns=1)]
+    for good, gx, gy, turns in (("cabbage", -0.55, 0.05, 0), ("tomato", 0.0, -0.15, 0), ("carrot", 0.45, 0.1, 1),
+                                ("corn", 0.0, 0.25, 1)):
+        parts.append(kit.place(kit.import_piece(FOOD, good, kit.mapping(), 1.5 * size), x + gx * size, y + gy * size,
+                               z + 0.75 * size, turns))
+    return parts
+
+
 @recipe("good_vegetables_a", ship=False)
 def vegetables():
-    """A Survival Kit `box-large-open` crate at scale 4 holding Food Kit `cabbage`, `carrot`, `tomato` and `corn` at
-    scale 1.5, heaped above its rim."""
-    parts = [kit.place(kit.import_piece(SURVIVAL, "box-large-open", kit.mapping(), 4.0), turns=1)]
-    for good, x, y, turns in (("cabbage", -0.55, 0.05, 0), ("tomato", 0.0, -0.15, 0), ("carrot", 0.45, 0.1, 1),
-                              ("corn", 0.0, 0.25, 1)):
-        parts.append(kit.place(kit.import_piece(FOOD, good, kit.mapping(), 1.5), x, y, 0.75, turns))
-    return kit.finish(parts, "good_vegetables_a")
+    """The vegetable crate (vegetable_crate)."""
+    return kit.finish(vegetable_crate(), "good_vegetables_a")
