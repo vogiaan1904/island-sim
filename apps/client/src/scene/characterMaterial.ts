@@ -90,14 +90,12 @@ export interface CharacterMaterials {
   material: MeshStandardMaterial;
   /** For the shadow pass, which must pose people the same way. */
   depth: MeshDepthMaterial;
-  /** The pose goods props are built for (`heldPose`), to set one down on a hand cart. */
-  held: Matrix4;
 }
 
-/** The people's material and its shadow twin, on the shared palette texture, and the held pose (suspends while the clips load). */
+/** The people's material and its shadow twin, on the shared palette texture (suspends while the clips load). */
 export function useCharacterMaterials(): CharacterMaterials {
   const palette = usePaletteMaterial();
-  const buffer = useLoader(FileLoader, modelUrl(ANIMATION_URL_FILE), (loader) => loader.setResponseType('arraybuffer')) as ArrayBuffer;
+  const buffer = useAnimationData();
   return useMemo(() => {
     const joints = jointTexture(buffer);
     const material = new MeshStandardMaterial({ map: palette.map, metalness: 0, roughness: 0.85 });
@@ -106,8 +104,20 @@ export function useCharacterMaterials(): CharacterMaterials {
     const depth = new MeshDepthMaterial({ depthPacking: RGBADepthPacking });
     depth.onBeforeCompile = (shader) => injectSkin(shader, joints, false);
     depth.customProgramCacheKey = () => 'character-skin-depth';
-    const [a = 1, b = 0, c = 0, d = 0, e = 0, f = 1, g = 0, h = 0, i = 0, j = 0, k = 1, l = 0] = heldPose(new Float32Array(buffer));
-    const held = new Matrix4().set(a, b, c, d, e, f, g, h, i, j, k, l, 0, 0, 0, 1);
-    return { material, depth, held };
+    return { material, depth };
   }, [palette, buffer]);
+}
+
+/** The joint-animation data, loaded once (suspends while it loads). */
+function useAnimationData(): ArrayBuffer {
+  return useLoader(FileLoader, modelUrl(ANIMATION_URL_FILE), (loader) => loader.setResponseType('arraybuffer')) as ArrayBuffer;
+}
+
+/** The pose goods props are built for (`heldPose`), to set one down on a hand cart or a boat's deck. */
+export function useHeldPose(): Matrix4 {
+  const buffer = useAnimationData();
+  return useMemo(() => {
+    const [a = 1, b = 0, c = 0, d = 0, e = 0, f = 1, g = 0, h = 0, i = 0, j = 0, k = 1, l = 0] = heldPose(new Float32Array(buffer));
+    return new Matrix4().set(a, b, c, d, e, f, g, h, i, j, k, l, 0, 0, 0, 1);
+  }, [buffer]);
 }

@@ -1,5 +1,6 @@
 import { catalog } from '@island/assets/src/catalog.ts';
 import type { BuildingId, Content, StageId } from '@island/content';
+import type { Carried } from './crowd.ts';
 
 // The client loads only the processed files the asset catalog lists (tools/assets/src/catalog.ts), never anything
 // from assets/raw or assets/packs. Every model URL goes through here.
@@ -35,6 +36,14 @@ export const PIER_MODEL = 'prop_pier_a.glb';
 export const LOG_PILE_MODEL = 'prop_log-pile_a.glb';
 /** The block beside a lumber camp with no tree in reach, where its workers chop. */
 export const CHOPPING_BLOCK_MODEL = 'prop_chopping-block_a.glb';
+
+/** What people hold in both arms (and what hand carts and cargo boats carry), each a model posed for the right arm. */
+export const CARRIED_MODELS: Readonly<Record<Carried, string>> = {
+  bag: 'accessory_bag_a.glb',
+  logs: 'accessory_logs_a.glb',
+  'vegetable-crate': 'accessory_vegetable-crate_a.glb',
+  'fish-basket': 'accessory_fish-basket_a.glb',
+};
 
 const ROAD_PIECES: readonly RoadPieceName[] = ['single', 'end', 'straight', 'corner', 't', 'cross'];
 

@@ -3,10 +3,11 @@ import { TICK_MS } from '@island/protocol';
 import { assignWorkers, childrenOf, findBuildingDef, roadPath, servicesInReach, stockOf, workersOf, type BuildingState, type IslandState } from '@island/sim';
 import { ANIMATION_FPS, CHARACTERS, clip, cycleFrames, type ClipName } from './clips.ts';
 import { MIN_STAY_MINUTES, ferryRoute, ferrySchedule, type FerryRoute, type FerrySchedule, type Point } from './ferry.ts';
+import { FISHING_SEAT, FISHING_WATERLINE, boatPlan, fishingBoatAt, type BoatPlan, type BoatPose } from './boats.ts';
 import { hash32, unit } from './hash.ts';
 import { besideFront, placedFootprint, sitePile } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
-import { FISH_RACK, FURROWS, FURROW_END, HUT_DOOR, WORK_LOOPS, campPile, choppingBlock, lumberTrees, onBuilding, type Spot } from './work.ts';
+import { FISH_RACK, FURROWS, FURROW_END, HUT_DOOR, WORK_LOOPS, campPile, choppingBlock, lumberTrees, onBuilding, workerKey, workersShown, type Spot } from './work.ts';
 
 // The crowd (spec 6.2, 12.5; island-3d-client, people): the sim counts citizens, the client draws them as people
 // walking along the sim's own roads, at the sim's own times. Who walks where is planned once per island state
@@ -20,6 +21,8 @@ export interface Mover {
   key: number;
   x: number;
   z: number;
+  /** Height above the ground: 0, except for someone sitting in a boat. */
+  y: number;
   /** Turn about the vertical axis: 0 faces +z, the models' front. */
   heading: number;
   /** Index into CHARACTERS. */
@@ -110,6 +113,8 @@ export interface CrowdPlan {
   loops: WorkLoop[];
   /** The ferry's lane and timetable, or null when the island has no pier. */
   ferry: FerrySchedule | null;
+  /** The fishing and cargo boats; a fishing boat's rower sits in it while it is out. */
+  boats: BoatPlan;
   startMinute: number;
   ticksPerDay: number;
 }
@@ -132,8 +137,6 @@ const SIDE_STEP = 0.6;
 const WHEELCHAIR_PERCENT = 3;
 /** A shipment of this many units or more goes on a hand cart pushed by one person; a smaller one, in someone's arms. */
 const CART_FROM = 4;
-/** At most this many workers show at a workplace (one while it is understaffed). */
-const WORKERS_SHOWN = 2;
 /** Builders at a site, and at a landmark's: half hammer at the scaffold, half fetch logs from the site's pile. */
 const BUILDERS_SHOWN = 2;
 const LANDMARK_BUILDERS_SHOWN = 4;
@@ -148,6 +151,8 @@ const PILE_REACH = 0.7;
 /** A farm worker tends the crops at this many stops along the furrow, and sets the crate down this far past the front. */
 const FURROW_STOPS = 3;
 const CRATE_OUT = 0.6;
+/** The `sit` clip lowers the body about this much below the seat it is drawn at, so the rower sits on the thwart. */
+const SIT_DROP = 0.15;
 /** Children are drawn at about three quarters of an adult (spec 12.5). */
 const CHILD_SCALE = 0.75;
 /** The evening market walk sets off between these minutes after the shift ends... */
@@ -174,6 +179,11 @@ function lookOf(slot: number, home: number, person: number, child = false): Look
     scale: child ? CHILD_SCALE : 1,
     wheelchair: !child && (h >>> 8) % 100 < WHEELCHAIR_PERCENT,
   };
+}
+
+/** A worker's look (no wheelchair at work) from their look key. */
+function workerLook(key: number): Look {
+  return { key, character: key % CHARACTERS.length, scale: 1, wheelchair: false };
 }
 
 /** A two-number hash with no rest parameters, for the per-frame day checks. */
@@ -372,6 +382,22 @@ function fishSteps(content: Content, hut: BuildingState, k: number, look: Look, 
 }
 
 /**
+ * A fishing boat's rower on land: from the hut's door to the boat in the morning, and back in with a basket of fish
+ * after rowing home. In between they sit in the boat (`moversAt`).
+ */
+function rowers(content: Content, boats: BoatPlan, walks: Walk[]): void {
+  for (const trip of boats.fishing) {
+    if (trip.spot === null) continue;
+    const look = workerLook(trip.rower);
+    const out = walkThrough(content, [trip.door, trip.shore], look, { daily: 0 });
+    out.start = { daily: trip.boardAt - (out.along[out.along.length - 1] as number) / out.speed };
+    const back = walkThrough(content, [trip.shore, trip.door], look, { daily: trip.landAt });
+    back.carrying = 'fish-basket';
+    walks.push(out, back);
+  }
+}
+
+/**
  * Workers doing their building's work during the day shift (its work loop, `WORK_LOOPS`), one round per production
  * cycle: up to two at a fully staffed workplace, one while it is understaffed, none without workers, from when its
  * first commuter arrives.
@@ -383,13 +409,11 @@ function workLoops(island: IslandState, content: Content, arrivals: Map<number, 
     const def = findBuildingDef(content, building.type);
     const kind = WORK_LOOPS[building.type];
     if (def === null || def.recipe === null || kind === undefined || building.constructionLeft > 0 || building.work === null) continue;
-    const workers = building.work.residents + building.work.commuters;
-    const shown = workers === 0 ? 0 : workers >= def.jobs ? Math.min(WORKERS_SHOWN, def.jobs) : 1;
+    const shown = workersShown(def, building);
     const from = arrivals.get(building.id) ?? rules.shiftStartMinute;
     const cycle = def.recipe.cycleTicks;
     for (let k = 0; k < shown; k += 1) {
-      const h = hash32(island.slot, building.id, k, 3);
-      const look: Look = { key: h, character: h % CHARACTERS.length, scale: 1, wheelchair: false };
+      const look = workerLook(workerKey(island.slot, building, k));
       let steps: LoopStep[] | null;
       if (kind === 'trees') {
         trees ??= lumberTrees(island, content);
@@ -566,10 +590,12 @@ export function crowdPlan(island: IslandState, content: Content): CrowdPlan {
     const stay = island.ferry === null ? null : { tick: island.ferry.tick, minutes: Math.max(MIN_STAY_MINUTES, Math.ceil(wait) + 1) };
     ferry = ferrySchedule(route, content, stay);
   }
+  const boats = boatPlan(island, content, route, arrivals);
+  rowers(content, boats, walks);
   const loops: WorkLoop[] = [];
   workLoops(island, content, arrivals, loops);
   builders(island, content, working, loops);
-  return { walks, stations: working, loops, ferry, startMinute: content.rules.startMinute, ticksPerDay: content.rules.ticksPerDay };
+  return { walks, stations: working, loops, ferry, boats, startMinute: content.rules.startMinute, ticksPerDay: content.rules.ticksPerDay };
 }
 
 const plans = new WeakMap<IslandState, CrowdPlan>();
@@ -589,10 +615,11 @@ export function crowdPlanFor(island: IslandState, content: Content): CrowdPlan {
 
 /** A pool of movers big enough for every walk in the plan, made once and reused every frame. */
 export function newMovers(plan: CrowdPlan): Mover[] {
-  return [...plan.walks, ...plan.stations, ...plan.loops].map(() => ({
+  return [...plan.walks, ...plan.stations, ...plan.loops, ...plan.boats.fishing].map(() => ({
     key: 0,
     x: 0,
     z: 0,
+    y: 0,
     heading: 0,
     character: 0,
     scale: 1,
@@ -609,12 +636,17 @@ const WALK_CYCLE = cycleFrames(clip('walk'));
 /** Holding both arms out is a pose: its last frame. */
 const HOLD_FRAME = clip('holding-both').frames - 1;
 const WHEEL_CYCLE = cycleFrames(clip('wheelchair-move-forward'));
+/** Sitting is a pose: the last frame of `sit`. */
+const SIT_FRAME = clip('sit').frames - 1;
+/** Where a rower's boat is this frame, reused so nothing is allocated. */
+const boat: BoatPose = { model: 'fishing', x: 0, y: 0, z: 0, heading: 0, load: null };
 
 /** Places someone standing in one spot playing a clip on both layers, at a frame of it. */
 function stand(look: Look, spot: { x: number; z: number; heading: number }, name: ClipName, phase: number, out: Mover): void {
   out.key = look.key;
   out.x = spot.x;
   out.z = spot.z;
+  out.y = 0;
   out.heading = spot.heading;
   out.character = look.character;
   out.scale = look.scale;
@@ -641,6 +673,7 @@ function place(walk: Walk, walked: number, out: Mover): void {
   out.key = look.key;
   out.x = x0 + (x1 - x0) * t;
   out.z = z0 + (z1 - z0) * t;
+  out.y = 0;
   if (span > 0) out.heading = Math.atan2(x1 - x0, z1 - z0);
   out.character = look.character;
   out.scale = look.scale;
@@ -714,6 +747,15 @@ export function moversAt(plan: CrowdPlan, ticks: number, target: { x: number; z:
       }
       break;
     }
+    count += 1;
+  }
+  for (const trip of plan.boats.fishing) {
+    if (trip.spot === null || minute < trip.boardAt || minute >= trip.landAt) continue;
+    const mover = out[count];
+    if (mover === undefined) break;
+    fishingBoatAt(trip, minute, ticks, boat);
+    stand(workerLook(trip.rower), boat, 'sit', SIT_FRAME, mover);
+    mover.y = boat.y - FISHING_WATERLINE + FISHING_SEAT - SIT_DROP;
     count += 1;
   }
   if (count <= cap) return count;

@@ -1,6 +1,7 @@
-import type { BuildingId, Content } from '@island/content';
+import type { BuildingDef, BuildingId, Content } from '@island/content';
 import { isBuilt, type BuildingState, type IslandState } from '@island/sim';
 import type { Point } from './ferry.ts';
+import { hash32 } from './hash.ts';
 import { besideFront, frontCorner, placedFootprint, rotationY, type ModelInstance, type ModelInstances } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
 import { CHOPPING_BLOCK_MODEL, LOG_PILE_MODEL } from './models.ts';
@@ -14,6 +15,21 @@ export type WorkKind = 'trees' | 'field' | 'boat';
 
 /** The work loop of every building with jobs; a test fails when one has none, so new content cannot forget it. */
 export const WORK_LOOPS: Readonly<Partial<Record<BuildingId, WorkKind>>> = { 'lumber-camp': 'trees', farm: 'field', 'fishing-hut': 'boat' };
+
+/** At most this many workers show at a workplace (one while it is understaffed). */
+const WORKERS_SHOWN = 2;
+
+/** How many of a built workplace's workers show at work: up to two when fully staffed, one while understaffed, none without workers. */
+export function workersShown(def: BuildingDef, building: BuildingState): number {
+  if (building.work === null || def.jobs === 0) return 0;
+  const workers = building.work.residents + building.work.commuters;
+  return workers === 0 ? 0 : workers >= def.jobs ? Math.min(WORKERS_SHOWN, def.jobs) : 1;
+}
+
+/** The look key of a workplace's k-th worker shown, the same every day. */
+export function workerKey(slot: number, building: BuildingState, k: number): number {
+  return hash32(slot, building.id, k, 3);
+}
 
 export interface Spot extends Point {
   /** Turn about the vertical axis: 0 faces +z. */

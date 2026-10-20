@@ -19,22 +19,15 @@ import { ISLAND_LIMITS } from '../camera/limits.ts';
 import { getLivePose } from '../camera/livePose.ts';
 import { CHARACTERS, JOINTS, characterModel, clip, variantRow, type ClipName } from '../render/clips.ts';
 import { GOOD_PROPS, PEOPLE_CAP, moversAt, newMovers, peopleShown, type Carried, type CrowdPlan, type Mover } from '../render/crowd.ts';
-import { modelUrl } from '../render/models.ts';
+import { CARRIED_MODELS, modelUrl } from '../render/models.ts';
 import { useGame } from '../session/game.tsx';
-import { useCharacterMaterials } from './characterMaterial.ts';
+import { useCharacterMaterials, useHeldPose } from './characterMaterial.ts';
 import { bakedGeometry } from './modelGeometry.ts';
 
 const WHEELCHAIR_MODEL = 'accessory_wheelchair_a.glb';
 const CART_MODEL = 'prop_hand-cart_a.glb';
 /** How far in front of a person their hands are when holding with both arms: where they grip the cart's handles. */
 const HANDS_AHEAD = 0.35;
-/** What people hold in both arms, each a model following the right arm. */
-const CARRIED_MODELS: Readonly<Record<Carried, string>> = {
-  bag: 'accessory_bag_a.glb',
-  logs: 'accessory_logs_a.glb',
-  'vegetable-crate': 'accessory_vegetable-crate_a.glb',
-  'fish-basket': 'accessory_fish-basket_a.glb',
-};
 const CARRIED = Object.keys(CARRIED_MODELS) as Carried[];
 /** What a hand cart can be loaded with: the goods props. */
 const LOADS: readonly Carried[] = [...new Set(Object.values(GOOD_PROPS))];
@@ -140,7 +133,7 @@ const size = new Vector3();
 
 /** Writes one person into slot `i` of an instanced mesh: where they stand and which frames their two layers play. */
 function writePerson(mesh: InstancedMesh, i: number, m: Mover): void {
-  place.set(m.x, 0, m.z);
+  place.set(m.x, m.y, m.z);
   turn.setFromEuler(euler.set(0, m.heading, 0));
   size.setScalar(m.scale);
   mesh.setMatrixAt(i, matrix.compose(place, turn, size));
@@ -172,7 +165,8 @@ function finish(mesh: InstancedMesh | null, count: number): void {
  */
 export function People({ plan }: { plan: CrowdPlan }) {
   const { clock, store } = useGame();
-  const { material, depth, held } = useCharacterMaterials();
+  const { material, depth } = useCharacterMaterials();
+  const held = useHeldPose();
   const gltfs = useGLTF(CHARACTERS.map((_, i) => modelUrl(characterModel(i))), false, true);
   const wheelchair = useGLTF(modelUrl(WHEELCHAIR_MODEL), false, true);
   const carriedGltfs = useGLTF(CARRIED.map((c) => modelUrl(CARRIED_MODELS[c])), false, true);

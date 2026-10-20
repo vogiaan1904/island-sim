@@ -164,29 +164,29 @@ function sideTiles(x: number, y: number, w: number, h: number, side: number): Ar
 }
 
 /**
- * One tile of pier on the water beside each finished dock: the first water tile along the side the dock faces, else
- * along the sides after it going round. The tile and its turn are the same for the same island; a dock hemmed in by
- * land gets none.
+ * The first water tile just outside a building, looking along the side it faces first and then the sides after it going
+ * round, with that side as a quarter-turn rotation (0 faces +Z); null when land hems it in. The same for the same island.
  */
+export function waterSide(island: IslandState, content: Content, building: BuildingState): { tx: number; ty: number; side: Rotation } | null {
+  const placed = placedFootprint(content, building);
+  if (placed === null) return null;
+  const size = content.rules.islandSize;
+  for (let turn = 0; turn < 4; turn += 1) {
+    const side = ((building.rotation + turn) % 4) as Rotation;
+    const water = sideTiles(building.x, building.y, placed.w, placed.h, side).find(([tx, ty]) => isWater(island, size, tx, ty));
+    if (water !== undefined) return { tx: water[0], ty: water[1], side };
+  }
+  return null;
+}
+
+/** One tile of pier on the water beside each finished dock, on its water side (`waterSide`); a dock hemmed in by land gets none. */
 export function pierInstances(island: IslandState, content: Content): ModelInstances {
   const instances = new Map<string, ModelInstance[]>();
-  const size = content.rules.islandSize;
   for (const building of inIdOrder(island)) {
     if (building.type !== 'dock' || !isBuilt(building)) continue;
-    const placed = placedFootprint(content, building);
-    if (placed === null) continue;
-    const { w, h } = placed;
-    for (let turn = 0; turn < 4; turn += 1) {
-      const water = sideTiles(building.x, building.y, w, h, (building.rotation + turn) % 4).find(([tx, ty]) => isWater(island, size, tx, ty));
-      if (water === undefined) continue;
-      add(instances, PIER_MODEL, {
-        id: building.id,
-        ...footprintCenter(water[0], water[1], 1, 1),
-        rotationY: rotationY(((building.rotation + turn) % 4) as Rotation),
-        y: PIER_BASE_HEIGHT,
-      });
-      break;
-    }
+    const water = waterSide(island, content, building);
+    if (water === null) continue;
+    add(instances, PIER_MODEL, { id: building.id, ...footprintCenter(water.tx, water.ty, 1, 1), rotationY: rotationY(water.side), y: PIER_BASE_HEIGHT });
   }
   return instances;
 }

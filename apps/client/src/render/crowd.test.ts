@@ -2,8 +2,9 @@ import { content, type BuildingId } from '@island/content';
 import { buildingDefOf, newBuilding, type IslandState } from '@island/sim';
 import { describe, expect, it } from 'vitest';
 import { aliceWorld, islandOf } from '../test/islands.ts';
+import { boatPlan, boatsAt, newBoatPoses } from './boats.ts';
 import { GOOD_PROPS, crowdPlan, crowdPlanFor, moversAt, newMovers, peopleShown, type CrowdPlan, type Mover } from './crowd.ts';
-import { ferryPose, newFerryPose } from './ferry.ts';
+import { ferryPose, ferryRoute, newFerryPose } from './ferry.ts';
 import { hash32 } from './hash.ts';
 import { sitePile } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
@@ -348,6 +349,29 @@ describe('the crowd: work loops', () => {
     const chopping = round(island, 110, 0, 40).filter((m) => m?.legs.startsWith('interact'));
     expect(chopping.length).toBeGreaterThan(0);
     for (const m of chopping) expect(Math.hypot(m!.x - block.x, m!.z - block.z)).toBeLessThan(1.2);
+  });
+
+  it('has a fishing hut\'s first worker walk to its boat, sit in it out at sea all day, and carry a basket in at the end', () => {
+    const island = staffed(2, { type: 'fishing-hut', x: 38, y: 54 });
+    const trip = crowdPlan(island, content).boats.fishing[0]!;
+    const rower = (minute: number) => everyone(island, minute).find((m) => m.key === workersOf(110)[0]);
+    const boat = (minute: number) => {
+      const plan = boatPlan(island, content, ferryRoute(island, content), new Map());
+      const out = newBoatPoses(plan);
+      boatsAt(plan, at(minute), out);
+      return out[0]!;
+    };
+    expect(rower(content.rules.shiftStartMinute - 1)).toBeUndefined();
+    expect(rower(trip.boardAt - 0.1)).toMatchObject({ legs: 'walk', accessory: null, y: 0 });
+    for (const minute of [trip.boardAt + 1, NOON, trip.landAt - 1]) {
+      const seated = rower(minute)!;
+      expect(seated.legs).toBe('sit');
+      expect(seated.x).toBeCloseTo(boat(minute).x);
+      expect(seated.z).toBeCloseTo(boat(minute).z);
+      expect(seated.y).toBeGreaterThan(boat(minute).y - 0.5);
+    }
+    expect(rower(trip.landAt + 0.1)).toMatchObject({ legs: 'walk', arms: 'holding-both', accessory: 'fish-basket', y: 0 });
+    expect(rower(content.rules.shiftEndMinute + 0.1)).toBeUndefined();
   });
 
   it('has a fishing hut\'s second worker clean fish at the door and take the basket in', () => {

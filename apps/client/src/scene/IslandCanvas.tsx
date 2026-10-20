@@ -8,6 +8,7 @@ import { guessQuality, pixelRatioFor } from '../render/quality.ts';
 import { useGame, useGameState } from '../session/game.tsx';
 import { Buildings } from './Buildings.tsx';
 import { CameraRig } from './CameraRig.tsx';
+import { Boats } from './Boats.tsx';
 import { Ferry } from './Ferry.tsx';
 import { Nature } from './Nature.tsx';
 import { FrameDriver } from './frameLoop.ts';
@@ -79,6 +80,7 @@ export default function IslandCanvas({ onReady }: { onReady: () => void }) {
         <Suspense fallback={null}>{island !== null && <Nature island={island} />}</Suspense>
         <Suspense fallback={null}>{plan !== null && <People plan={plan} />}</Suspense>
         <Suspense fallback={null}>{plan?.ferry != null && <Ferry schedule={plan.ferry} />}</Suspense>
+        <Suspense fallback={null}>{plan !== null && <Boats plan={plan.boats} />}</Suspense>
       </Canvas>
     </div>
   );
