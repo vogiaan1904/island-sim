@@ -140,6 +140,9 @@ describe('watch captions', () => {
       captionText({ kind: 'tour', spot: 'market', building: 'market' }),
       captionText({ kind: 'tour', spot: 'night', building: 'cottage' }),
       captionText({ kind: 'tour', spot: 'dock', building: 'dock' }),
+      captionText({ kind: 'cargo', good: 'vegetables' }),
+      captionText({ kind: 'fishing' }),
+      captionText({ kind: 'finish', building: 'cottage' }),
     ];
     expect(texts).toEqual([
       'The morning ferry comes in',
@@ -152,6 +155,9 @@ describe('watch captions', () => {
       'Evening at the market',
       'Night over the island',
       'By the dock',
+      'A boat takes vegetables to the Mainland',
+      'A fishing boat comes home',
+      'The cottage is finished',
     ]);
     for (const text of texts) expectNoEmoji(text);
   });

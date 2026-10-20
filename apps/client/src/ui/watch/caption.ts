@@ -1,5 +1,5 @@
 import type { Caption } from '../../camera/watch.ts';
-import { STAGE_NAMES, theBuilding } from '../names.ts';
+import { GOOD_NAMES, STAGE_NAMES, theBuilding } from '../names.ts';
 
 // One plain line per watch-mode moment (island-ui: calm, short, never emoji or emoji-like symbols).
 
@@ -17,6 +17,9 @@ const EVENT_WORDS: Record<string, string> = {
 
 export function captionText(caption: Caption): string {
   if (caption.kind === 'ferry') return `The ${caption.trip} ferry comes in`;
+  if (caption.kind === 'cargo') return `A boat takes ${GOOD_NAMES[caption.good].toLowerCase()} to the Mainland`;
+  if (caption.kind === 'fishing') return 'A fishing boat comes home';
+  if (caption.kind === 'finish') return `${capital(theBuilding(caption.building))} is finished`;
   if (caption.kind === 'event') {
     const building = caption.building === null ? null : theBuilding(caption.building);
     if (caption.type === 'construction-finished' && building) return `${capital(building)} is finished`;

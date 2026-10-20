@@ -1,6 +1,6 @@
 import { content } from '@island/content';
 import { useEffect, useRef, useState } from 'react';
-import { WATCH_TILT, pickMoment, type Moment } from '../../camera/watch.ts';
+import { WATCH_TILT, pickMoment, showsOnce, type Moment } from '../../camera/watch.ts';
 import { cameraPose } from '../../camera/controller.ts';
 import { ISLAND_LIMITS } from '../../camera/limits.ts';
 import { getLivePose } from '../../camera/livePose.ts';
@@ -104,12 +104,10 @@ export function Watch() {
       const island = store.getState().island;
       if (island === null) return;
       const ticks = clock.ticksAt(performance.now());
-      const next = pickMoment(
-        { island: island.state, content, events: island.events, ticks, ferry: crowdPlanFor(island.state, content).ferry, shown: shown.current, since },
-        current,
-      );
+      const plan = crowdPlanFor(island.state, content);
+      const next = pickMoment({ island: island.state, content, events: island.events, ticks, ferry: plan.ferry, boats: plan.boats, shown: shown.current, since }, current);
       if (next === current) return;
-      if (next.kind === 'event') shown.current.add(next.key);
+      if (showsOnce(next.kind)) shown.current.add(next.key);
       current = next;
       setMoment(next);
       const real = getLivePose() ?? cameraPose(store.getState().view.camera, ISLAND_LIMITS);

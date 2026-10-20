@@ -26,7 +26,24 @@ function island(): IslandState {
 }
 
 function input(state: IslandState, minute: number, events: SimEvent[] = [], shown: string[] = []): WatchInput {
-  return { island: state, content, events, ticks: at(minute), ferry: crowdPlan(state, content).ferry, shown: new Set(shown), since: at(minute) - 5 };
+  const plan = crowdPlan(state, content);
+  return { island: state, content, events, ticks: at(minute), ferry: plan.ferry, boats: plan.boats, shown: new Set(shown), since: at(minute) - 5 };
+}
+
+/** The island with a staffed fishing hut (110) at (38, 54), a sale of fish at minute 700, and a cottage site (120). */
+function harbour(siteLeft = 0): IslandState {
+  const state = island();
+  const hut = newBuilding(buildingDefOf(content, 'fishing-hut'), 110, 38, 54, 0);
+  hut.constructionLeft = 0;
+  if (hut.work) hut.work.residents = 2;
+  state.buildings.push(hut);
+  state.sales = [{ tick: at(700), good: 'fish', amount: 5 }];
+  if (siteLeft > 0) {
+    const site = newBuilding(buildingDefOf(content, 'cottage'), 120, 26, 54, 0);
+    site.constructionLeft = siteLeft;
+    state.buildings.push(site);
+  }
+  return state;
 }
 
 const finished = (tick: number, buildingId: number): SimEvent => ({
@@ -36,6 +53,52 @@ const finished = (tick: number, buildingId: number): SimEvent => ({
   type: 'construction-finished',
   slot: 0,
   data: { buildingId, building: 'farm' },
+});
+
+describe('the watch director: boats and a building finishing', () => {
+  it('shows a cargo boat leaving the pier from its sale\'s tick, once', () => {
+    const state = harbour();
+    const moment = pickMoment(input(state, 702), null);
+    expect(moment).toMatchObject({ kind: 'cargo', caption: { kind: 'cargo', good: 'fish' }, azimuth: Math.PI });
+    const mooring = crowdPlan(state, content).boats.cargo!.mooring;
+    expect(Math.hypot(moment.x - mooring.x, moment.z - mooring.z)).toBeLessThan(15);
+    expect(pickMoment(input(state, 702, [], [moment.key]), null).kind).toBe('tour');
+    expect(pickMoment(input(state, 730), null).kind).toBe('tour');
+  });
+
+  it('shows the fishing boat coming home on its way back, once', () => {
+    const state = harbour();
+    const trip = crowdPlan(state, content).boats.fishing[0]!;
+    const minute = Math.ceil(trip.landAt - trip.row + 1);
+    const moment = pickMoment(input(state, minute), null);
+    expect(moment).toMatchObject({ kind: 'fishing', caption: { kind: 'fishing' } });
+    expect(moment.until).toBeGreaterThanOrEqual(at(trip.landAt));
+    expect(pickMoment(input(state, minute, [], [moment.key]), null).kind).toBe('tour');
+    expect(pickMoment(input(state, 720), null).kind).toBe('tour');
+  });
+
+  it('shows a building in its last minutes and a moment after it finishes, then not again as news', () => {
+    const moment = pickMoment(input(harbour(2), 720), null);
+    expect(moment).toMatchObject({ kind: 'finish', caption: { kind: 'finish', building: 'cottage' } });
+    expect(moment.until).toBeGreaterThan(at(722));
+    expect(pickMoment(input(harbour(30), 720), null).kind).toBe('tour');
+    // Finished now: the moment holds, and the news of it is not shown a second time.
+    const done = harbour();
+    const finished: SimEvent = { tick: at(722), source: 0, index: 0, type: 'construction-finished', slot: 0, data: { buildingId: 120, building: 'cottage' } };
+    expect(pickMoment({ ...input(done, 723, [finished]) }, moment)).toBe(moment);
+    expect(pickMoment(input(done, 740, [finished], [moment.key]), null).kind).toBe('tour');
+  });
+
+  it('ranks them after a due ferry and before news and the tour, and the same input gives the same moment', () => {
+    const state = harbour();
+    state.sales = [{ tick: at(MORNING - 4), good: 'wood', amount: 5 }];
+    expect(pickMoment(input(state, MORNING - 2), null).kind).toBe('ferry');
+    const sold = harbour();
+    const touring = pickMoment(input(sold, 698), null);
+    expect(touring.kind).toBe('tour');
+    expect(pickMoment(input(sold, 701, [finished(at(700), 103)]), touring).kind).toBe('cargo');
+    expect(pickMoment(input(sold, 701), null)).toEqual(pickMoment(input(sold, 701), null));
+  });
 });
 
 describe('the watch director', () => {
