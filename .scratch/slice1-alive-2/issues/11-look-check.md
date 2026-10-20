@@ -4,16 +4,16 @@
 
 **Blocked by:** 03, 04, 05, 06, 07, 08, 09, 10.
 
-**Status:** ready-for-human
+**Status:** done
 
 How: `pnpm client:build`, then `pnpm preview <minute>` and sign in as alice / password-1 (ticket 10 lists the minutes).
 
-- [ ] Workers: lumber camp, farm, fishing hut.
-- [ ] A building rising, builders, the scaffold coming down.
-- [ ] Carriers holding goods; a cart.
-- [ ] The fishing boat out and back; a cargo boat after a sale; the ferry undisturbed.
-- [ ] The camera at the closest zoom over buildings; the four rough spots; the new watch moments.
-- [ ] The user's verdict and notes recorded under Comments, and follow-up work made from them.
+- [x] Workers: lumber camp, farm, fishing hut.
+- [x] A building rising, builders, the scaffold coming down.
+- [x] Carriers holding goods; a cart.
+- [x] The fishing boat out and back; a cargo boat after a sale; the ferry undisturbed.
+- [x] The camera at the closest zoom over buildings; the four rough spots; the new watch moments.
+- [x] The user's verdict and notes recorded under Comments, and follow-up work made from them.
 
 ## Minutes to open
 
@@ -42,3 +42,4 @@ How: `pnpm client:build`, then `pnpm preview <minute>` and sign in as alice / pa
   one already open.
 - Note for the check: the preview world pauses while nobody watches and catches up on the real time that passed when
   it is opened again, so reopen it right after starting it to see the listed minutes.
+- 2026-10-20, the user's check: passed, no notes. No follow-up work.

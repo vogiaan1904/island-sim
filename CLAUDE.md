@@ -1,7 +1,7 @@
 # Island Sim
 
 3D web game: build a modern island (citizens, farms, factories, transport, hiring) in deep-management style,
-in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay), 3 (protocol and server), 4 (art direction and assets), 5 (the client: `slice1-client`, `slice1-auto-roads`, `slice1-remove-roads`, `slice1-big-island`, `slice1-soft-ui`, `slice1-alive`) and 6 (`slice1-alive-2`) are done and merged. Plan 6 (slice 1 alive, part 2: people at work, construction, carts and boats; `.scratch/slice1-alive-2/`) is built and merged (2026-10-20); its ticket 11, the user's look check, is still to come. Plan 7 (slice 1 builders: crews from the Mainland by boat; `.scratch/slice1-builders/`) is grilled and specced; plan 8 (ship slice 1) is postponed until the rules settle.**
+in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay), 3 (protocol and server), 4 (art direction and assets), 5 (the client: `slice1-client`, `slice1-auto-roads`, `slice1-remove-roads`, `slice1-big-island`, `slice1-soft-ui`, `slice1-alive`) and 6 (`slice1-alive-2`) are done and merged. Plan 6 (slice 1 alive, part 2: people at work, construction, carts and boats; `.scratch/slice1-alive-2/`) is built and merged (2026-10-20), and the user's look check passed. Plan 7 (slice 1 builders: crews from the Mainland by boat; `.scratch/slice1-builders/`) is grilled and specced; plan 8 (ship slice 1) is postponed until the rules settle.**
 
 ## Resume here
 
@@ -12,9 +12,7 @@ in always-running private multiplayer worlds. **Status: slice 1 in progress; pla
   No product code before the user approves the tickets.
 - **Next step:** plan 7, `.scratch/slice1-builders/`: spec and 11 tickets approved (2026-10-20); build them on
   branch `slice1-builders`, one commit per ticket (06 needs Blender open, 11 is the user's look check). The user has more game-logic changes in mind: grill
-  each as its own feature. Shipping is plan 8 (its questions in `docs/plans/2026-10-17-slice1-index.md`). Plan 6's look
-  check (`.scratch/slice1-alive-2/issues/11-look-check.md`) still waits for the user; its fixes go onto `main` on a
-  small branch. Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);
+  each as its own feature. Shipping is plan 8 (its questions in `docs/plans/2026-10-17-slice1-index.md`). Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);
   develop with `pnpm server:dev` and `pnpm client`. `pnpm preview [minute] [--lan]` serves the built client with a prepared village in memory (sign in as alice / password-1), for look checks and, with `--lan`, phone tests. `pnpm admin create-account <name>` makes the first account. The
   skills `island-3d-client`, `island-ui`, `island-testing`, `island-server` and `island-game-logic` describe what is
   built.
