@@ -4,6 +4,7 @@ import {
   DataTexture,
   FileLoader,
   FloatType,
+  Matrix4,
   MeshDepthMaterial,
   MeshStandardMaterial,
   NearestFilter,
@@ -12,7 +13,7 @@ import {
   type Texture,
   type WebGLProgramParametersWithUniforms,
 } from 'three';
-import { ANIMATION_HEIGHT, ANIMATION_URL_FILE, ANIMATION_WIDTH, ARM_JOINTS, TORSO } from '../render/clips.ts';
+import { ANIMATION_HEIGHT, ANIMATION_URL_FILE, ANIMATION_WIDTH, ARM_JOINTS, TORSO, heldPose } from '../render/clips.ts';
 import { modelUrl } from '../render/models.ts';
 import { usePaletteMaterial } from './palette.ts';
 
@@ -89,9 +90,11 @@ export interface CharacterMaterials {
   material: MeshStandardMaterial;
   /** For the shadow pass, which must pose people the same way. */
   depth: MeshDepthMaterial;
+  /** The pose goods props are built for (`heldPose`), to set one down on a hand cart. */
+  held: Matrix4;
 }
 
-/** The people's material and its shadow twin, on the shared palette texture (suspends while the clips load). */
+/** The people's material and its shadow twin, on the shared palette texture, and the held pose (suspends while the clips load). */
 export function useCharacterMaterials(): CharacterMaterials {
   const palette = usePaletteMaterial();
   const buffer = useLoader(FileLoader, modelUrl(ANIMATION_URL_FILE), (loader) => loader.setResponseType('arraybuffer')) as ArrayBuffer;
@@ -103,6 +106,8 @@ export function useCharacterMaterials(): CharacterMaterials {
     const depth = new MeshDepthMaterial({ depthPacking: RGBADepthPacking });
     depth.onBeforeCompile = (shader) => injectSkin(shader, joints, false);
     depth.customProgramCacheKey = () => 'character-skin-depth';
-    return { material, depth };
+    const [a = 1, b = 0, c = 0, d = 0, e = 0, f = 1, g = 0, h = 0, i = 0, j = 0, k = 1, l = 0] = heldPose(new Float32Array(buffer));
+    const held = new Matrix4().set(a, b, c, d, e, f, g, h, i, j, k, l, 0, 0, 0, 1);
+    return { material, depth, held };
   }, [palette, buffer]);
 }

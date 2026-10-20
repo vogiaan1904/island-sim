@@ -71,3 +71,22 @@ export function variantRow(character: number): number {
 }
 
 export const ANIMATION_URL_FILE = 'characters-animation.bin';
+
+/** A joint's baked matrix at a row of the joint-animation data: the top three rows of a 4 x 4, row by row. */
+export function jointMatrix(data: Float32Array, row: number, joint: number): number[] {
+  const out: number[] = [];
+  for (let t = 0; t < 3; t += 1) {
+    const i = (row * ANIMATION_WIDTH + joint * 3 + t) * 4;
+    out.push(data[i] ?? 0, data[i + 1] ?? 0, data[i + 2] ?? 0, data[i + 3] ?? 0);
+  }
+  return out;
+}
+
+/**
+ * The pose the goods props are built for (island-blender): the right arm in the last frame of `holding-both`. A prop
+ * set down on a cart or a boat is posed with it once, then placed like any model.
+ */
+export function heldPose(data: Float32Array): number[] {
+  const held = clip('holding-both');
+  return jointMatrix(data, variantRow(0) + held.firstRow + held.frames - 1, JOINTS.indexOf('arm-right'));
+}

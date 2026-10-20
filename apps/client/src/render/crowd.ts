@@ -1,4 +1,4 @@
-import type { Content } from '@island/content';
+import type { Content, GoodId } from '@island/content';
 import { TICK_MS } from '@island/protocol';
 import { assignWorkers, childrenOf, findBuildingDef, roadPath, servicesInReach, stockOf, workersOf, type BuildingState, type IslandState } from '@island/sim';
 import { ANIMATION_FPS, CHARACTERS, clip, cycleFrames, type ClipName } from './clips.ts';
@@ -33,10 +33,15 @@ export interface Mover {
   arms: ClipName | null;
   armsPhase: number;
   accessory: Carried | 'wheelchair' | null;
+  /** The load of the hand cart this person pushes (the cart goes ahead of them), or null. */
+  cart: Carried | null;
 }
 
 /** What someone holds in both arms: a traveller's bag, or the goods of a work loop. */
 export type Carried = 'bag' | 'logs' | 'vegetable-crate' | 'fish-basket';
+
+/** The prop each good is carried as, in both arms or on a hand cart (a test checks that every good has one). */
+export const GOOD_PROPS: Readonly<Record<GoodId, Carried>> = { wood: 'logs', vegetables: 'vegetable-crate', fish: 'fish-basket' };
 
 /** Who a person is to look at: the same every day for the same home and person. */
 interface Look {
@@ -58,8 +63,10 @@ interface Walk {
   start: Start;
   /** Metres per game minute. */
   speed: number;
-  /** What is held in both arms, if anything. */
+  /** What is held in both arms, if anything, or loaded on the hand cart pushed along. */
   carrying: Carried | null;
+  /** Whether `carrying` goes on a hand cart. */
+  cart: boolean;
   /** x, z pairs. */
   points: Float64Array;
   /** Distance walked at each point. */
@@ -123,11 +130,8 @@ const STAGGER_MINUTES = 4;
 const SIDE_STEP = 0.6;
 /** About 3 in 100 people use a wheelchair. */
 const WHEELCHAIR_PERCENT = 3;
-/** One carrier walks each this many units of a shipment... */
-const UNITS_PER_CARRIER = 5;
-/** ...and never more than this many, in single file this far apart. */
-const MAX_CARRIERS = 4;
-const CARRIER_GAP = 1.2;
+/** A shipment of this many units or more goes on a hand cart pushed by one person; a smaller one, in someone's arms. */
+const CART_FROM = 4;
 /** At most this many workers show at a workplace (one while it is understaffed). */
 const WORKERS_SHOWN = 2;
 /** Builders at a site, and at a landmark's: half hammer at the scaffold, half fetch logs from the site's pile. */
@@ -227,7 +231,7 @@ function walkThrough(content: Content, line: readonly Point[], look: Look, start
     if (i > 0) along[i] = (along[i - 1] as number) + Math.hypot(p.x - (line[i - 1]?.x ?? 0), p.z - (line[i - 1]?.z ?? 0));
   });
   const speed = TILE_SIZE / content.rules.roadTicksPerTile;
-  return { look, start, speed, carrying: null, points, along };
+  return { look, start, speed, carrying: null, cart: false, points, along };
 }
 
 /** Each home's people in a fixed order: the workers first (the person indexes the work flows use), then the children. */
@@ -260,8 +264,9 @@ function residentsCommute(island: IslandState, content: Content, walks: Walk[], 
 }
 
 /**
- * Goods on the roads (before trucks): carriers walk each shipment in single file, one per few units, timed so the last
- * one steps in as the goods land in the destination's stock. They walk the whole route in the sim's travel time.
+ * Goods on the roads (before trucks): each shipment walked by one carrier holding its good, or pushed on a hand cart when
+ * it is big, timed so it steps in as the goods land in the destination's stock. It goes the whole route in the sim's
+ * travel time.
  */
 function carriers(island: IslandState, content: Content, walks: Walk[]): void {
   const byId = new Map(island.buildings.map((b) => [b.id, b]));
@@ -272,20 +277,14 @@ function carriers(island: IslandState, content: Content, walks: Walk[]): void {
     const tiles = from && to ? roadPath(island, content, from, to) : null;
     if (!from || !to || tiles === null) continue;
     const travel = Math.max(1, tiles.length * ticksPerTile);
-    const count = Math.min(MAX_CARRIERS, Math.ceil(shipment.amount / UNITS_PER_CARRIER));
-    for (let k = 0; k < count; k += 1) {
-      const h = hash32(island.slot, shipment.id, k, 2);
-      const look: Look = { key: h, character: h % CHARACTERS.length, scale: 1, wheelchair: false };
-      const walk = walkBetween(content, island, from, to, look, { tick: 0 });
-      if (walk === null) continue;
-      const length = walk.along[walk.along.length - 1] as number;
-      walk.speed = length / travel;
-      // The leader is k gaps ahead of the last carrier, so it set off that much earlier.
-      const ahead = (count - 1 - k) * CARRIER_GAP;
-      walk.start = { tick: shipment.arriveTick - travel - ahead / walk.speed };
-      walk.carrying = 'bag';
-      walks.push(walk);
-    }
+    const h = hash32(island.slot, shipment.id, 0, 2);
+    const look: Look = { key: h, character: h % CHARACTERS.length, scale: 1, wheelchair: false };
+    const walk = walkBetween(content, island, from, to, look, { tick: shipment.arriveTick - travel });
+    if (walk === null) continue;
+    walk.speed = (walk.along[walk.along.length - 1] as number) / travel;
+    walk.carrying = GOOD_PROPS[shipment.good];
+    walk.cart = shipment.amount >= CART_FROM;
+    walks.push(walk);
   }
 }
 
@@ -602,6 +601,7 @@ export function newMovers(plan: CrowdPlan): Mover[] {
     arms: null,
     armsPhase: 0,
     accessory: null,
+    cart: null,
   }));
 }
 
@@ -623,6 +623,7 @@ function stand(look: Look, spot: { x: number; z: number; heading: number }, name
   out.arms = null;
   out.armsPhase = 0;
   out.accessory = null;
+  out.cart = null;
 }
 
 /** Places one walker at a distance along its walk. */
@@ -645,10 +646,11 @@ function place(walk: Walk, walked: number, out: Mover): void {
   out.scale = look.scale;
   out.arms = walk.carrying !== null ? 'holding-both' : null;
   out.armsPhase = walk.carrying !== null ? HOLD_FRAME : 0;
+  out.cart = walk.cart ? walk.carrying : null;
   if (walk.carrying !== null) {
     out.legs = 'walk';
     out.legsPhase = (walked / (STRIDE * look.scale)) * WALK_CYCLE;
-    out.accessory = walk.carrying;
+    out.accessory = walk.cart ? null : walk.carrying;
   } else if (look.wheelchair) {
     out.legs = 'wheelchair-move-forward';
     out.legsPhase = (walked / WHEEL_STRIDE) * WHEEL_CYCLE;

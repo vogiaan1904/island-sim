@@ -2,7 +2,7 @@ import { content, type BuildingId } from '@island/content';
 import { buildingDefOf, newBuilding, type IslandState } from '@island/sim';
 import { describe, expect, it } from 'vitest';
 import { aliceWorld, islandOf } from '../test/islands.ts';
-import { crowdPlan, crowdPlanFor, moversAt, newMovers, peopleShown, type CrowdPlan, type Mover } from './crowd.ts';
+import { GOOD_PROPS, crowdPlan, crowdPlanFor, moversAt, newMovers, peopleShown, type CrowdPlan, type Mover } from './crowd.ts';
 import { ferryPose, newFerryPose } from './ferry.ts';
 import { hash32 } from './hash.ts';
 import { sitePile } from './instances.ts';
@@ -154,13 +154,13 @@ describe('the crowd: carriers', () => {
   };
   const NOON = at(720);
 
-  // The farm to the dock is 4 road tiles: a shipment takes 4 ticks, so its last carrier sets off 4 ticks before it lands.
-  it('walks a shipment along the road with goods in both arms, arriving when the goods land', () => {
+  // The farm to the dock is 4 road tiles: a shipment takes 4 ticks, so its carrier sets off 4 ticks before it lands.
+  it('walks a shipment of under 4 units along the road with its good in both arms, arriving when the goods land', () => {
     const island = shipping(3, NOON + 20);
     expect(carriersAt(island, NOON)).toEqual([]);
     const walking = carriersAt(island, NOON + 19);
     expect(walking).toHaveLength(1);
-    expect(walking[0]).toMatchObject({ legs: 'walk', accessory: 'bag' });
+    expect(walking[0]).toMatchObject({ legs: 'walk', accessory: 'vegetable-crate', cart: null });
     expect(onRoadRow(walking[0] as Mover)).toBe(true);
     expect(carriersAt(island, NOON + 19.99)).toHaveLength(1);
     expect(carriersAt(island, NOON + 20.01)).toEqual([]);
@@ -174,10 +174,26 @@ describe('the crowd: carriers', () => {
     expect(Math.abs((later as Mover).x - dockX)).toBeLessThan(Math.abs((early as Mover).x - dockX));
   });
 
-  it('sends one carrier per 5 units, at most 4, in single file', () => {
-    for (const [amount, carriers] of [[1, 1], [5, 1], [6, 2], [20, 4], [60, 4]] as const) {
-      expect(carriersAt(shipping(amount, NOON + 20), NOON + 18), `${amount} units`).toHaveLength(carriers);
+  it('sends a shipment of 4 units or more as one hand cart pushed by one person, on the same path and timing', () => {
+    for (const amount of [4, 20, 60]) {
+      const island = shipping(amount, NOON + 20);
+      expect(carriersAt(island, NOON), `${amount} units`).toEqual([]);
+      const pushing = carriersAt(island, NOON + 19);
+      expect(pushing, `${amount} units`).toHaveLength(1);
+      expect(pushing[0]).toMatchObject({ legs: 'walk', arms: 'holding-both', accessory: null, cart: 'vegetable-crate' });
+      expect(onRoadRow(pushing[0] as Mover)).toBe(true);
+      expect(carriersAt(island, NOON + 19.99)).toHaveLength(1);
+      expect(carriersAt(island, NOON + 20.01)).toEqual([]);
     }
+    expect(carriersAt(shipping(3, NOON + 20), NOON + 19)[0]?.cart).toBeNull();
+  });
+
+  it('is the same for the same shipment and time', () => {
+    expect(carriersAt(shipping(20, NOON + 20), NOON + 18.3)).toEqual(carriersAt(structuredClone(shipping(20, NOON + 20)), NOON + 18.3));
+  });
+
+  it('gives every good a prop to carry', () => {
+    for (const good of content.goods) expect(GOOD_PROPS[good.id], good.id).toBeDefined();
   });
 
   it('shows no carrier when no road joins the two buildings any more', () => {
