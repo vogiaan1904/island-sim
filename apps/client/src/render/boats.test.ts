@@ -1,10 +1,11 @@
 import { content } from '@island/content';
-import { buildingDefOf, newBuilding, type IslandState } from '@island/sim';
+import { buildingDefOf, checkPlacement, newBuilding, type IslandState } from '@island/sim';
 import { describe, expect, it } from 'vitest';
 import { aliceWorld, islandOf } from '../test/islands.ts';
 import { CARGO_OUT_MINUTES, boatPlan, boatsAt, ferryLaneDistance, newBoatPoses, type BoatPose } from './boats.ts';
 import { ferryRoute } from './ferry.ts';
 import { TILE_SIZE } from './look.ts';
+import { WATER_LEVEL, groundHeight } from './terrain.ts';
 
 type SaleState = IslandState['sales'][number];
 const SIZE = content.rules.islandSize;
@@ -32,6 +33,18 @@ function boats(island: IslandState, ticks: number): BoatPose[] {
 }
 const water = (island: IslandState, p: { x: number; z: number }) => island.terrain[Math.floor(p.z / TILE_SIZE) * SIZE + Math.floor(p.x / TILE_SIZE)] === '0';
 const apart = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.hypot(a.x - b.x, a.z - b.z);
+/** The shallowest water under a hull this long and wide lying at `at` along `heading` (the drawn ground, not tiles). */
+function depthUnder(island: IslandState, at: { x: number; z: number; heading: number }, half: number, beam: number): number {
+  let shallowest = Number.POSITIVE_INFINITY;
+  const [fx, fz] = [Math.sin(at.heading), Math.cos(at.heading)];
+  for (let a = -half; a <= half + 1e-9; a += 0.2) {
+    for (const b of [-beam / 2, 0, beam / 2]) {
+      const ground = groundHeight(island.terrain, SIZE, at.x + fx * a + fz * b, at.z + fz * a - fx * b);
+      shallowest = Math.min(shallowest, WATER_LEVEL - ground);
+    }
+  }
+  return shallowest;
+}
 
 describe('fishing boats', () => {
   it('moors a boat on the water by a fishing hut with a worker shown, and none without workers', () => {
@@ -40,8 +53,30 @@ describe('fishing boats', () => {
     expect(planOf(harbour(0)).fishing).toEqual([]);
     const { mooring } = planOf(harbour()).fishing[0]!;
     expect(water(harbour(), mooring)).toBe(true);
-    // The hut's front edge is at z 56 tiles; the boat lies just off it.
-    expect(Math.abs(mooring.z - 56 * TILE_SIZE)).toBeLessThan(2);
+    // The hut's front edge is at z 56 tiles; the boat lies off it, past the beach (within a tile and a half).
+    expect(mooring.z).toBeGreaterThan(56 * TILE_SIZE);
+    expect(mooring.z - 56 * TILE_SIZE).toBeLessThan(1.5 * TILE_SIZE);
+  });
+
+  it('moors in water deep enough for its hull, never up the beach, and the rower boards at the water\'s edge', () => {
+    let moored = 0;
+    for (const [x, y] of [[38, 54], [29, 54], [27, 51], [36, 55], [33, 56]] as const) {
+      for (const rotation of [0, 1, 2, 3] as const) {
+        const island = harbour();
+        const hut = island.buildings.find((b) => b.id === 110)!;
+        const others = { ...island, buildings: island.buildings.filter((b) => b !== hut) };
+        if (!checkPlacement(others, content, buildingDefOf(content, 'fishing-hut'), x, y, rotation).ok) continue;
+        Object.assign(hut, { x, y, rotation });
+        const trip = planOf(island).fishing[0];
+        if (trip === undefined) continue;
+        moored += 1;
+        expect(depthUnder(island, trip.mooring, 1.2, 1), `${x},${y} r${rotation}`).toBeGreaterThanOrEqual(0.25);
+        const edge = trip.ashore[trip.ashore.length - 1]!;
+        expect(Math.abs(groundHeight(island.terrain, SIZE, edge.x, edge.z) - WATER_LEVEL), `${x},${y} r${rotation}`).toBeLessThan(0.3);
+        expect(apart(edge, trip.mooring)).toBeLessThan(3);
+      }
+    }
+    expect(moored).toBeGreaterThan(6);
   });
 
   it('rows out to a spot 3 to 5 tiles offshore, on water and off the ferry lane, and is back by the end of the shift', () => {
@@ -80,7 +115,9 @@ describe('cargo boats', () => {
     expect(moored).toHaveLength(1);
     expect(moored[0]!.load).toBeNull();
     expect(water(island, moored[0]!)).toBe(true);
-    expect(apart(moored[0]!, route.pier)).toBeLessThan(TILE_SIZE);
+    expect(depthUnder(island, moored[0]!, 3.15, 2.35)).toBeGreaterThanOrEqual(0.4);
+    // Beside the pier, a little out along it where the water is deep enough.
+    expect(apart(moored[0]!, route.pier)).toBeLessThan(1.5 * TILE_SIZE);
     expect(ferryLaneDistance(route, moored[0]!)).toBeGreaterThan(2.6);
   });
 

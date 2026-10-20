@@ -70,6 +70,29 @@ function tileColor(char: string | undefined): Rgb {
   return LOOK.seabed;
 }
 
+/**
+ * The height of the drawn ground at a world point: the plane of the mesh triangle under it (`terrainChunks`), so a
+ * boat can tell real water from a water tile the beach slopes up into. The sea floor off the map.
+ */
+export function groundHeight(terrain: string, size: number, x: number, z: number): number {
+  const tx = Math.floor(x / TILE_SIZE);
+  const ty = Math.floor(z / TILE_SIZE);
+  if (tx < 0 || ty < 0 || tx >= size || ty >= size) return SEA_FLOOR_HEIGHT;
+  const u = x / TILE_SIZE - tx;
+  const v = z / TILE_SIZE - ty;
+  const h00 = cornerHeight(terrain, size, tx, ty);
+  const h10 = cornerHeight(terrain, size, tx + 1, ty);
+  const h01 = cornerHeight(terrain, size, tx, ty + 1);
+  const h11 = cornerHeight(terrain, size, tx + 1, ty + 1);
+  const corner = filledCorner(terrain, size, tx, ty);
+  if (corner === 'ne' || corner === 'sw') {
+    // Split along the NW-SE diagonal.
+    return v >= u ? h00 + v * (h01 - h00) + u * (h11 - h01) : h00 + u * (h10 - h00) + v * (h11 - h10);
+  }
+  // Split along the NE-SW diagonal.
+  return u + v <= 1 ? h00 + u * (h10 - h00) + v * (h01 - h00) : h11 + (1 - u) * (h01 - h11) + (1 - v) * (h10 - h11);
+}
+
 /** The terrain string of an island (one char per tile: 0 water, 1 beach, 2 grass) as chunks, the same for the same input. */
 export function terrainChunks(terrain: string, size: number, chunkTiles: number = TERRAIN_CHUNK_TILES): TerrainChunk[] {
   const chunks: TerrainChunk[] = [];

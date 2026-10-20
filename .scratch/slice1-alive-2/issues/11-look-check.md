@@ -32,3 +32,13 @@ How: `pnpm client:build`, then `pnpm preview <minute>` and sign in as alice / pa
 - 17:00 (1020): the evening ferry. Any time: the camera at the closest zoom over the roofs.
 
 ## Comments
+
+- 2026-10-20, before the user's check (Claude, screenshots of the preview): the fishing boat was moored on beach-height
+  ground and the moored cargo boat partly too (the beach slopes up into the first water tile, and a water tile with
+  land on two sides is filled in). Fixed: `groundHeight` in `render/terrain.ts` is the drawn terrain's height (tested
+  against every mesh triangle); boats moor where it leaves their hull afloat, the fishing boat a little further out
+  and the rower walking down the beach to the water's edge, the cargo boat a little out along the pier. The village
+  gave the island a second port master (the claim makes one); removed. `PREVIEW_PORT` lets a second preview run beside
+  one already open.
+- Note for the check: the preview world pauses while nobody watches and catches up on the real time that passed when
+  it is opened again, so reopen it right after starting it to see the listed minutes.

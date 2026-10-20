@@ -8,8 +8,9 @@ import { applyCommand, buildingDefOf, checkPlacement, roadsFrom, type IslandStat
 //   water off its front, both fully staffed;
 // - a farm, a well, a market with fish and four cottages near the dock: two full, one empty (the morning ferry brings
 //   newcomers to it) and one still being built, half way up its scaffold;
-// - 6 hired commuters, a port master whose auto-sell rule sells all the wood in the stores every game hour (30 to
-//   start with), and a hand cart of 20 vegetables on the road from the farm to the dock.
+// - 6 hired commuters, an auto-sell rule (the island's port master, there from the claim) that sells all the wood in
+//   the stores every game hour (30 to start with), and a hand cart of 20 vegetables on the road from the farm to the
+//   dock.
 // The world is set to the given minute of its second day.
 
 /** Where the lumber camp and the fishing hut go on seed 42's first island (the client tests check both still work). */
@@ -58,8 +59,6 @@ export function previewVillage(world: WorldState, minute: number): void {
     if (building.type === 'dock') building.stock = { wood: 30 };
   }
   island.commuters.hired = 6;
-  island.staff.push({ id: world.nextId, role: 'port-master', name: 'Lena', look: 3 });
-  world.nextId += 1;
   island.autoSell = { wood: 0 };
 
   world.tick = content.rules.ticksPerDay + ((minute - content.rules.startMinute + content.rules.ticksPerDay) % content.rules.ticksPerDay);

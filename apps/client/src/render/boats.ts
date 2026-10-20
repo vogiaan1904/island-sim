@@ -5,7 +5,7 @@ import { roundFootprint } from './around.ts';
 import { hash32, unit } from './hash.ts';
 import { footprintCenter, waterSide } from './instances.ts';
 import { TILE_SIZE } from './look.ts';
-import { WATER_LEVEL } from './terrain.ts';
+import { WATER_LEVEL, groundHeight } from './terrain.ts';
 import { waveHeight } from './waves.ts';
 import { HUT_DOOR, onBuilding, workerKey, workersShown, type Spot } from './work.ts';
 
@@ -27,8 +27,16 @@ export const CARGO_LOAD_ACROSS: readonly number[] = [-0.55, 0.55];
 
 /** Half the fishing boat's length and the cargo boat's beam and length, in metres. */
 const FISHING_HALF_LENGTH = 1.2;
+const FISHING_BEAM = 1;
 const CARGO_HALF_BEAM = 1.2;
 const CARGO_HALF_LENGTH = 3.2;
+/** Water a moored hull needs under it (its draft and a little), measured on the drawn ground: the beach slopes up into
+ * the first water tile, so a tile of water is not yet deep enough to float in. */
+const FISHING_DRAFT = 0.25;
+const CARGO_DRAFT = 0.4;
+/** A mooring is looked for this far out from the shore, a step at a time. */
+const MOORING_REACH = 2 * TILE_SIZE;
+const MOORING_STEP = 0.2;
 /** A fishing boat fishes this many tiles out from its mooring, its heading hashed within this turn of straight out. */
 const FISHING_TILES_FROM = 3;
 const FISHING_TILES_SPREAD = 2;
@@ -101,6 +109,18 @@ const isWater = (island: IslandState, size: number, p: Point) => {
   return tx < 0 || ty < 0 || tx >= size || ty >= size || island.terrain[ty * size + tx] === '0';
 };
 
+/** Whether a hull this long and wide, lying at `at` along `heading`, has at least `draft` of water under it everywhere. */
+function floats(island: IslandState, size: number, at: Point, heading: number, half: number, beam: number, draft: number): boolean {
+  const fx = Math.sin(heading);
+  const fz = Math.cos(heading);
+  for (let a = -half; a <= half + 1e-9; a += MOORING_STEP) {
+    for (const b of [-beam / 2, 0, beam / 2]) {
+      if (groundHeight(island.terrain, size, at.x + fx * a + fz * b, at.z + fz * a - fx * b) > WATER_LEVEL - draft) return false;
+    }
+  }
+  return true;
+}
+
 /** Whether every point of a line, every metre along it, is on water. */
 function onWater(island: IslandState, size: number, from: Point, to: Point): boolean {
   const steps = Math.ceil(Math.hypot(to.x - from.x, to.z - from.z));
@@ -132,8 +152,15 @@ function fishingTrip(island: IslandState, content: Content, hutId: number, from:
   if (hut === undefined || water === null || door === null || front === null) return null;
   const size = content.rules.islandSize;
   const heading = (water.side * Math.PI) / 2;
-  const shore = ahead(footprintCenter(water.tx, water.ty, 1, 1), heading, -TILE_SIZE / 2);
-  const mooring = { ...ahead(shore, heading, FISHING_HALF_LENGTH + 0.2), heading };
+  // Down the beach from the hut's water side to the water's edge, and out until the boat floats.
+  const coast = ahead(footprintCenter(water.tx, water.ty, 1, 1), heading, -TILE_SIZE / 2);
+  let out = 0;
+  while (out < MOORING_REACH && groundHeight(island.terrain, size, ahead(coast, heading, out).x, ahead(coast, heading, out).z) > WATER_LEVEL) out += MOORING_STEP / 2;
+  const shore = ahead(coast, heading, out);
+  let afloat = out + FISHING_HALF_LENGTH;
+  while (afloat < MOORING_REACH && !floats(island, size, ahead(coast, heading, afloat), heading, FISHING_HALF_LENGTH, FISHING_BEAM, FISHING_DRAFT)) afloat += MOORING_STEP;
+  if (afloat >= MOORING_REACH) return null;
+  const mooring = { ...ahead(coast, heading, afloat), heading };
   let spot: Point | null = null;
   for (let i = 0; i < FISHING_TRIES && spot === null; i += 1) {
     const turn = heading + (unit(hash32(island.slot, hut.id, i, 9)) * 2 - 1) * FISHING_TURN;
@@ -159,10 +186,14 @@ function cargoRoute(island: IslandState, content: Content, route: FerryRoute | n
   for (const side of [1, -1]) {
     // To the pier's right (seen looking out to sea) first, then its left.
     const right = heading - Math.PI / 2;
-    const mooring = ahead(pier, right, side * (TILE_SIZE / 2 + CARGO_HALF_BEAM + 0.3));
+    // Beside the pier, as far in as the water lets it float.
+    const beside = ahead(pier, right, side * (TILE_SIZE / 2 + CARGO_HALF_BEAM + 0.3));
+    let out = 0;
+    while (out < MOORING_REACH && !floats(island, size, ahead(beside, heading, out), heading, CARGO_HALF_LENGTH, 2 * CARGO_HALF_BEAM, CARGO_DRAFT)) out += MOORING_STEP;
+    const mooring = ahead(beside, heading, out);
     const bow = ahead(mooring, heading, CARGO_HALF_LENGTH);
     const stern = ahead(mooring, heading, -CARGO_HALF_LENGTH);
-    if (!isWater(island, size, mooring) || !isWater(island, size, bow) || !isWater(island, size, stern)) continue;
+    if (out >= MOORING_REACH || !isWater(island, size, mooring) || !isWater(island, size, bow) || !isWater(island, size, stern)) continue;
     const clear = ahead(mooring, heading, CARGO_CLEAR_PIER);
     const lane = ahead(route.from, right, side * CARGO_LANE_OFFSET);
     const points = [mooring, clear, lane];

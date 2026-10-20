@@ -12,8 +12,9 @@ import { previewVillage } from './village.ts';
 // shift).
 // Build the client first: pnpm client:build. With --lan it also listens on this machine's local network address, so a
 // phone on the same Wi-Fi can open it (plain http: the browser then allows no Wake Lock); without it, only this machine.
+// PREVIEW_PORT=<port> serves it on another port than 8795, beside a preview already running.
 
-const PORT = 8795;
+const PORT = Number(process.env.PREVIEW_PORT ?? 8795);
 const USERNAME = 'alice';
 const PASSWORD = 'password-1';
 

@@ -2,7 +2,7 @@ import { content } from '@island/content';
 import { describe, expect, it } from 'vitest';
 import { aliceWorld, islandOf } from '../test/islands.ts';
 import { LOOK } from './look.ts';
-import { LAND_HEIGHT, SEA_FLOOR_HEIGHT, TERRAIN_CHUNK_TILES, terrainChunks } from './terrain.ts';
+import { LAND_HEIGHT, SEA_FLOOR_HEIGHT, TERRAIN_CHUNK_TILES, groundHeight, terrainChunks } from './terrain.ts';
 
 const SIZE = content.rules.islandSize;
 const terrain = islandOf(aliceWorld()).terrain;
@@ -109,5 +109,31 @@ describe('terrain chunks', () => {
         expect(around(sides).flatMap((t) => t.colors), sides.join('')).toEqual(Array(6).fill(seabed));
       }
     });
+  });
+});
+
+describe('ground height', () => {
+  const island = islandOf(aliceWorld());
+  const size = content.rules.islandSize;
+
+  it('is the height of the drawn terrain everywhere: on each triangle of the mesh', () => {
+    for (const chunk of terrainChunks(island.terrain, size)) {
+      const p = chunk.positions;
+      for (let t = 0; t < p.length; t += 9) {
+        // Points inside each triangle, toward each of its corners.
+        for (const [a, b, c] of [[0.6, 0.2, 0.2], [0.2, 0.6, 0.2], [0.2, 0.2, 0.6]]) {
+          const x = a! * p[t]! + b! * p[t + 3]! + c! * p[t + 6]!;
+          const y = a! * p[t + 1]! + b! * p[t + 4]! + c! * p[t + 7]!;
+          const z = a! * p[t + 2]! + b! * p[t + 5]! + c! * p[t + 8]!;
+          expect(groundHeight(island.terrain, size, x, z)).toBeCloseTo(y, 4);
+        }
+      }
+    }
+  });
+
+  it('is land height on land and the sea floor out at sea and off the map', () => {
+    expect(groundHeight(island.terrain, size, 31.5 * 4, 50.5 * 4)).toBe(LAND_HEIGHT);
+    expect(groundHeight(island.terrain, size, 2, 2)).toBe(SEA_FLOOR_HEIGHT);
+    expect(groundHeight(island.terrain, size, -40, 300)).toBe(SEA_FLOOR_HEIGHT);
   });
 });
