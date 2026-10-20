@@ -10,8 +10,8 @@ in always-running private multiplayer worlds. **Status: slice 1 in progress; pla
 - Process: the mattpocock skills' main flow (`HARNESS.md`, "Workflow"). The game design spec is
   `docs/design/`; each remaining slice 1 plan becomes a feature in `.scratch/<feature>/` (a spec and tickets).
   No product code before the user approves the tickets.
-- **Next step:** plan 7, `.scratch/slice1-builders/`: the spec is written (2026-10-20); next `/to-tickets`, then the
-  user approves the tickets, then build on branch `slice1-builders`. The user has more game-logic changes in mind: grill
+- **Next step:** plan 7, `.scratch/slice1-builders/`: spec and 11 tickets approved (2026-10-20); build them on
+  branch `slice1-builders`, one commit per ticket (06 needs Blender open, 11 is the user's look check). The user has more game-logic changes in mind: grill
   each as its own feature. Shipping is plan 8 (its questions in `docs/plans/2026-10-17-slice1-index.md`). Plan 6's look
   check (`.scratch/slice1-alive-2/issues/11-look-check.md`) still waits for the user; its fixes go onto `main` on a
   small branch. Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);

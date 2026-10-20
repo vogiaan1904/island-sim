@@ -22,7 +22,7 @@ the islands keep running while you're away, and you can watch each other's islan
 | 4 | Art direction and asset pipeline | The chosen look, the conventions, and every slice 1 model and icon | the user and Blender (can run beside plans 1-3) | done: `2026-10-18-slice1-plan4-art-assets.md` |
 | 5 | Client | `apps/client`: the 3D island and the style A UI on phones. Two features: `slice1-client` (the playable island, plus the soft lock fix) then `slice1-alive` (crowds, ferry, watch mode, sound) | plans 1-3; plan 4 for final models | done 2026-10-19: both features built and merged; the user approved the camera (ticket 08) and the look of the living island (`slice1-alive` 13). The look review notes (`slice1-client` 21) and the phone frame rate (`slice1-alive` 14) moved into plan 6 |
 | 6 | Slice 1 alive, part 2 | What a watcher sees still falls short (user, 2026-10-19): people's actions at work, buildings growing from the ground, the ferry and ships, vehicles; plus the look polish plan 5 carried over | plans 1-5 | done 2026-10-20: spec and 12 tickets in `.scratch/slice1-alive-2/` (ADR 0002, the sale manifest), built and merged; the user's look check (ticket 11) is still to come, its fixes follow on `main` |
-| 7 | Slice 1 builders | Builders from the Mainland: a crew per building comes on the builders' boat each morning, builds in the day shift and goes home; calling builders for a fee; the welcome crew for a new island's first building | plans 1-6 | grilled 2026-10-20 (the user chose game logic over shipping); spec in `.scratch/slice1-builders/`, tickets next |
+| 7 | Slice 1 builders | Builders from the Mainland: a crew per building comes on the builders' boat each morning, builds in the day shift and goes home; calling builders for a fee; the welcome crew for a new island's first building | plans 1-6 | grilled 2026-10-20 (the user chose game logic over shipping); spec and 11 tickets in `.scratch/slice1-builders/`, approved 2026-10-20, ready to build |
 | 8 | Ship slice 1 | Installable app, two-player end-to-end test, deployment, phone performance check | plans 1-7 | later: postponed by the user (2026-10-20) until the game rules stop changing, since a live world turns every rule change into a migration; its questions are under "Plan 8, ship slice 1" below |
 
 ## What each later plan covers
@@ -155,6 +155,9 @@ passengers through the dock, the new family in that morning's commute, watch mod
 **Plan 7, slice 1 builders** (grilled 2026-10-20). Spec `.scratch/slice1-builders/spec.md`; the words are in the glossary
 (Builder, Crew, Builders' boat, Waiting for builders, Call builders). More game-logic changes from the user follow as
 their own features, each grilled while the one before is built.
+Until plan 8 puts a world on a live server, a sim state change bumps `SIM_VERSION` without a migration: older
+snapshots are refused (`missing-migration`) and the local world database is deleted (the user, 2026-10-20). Plan 8
+brings migrations back from its first live world on.
 
 **Plan 8, ship slice 1** (spec 6.2, 9; later). A first grilling round on 2026-10-20 was stopped before any answer,
 when the user moved game logic first; its suggestions, to confirm when this plan's turn comes: one feature

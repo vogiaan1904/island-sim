@@ -128,12 +128,12 @@ News, cards and watch mode
 36. As a player, I want the bubble over a waiting site to stay calm (not a problem) at night, so that the night does
     not look broken.
 
-Pacing and existing islands
+Pacing
 
 37. As a player, I want the first residents to still come within about a real hour and Settlement within the first
     real day, so that builders make growing calmer but not slower overall.
-38. As a player with an island already growing, I want my sites under construction to wait for builders and get a
-    crew on the next morning's boat, so that an update never loses my buildings.
+38. As the developer, I want an island saved by the old sim refused clearly instead of half-loaded, so that I start a
+    fresh world after the update and never play a broken one.
 
 Checking
 
@@ -154,7 +154,7 @@ Checking
   `construction-finished` and `newcomers-arrived`. New condition: `waiting-for-builders`, shown before
   `under-construction`. New ledger reason: `builders-called`. New reason codes for the call (below).
 
-### Sim: state (a state change; `SIM_VERSION` 7 with a migration)
+### Sim: state (a state change; `SIM_VERSION` 7, no migration)
 
 Every site under construction carries where its crew is, and the island carries its free builders and the builders'
 boat's last trip, the way the ferry manifest records the ferry's (ADR 0001), so a player who opens the island later
@@ -174,9 +174,13 @@ buildersBoat: BuildersBoatTrip | null;   // the last trip, replaced by each trip
 interface BuildersBoatTrip { tick: number; way: 'in' | 'out'; builders: number; sites: number[] }
 ```
 
-- The migration from version 6 gives every site under construction `{ at: 'away' }`, every built building `null`,
-  every island `freeBuilders: 0` and `buildersBoat: null`. Change sets carry the new fields; `validateWorld` checks
-  them (a crew only on a site, arrive ticks not in the past, a trip's sites existing, free builders not negative).
+- **No migration from version 6** (the user, 2026-10-20: "since we are developing and testing, we don't need to
+  migrate the existing world, just simply remove it"). Until shipping (plan 8) puts a world on a live server, a state
+  change bumps `SIM_VERSION` without a migration: an older snapshot is refused with `missing-migration`, as the
+  snapshot loader already does, and the local world database is deleted. This sets aside, for the time before
+  shipping only, plan 3's load policy (a version bump comes with a migration); the earlier migrations stay.
+- Change sets carry the new fields; `validateWorld` checks them (a crew only on a site, arrive ticks not in the past,
+  a trip's sites existing, free builders not negative).
 - Golden hashes change deliberately, once; the readable checks of the golden scenarios must still hold.
 
 ### Sim: the rules
@@ -275,7 +279,7 @@ A new builders pass runs before construction, every tick:
   idle builders leave at 17:15 with the crews; an unfinished site's crew returns the next morning; the welcome crew
   only for the first building, at any hour, building through the night and leaving when done; calling inside and
   outside the window, twice, short of coins, at a landmark without its materials; the Island Hall's crew with wood on
-  site or on the morning ferry's cargo; conditions and their order; the migration from version 6; `validateWorld`;
+  site or on the morning ferry's cargo; conditions and their order; a version 6 snapshot refused with `missing-migration`; `validateWorld`;
   replay; golden hashes updated deliberately once; the pacing targets still met.
 - Client cases: builders shown from crews (full crew, none while away, a welcome crew at night); their walks start on
   the trip's tick; the builders' boat comes in and leaves on the trips and never takes the ferry's berth; the card's
