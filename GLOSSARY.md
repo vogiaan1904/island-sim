@@ -36,5 +36,21 @@ who boarded (leavers, by the home they left, and commuters going home). Each tri
 _Avoid_: passenger list, last ferry
 
 **Carrier**:
-A person walking goods along the roads from one building to another, before the island has trucks.
+A person walking goods along the roads from one building to another, holding them, before the island has trucks. A
+shipment of 4 units or more goes by cart instead.
 _Avoid_: porter, courier, delivery
+
+**Cart**:
+A hand cart pushed along the roads by one person, loaded with a shipment of 4 units or more; Outpost's vehicle, until
+trucks arrive with Village.
+_Avoid_: wagon, barrow, truck
+
+**Work loop**:
+What a workplace's workers visibly do through the day shift: fell trees and carry logs, work the field rows, row out
+to fish. Animation only; it follows the sim's staffing and shift times and changes no numbers.
+_Avoid_: job animation, task, routine
+
+**Sale manifest**:
+An island's record of its sales to the Mainland in the last game hour (tick, good and amount per sale), from which a
+cargo boat leaves the pier for each sale.
+_Avoid_: shipment (goods on the roads), sales log, export

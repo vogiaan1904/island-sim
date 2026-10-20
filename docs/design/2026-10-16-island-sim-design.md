@@ -324,7 +324,10 @@ A thin version of every layer, so later stages add content without rewrites.
 8. **Always running:** 2.5 s tick, snapshots + command log, replay after a crash, catch-up after downtime.
 9. **Client:** 3D island with water and day/night, Kenney models on the grid, the full free camera, building with the
    ghost, building cards, bubbles, crowds of Mini Characters walking, carrying and working, the ferry, the HUD (stage
-   badge, coins, residents, commuters), the news, basic watch mode, installable on the home screen.
+   badge, coins, residents, commuters), the news, basic watch mode, installable on the home screen. Added
+   2026-10-20 (`slice1-alive-2`): workers' work loops at their buildings (felling trees, working the field, rowing
+   out to fish), buildings rising from the ground inside their scaffolds, goods held by carriers and hand carts for
+   big shipments, a fishing boat per fishing hut, and a cargo boat leaving the pier for each sale to the Mainland.
 10. **Project skills:** update the first drafts (see 10) with real paths, APIs and examples as each domain gets code.
 
 **Done when:** you and a friend each grow an island from empty to Settlement on your phones, the islands keep running
@@ -336,7 +339,7 @@ while you're away, and you can watch each other's islands.
    master's auto-sell rule),
    the Harbor Office landmark.
 3. **Village:** production chains (windmill → bakery, cotton → weaving), skilled class + townhouses, delivery trucks,
-   the Goods flow view, more key staff, trade with friends by ship.
+   the Goods flow view, more key staff, trade with friends by ship. Delivery trucks take over from Outpost's hand carts.
 4. **Town:** factories, power, cargo port and cargo ships, buses, engineers + apartments, shared world projects.
 5. **Modern island:** sand → glass → electronics, solar and wind, small airport.
 6. **Late game:** tourism and settling small nearby islands.

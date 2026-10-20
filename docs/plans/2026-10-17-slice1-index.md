@@ -3,7 +3,7 @@
 **Spec:** `docs/design/2026-10-16-island-sim-design.md` (section 8.1 defines slice 1 and when it is done).
 
 Slice 1 builds a thin version of every layer: simulation, server, phone client, 3D assets and multiplayer. That is too
-much for one plan, so it is split into six plans that each produce working, tested software. Each plan is written
+much for one plan, so it is split into seven plans that each produce working, tested software. Each plan is written
 only when its turn comes, so it builds on the real code of the plans before it instead of guesses. Each plan ends
 by updating the project skills it touched, using the official skill-creator.
 
@@ -21,7 +21,8 @@ the islands keep running while you're away, and you can watch each other's islan
 | 3 | Protocol and server | `packages/protocol`, `apps/server`: the always-running worlds behind accounts and invite codes | plans 1-2 | done: `2026-10-18-slice1-plan3-protocol-server.md` |
 | 4 | Art direction and asset pipeline | The chosen look, the conventions, and every slice 1 model and icon | the user and Blender (can run beside plans 1-3) | done: `2026-10-18-slice1-plan4-art-assets.md` |
 | 5 | Client | `apps/client`: the 3D island and the style A UI on phones. Two features: `slice1-client` (the playable island, plus the soft lock fix) then `slice1-alive` (crowds, ferry, watch mode, sound) | plans 1-3; plan 4 for final models | done 2026-10-19: both features built and merged; the user approved the camera (ticket 08) and the look of the living island (`slice1-alive` 13). The look review notes (`slice1-client` 21) and the phone frame rate (`slice1-alive` 14) moved into plan 6 |
-| 6 | Ship slice 1 | Installable app, two-player end-to-end test, deployment, phone performance check | plans 1-5 | next: its `/grill-with-docs` on the questions under "Plan 6, ship slice 1" below, then `/to-spec` and `/to-tickets` into `.scratch/slice1-ship/` |
+| 6 | Slice 1 alive, part 2 | What a watcher sees still falls short (user, 2026-10-19): people's actions at work, buildings growing from the ground, the ferry and ships, vehicles; plus the look polish plan 5 carried over | plans 1-5 | grilled 2026-10-20; spec and 12 tickets in `.scratch/slice1-alive-2/` (ADR 0002, the sale manifest), waiting for the user's approval |
+| 7 | Ship slice 1 | Installable app, two-player end-to-end test, deployment, phone performance check | plans 1-6 | later: the user moved it after plan 6 (2026-10-19), "we are still far from it"; its questions are under "Plan 7, ship slice 1" below |
 
 ## What each later plan covers
 
@@ -136,7 +137,21 @@ The questions as they were asked:
   Vitest and Testing Library. Playwright and the real-phone check belong to plan 6.
 - Which tickets need the user (the look, phone speed, real touch) and are therefore `ready-for-human`.
 
-**Plan 6, ship slice 1** (spec 6.2, 9; next, not grilled). Its `/grill-with-docs` runs on the merged `main`, with the
+**Plan 6, slice 1 alive, part 2** (grilled 2026-10-20: `.scratch/slice1-alive-2/spec.md`, ADR 0002). The user played the build on 2026-10-19 and still sees many
+problems in what the island shows, so the game is improved before it ships. Their words: "the action of people, the
+logic of building growing from the ground, the ship, the vehicles". What the code does today (checked 2026-10-19):
+- People at work: up to two stand side by side outside the front of each staffed workplace, facing it, playing
+  `interact-left` / `interact-right` all shift (`render/crowd.ts`, `stations`). Nobody fells trees, tends fields or
+  fishes; builders are two people at the site's front the same way. Carriers walk with empty arms raised (no goods).
+- Construction: the scaffold appears, and the finished model is scaled in height to 0, 25, 50 and 75 % in four jumps
+  (`render/construction.ts`, `scene/ModelInstances.tsx`), so a site shows a squashed building, not one being built.
+- The ferry: one houseboat on a straight lane due south, turning at the pier (`render/ferry.ts`). No other boats.
+- Vehicles: none. The spec puts the first trucks in Village (slice 3) and fishing boats in Settlement (slice 2).
+- Also seen: at the closest zoom the camera can end up inside a building's roof.
+Plus the polish from plan 5 listed under plan 7's "Carried over" (the user took four of the five: back-wall exits,
+passengers through the dock, the new family in that morning's commute, watch mode framing the pier).
+
+**Plan 7, ship slice 1** (spec 6.2, 9; later, not grilled). Its `/grill-with-docs` runs on the merged `main`, with the
 skills `island-server` (operations), `island-3d-client` (`state-and-pwa.md`), `island-ui`, `island-testing`
 (`phone-performance.md`, `client-tests.md`) as inputs.
 - PWA: manifest and icons, service worker and model and sound caching (what is cached, how a new build replaces it),

@@ -1,7 +1,7 @@
 # Island Sim
 
 3D web game: build a modern island (citizens, farms, factories, transport, hiring) in deep-management style,
-in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay), 3 (protocol and server), 4 (art direction and assets) and 5 (the client: `slice1-client`, `slice1-auto-roads`, `slice1-remove-roads`, `slice1-big-island`, `slice1-soft-ui`, `slice1-alive`) are done and merged. Plan 6 (ship slice 1) is next and not grilled yet.**
+in always-running private multiplayer worlds. **Status: slice 1 in progress; plans 1 (workspace and sim kernel), 2 (Outpost gameplay), 3 (protocol and server), 4 (art direction and assets) and 5 (the client: `slice1-client`, `slice1-auto-roads`, `slice1-remove-roads`, `slice1-big-island`, `slice1-soft-ui`, `slice1-alive`) are done and merged. Plan 6 (slice 1 alive, part 2: people at work, construction, carts and boats) is grilled: spec and tickets in `.scratch/slice1-alive-2/`, waiting for the user's approval; plan 7 (ship slice 1) comes after it.**
 
 ## Resume here
 
@@ -10,10 +10,10 @@ in always-running private multiplayer worlds. **Status: slice 1 in progress; pla
 - Process: the mattpocock skills' main flow (`HARNESS.md`, "Workflow"). The game design spec is
   `docs/design/`; each remaining slice 1 plan becomes a feature in `.scratch/<feature>/` (a spec and tickets).
   No product code before the user approves the tickets.
-- **Next step:** plan 6, ship slice 1. Run `/grill-with-docs` on the questions under "Plan 6, ship slice 1" in
-  `docs/plans/2026-10-17-slice1-index.md` (they include what plan 5 carried over: the real-phone run, look polish),
-  then `/to-spec` and `/to-tickets` into `.scratch/slice1-ship/`. Slice 2 content (only 8 Outpost buildings exist) is
-  the alternative the user may still prefer first; ask. Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);
+- **Next step:** plan 6, `.scratch/slice1-alive-2/` (branch `slice1-alive-2`). Once the user approves the tickets,
+  build them blockers first with `/implement`, one commit per ticket; ticket 02 needs Blender open with the MCP
+  server, ticket 11 is the user's look check. Plan 7 (ship: installable app, Playwright, deployment, the real-phone
+  run) waits until after it; its questions are in `docs/plans/2026-10-17-slice1-index.md`. Play the build: `pnpm client:build`, then `pnpm server` (`http://127.0.0.1:8787`);
   develop with `pnpm server:dev` and `pnpm client`. `pnpm preview [minute] [--lan]` serves the built client with a prepared village in memory (sign in as alice / password-1), for look checks and, with `--lan`, phone tests. `pnpm admin create-account <name>` makes the first account. The
   skills `island-3d-client`, `island-ui`, `island-testing`, `island-server` and `island-game-logic` describe what is
   built.
