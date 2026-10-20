@@ -1,6 +1,6 @@
 # Slice 1 alive, part 2: people at work, buildings rising, carts and boats
 
-Status: needs-triage
+Status: ready-for-agent
 
 From the `/grill-with-docs` session of 2026-10-19 to 2026-10-20 (plan 6, re-scoped by the user: "the action of people,
 the logic of building growing from the ground, the ship, the vehicles"; deployment moved to plan 7). Sources: design
